@@ -73,7 +73,18 @@ print "Querying MusicBrainz..."
 q = ws.Query()
 filter = ws.ReleaseFilter(discId=disc.id)
 #results = q.getReleases(filter=filter)
-results_meta = q._getFromWebService('release', '', filter=filter)
+results_meta = q._getFromWebService('release', '', filter=filter,
+		include=ws.ReleaseIncludes(
+			artist=True, 
+			counts=True,
+			releaseEvents=True,
+			discs=True,
+			labels=True,
+			tracks=True,
+			tags=True,
+			#ratings=True,
+			#isrcs=True
+			))
 results = results_meta.getReleaseResults()
 
 for i, result in enumerate(results):
@@ -84,11 +95,15 @@ for i, result in enumerate(results):
 	print "Artist	:", result.release.artist.getName()
 	print "Title	:", result.release.title
 	for releaseEvent in result.release.releaseEvents:
-		print "Released	:", releaseEvent.date, 
-			"Country	:", releaseEvent.country,
-			"Label	:", releaseEvent.label.name,
-			"Catalog #:", releaseEvent.catalogNumber,
-			"Barcode :", releaseEvent.barcode
+		for label, field in [("Released	:", releaseEvent.date), \
+				("Country	:", releaseEvent.country), \
+				("Label	:", (releaseEvent.label.name if releaseEvent.label else None)), \
+				("Catalog #:", releaseEvent.catalogNumber), \
+				("Barcode :", releaseEvent.barcode) ]:
+			if field:
+				print label, field, ",\t",
+			else:
+				print label, "\t,\t", 
 	print 
 	if len(result.release.releaseEvents):
 		print "Date	:", result.release.releaseEvents[0].getDate()
@@ -129,6 +144,7 @@ releaseId = mbutils.extractUuid(results_meta.releaseResults[choice].release._id)
 
 if not releaseId:
 	print "It looks like MusicBrainz only has a CD stub for this TOC."
+	sys.exit(1)
 
 from catalog import *
 

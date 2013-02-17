@@ -137,8 +137,9 @@ class Catalog(object):
 			include=ws.ReleaseIncludes(
 				artist=True, 
 				counts=True,
-				labels=True,
+				releaseEvents=True,
 				discs=True,
+				labels=True,
 				tracks=True,
 				tags=True,
 				#ratings=True,
@@ -176,47 +177,36 @@ class Catalog(object):
 	
 		self.writeXml(discId, results_meta)
 	
-	def getMetaData(self, discId):
-		xmlPath = os.path.join(self.rootPath, discId, 'metadata.xml')
+	def getMetaData(self, releaseId):
+		xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
 		if (not os.path.isfile(xmlPath)):
-			print "No metadata for", discId
+			print "No metadata for", releaseId
 			return None
 		xmlf = open(xmlPath, 'r')
 		XmlParser = wsxml.MbXmlParser()
 		metadata = XmlParser.parse(xmlf)
 		if (len(metadata.getReleaseResults())):
+			print "Old format"
 			release = metadata.getReleaseResults()[0].release
 		else:
-			#print "Got it"
-			#print dir(metadata)
-			#print dir(metadata.release)
 			release = metadata.getRelease()
 		return release
 	
 		
 	
-	def refreshMetaData(self, discId, olderThan=0):
-		xmlPath = os.path.join(self.rootPath, discId, 'metadata.xml')
+	def refreshMetaData(self, releaseId, olderThan=0):
+		xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
 		if (os.path.isfile(xmlPath) and (os.path.getmtime(xmlPath) > (time.time() - olderThan))):
-			print "Skipping because it is new"
+			print "Skipping", releaseId, "because it is new"
 			return 0
 		
-		metaData = self.getMetaData(discId)
-		releaseId = mbutils.extractUuid(metaData.id)
-		if (not releaseId):
-			print "Error: No release ID. Enter a new one: "
-			releaseId = sys.stdin.readline().strip()
-	
-		if (releaseId):
-			results_meta = self.getReleaseMeta(releaseId)
-			self.writeXml(discId, results_meta)
-		else:
-			print "Couldn't update", discId
+		results_meta = self.getReleaseMeta(releaseId)
+		self.writeXml(releaseId, results_meta)
 	
 	def refreshAllMetaData(self, olderThan=0):
-		for discId in self.releaseIndex.keys():
-			print "Refreshing", discId, 
-			self.refreshMetaData(discId, olderThan)
+		for releaseId in self.releaseIndex.keys():
+			print "Refreshing", releaseId, 
+			self.refreshMetaData(releaseId, olderThan)
 
 	def checkDiscIds(self):
 		count = 0
