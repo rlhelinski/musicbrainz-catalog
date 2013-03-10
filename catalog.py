@@ -10,6 +10,18 @@ lastQueryTime = 0
 def releaseSortCmp(a, b):
 	return unicode.lower(a[1]) < unicode.lower(b[1])
 
+import HTMLParser
+h = HTMLParser.HTMLParser()
+
+def getFormatFromUri(uriStr, escape=True):
+	#return uriStr.split("#")[1].decode('ascii')
+	formatStr = uriStr.split("#", 1)[1]
+	if escape:
+		return h.unescape(uriStr)
+	else:
+		return formatStr
+
+
 class Catalog(object):
 	def __init__(self, rootPath='release-id'):
 		self.rootPath = rootPath
@@ -18,6 +30,9 @@ class Catalog(object):
 		self.discIdMap = dict()
 
 	def load(self):
+		self.releaseIndex = dict()
+		self.wordmap = dict()
+		self.discIdMap = dict()
 		for releaseId in os.listdir(self.rootPath):
 			if releaseId.startswith('.') or len(releaseId) != 36:
 				continue
@@ -112,10 +127,13 @@ class Catalog(object):
 
 		index = self.sortedList.index((releaseId, self.formatDiscSortKey(releaseId)))
 		for i in range(max(0,index-neighborHood), min(len(self.sortedList), index+neighborHood)):
-			print "%4d" % i, \
+			# TODO make a function to get the format type from a format URI
+			print ('\033[92m' if i == index else "") + "%4d" % i, \
 				self.sortedList[i][0], \
 				self.sortedList[i][1], \
-				" <<<" if i == index else ""
+				"[" + getFormatFromUri(self.releaseIndex[self.sortedList[i][0]].releaseEvents[0].format) + "]", \
+				(" <<<" if i == index else "") + \
+				('\033[0m' if i == index else "")
 
 
 	def search(self, query):
@@ -150,6 +168,7 @@ class Catalog(object):
 <th>Label</th>
 <th>Catalog #</th>
 <th>Barcode</th>
+<th>Format</th>
 </tr>
 """
 		for sortIndex, (releaseId, releaseSortStr) in enumerate(self.getSortedList()):
@@ -163,6 +182,7 @@ class Catalog(object):
 			print >> htf, "<td>"+("<a href=\""+release.releaseEvents[0].label.id+"\">"+release.releaseEvents[0].label.name.encode('ascii', 'xmlcharrefreplace')+"</a>" if len(release.releaseEvents) and release.releaseEvents[0].label else '')+"</td>"
 			print >> htf, "<td>"+(release.releaseEvents[0].catalogNumber if len(release.releaseEvents) and release.releaseEvents[0].catalogNumber else '')+"</td>"
 			print >> htf, "<td>"+(release.releaseEvents[0].barcode if len(release.releaseEvents) and release.releaseEvents[0].barcode else '')+"</td>"
+			print >> htf, "<td>"+("<a href=\""+release.releaseEvents[0].format+"\">"+getFormatFromUri(release.releaseEvents[0].format, escape=False)+"</a>" if len(release.releaseEvents) else '')+"</td>"
 			print >> htf, "</tr>"
 		print >> htf, "</table>"
 			
@@ -243,6 +263,10 @@ class Catalog(object):
 		
 	
 	def refreshMetaData(self, releaseId, olderThan=0):
+		"""Should be renamed to "add release" or something"""
+		
+		if releaseId.startswith('http'):
+			releaseId = mbutils.extractUuid(releaseId, 'release')
 		xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
 		if (os.path.isfile(xmlPath) and (os.path.getmtime(xmlPath) > (time.time() - olderThan))):
 			print "Skipping", releaseId, "because it is new"
@@ -250,6 +274,8 @@ class Catalog(object):
 		
 		results_meta = self.getReleaseMeta(releaseId)
 		self.writeXml(releaseId, results_meta)
+		self.load()
+		self.getSortedList()
 	
 	def refreshAllMetaData(self, olderThan=0):
 		for releaseId in self.releaseIndex.keys():
