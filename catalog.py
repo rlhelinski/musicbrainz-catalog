@@ -59,31 +59,14 @@ class Catalog(object):
 			xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
 			if (not os.path.isfile(xmlPath)):
 				print "No metadata for", releaseId
-				#tocf = open(os.path.join(self.rootPath, discid, 'toc.txt'))
-				#lines = tocf.readlines()
-				#print lines[-2:-1]
-				#print tocf.read()
-				#tocf.close()
 				continue
 			xmlf = open(xmlPath, 'r')
 			XmlParser = wsxml.MbXmlParser()
 			metadata = XmlParser.parse(xmlf)
-			if (len(metadata.getReleaseResults())):
-				print "Old format", type(metadata)
-				release = metadata.getReleaseResults()[0].release
-			else:
-				release = metadata.getRelease()
+			xmlf.close()
+			release = metadata.getRelease()
 			self.releaseIndex[releaseId] = release
 		
-			if False:
-				"""This is a fix for an old implementation"""
-				releaseDir = os.path.join('release-id',releaseId)
-				if not os.path.isdir(releaseDir):
-					os.mkdir(releaseDir)
-				releaseXmlPath = os.path.join('release-id',releaseId,'metadata.xml')
-				import shutil
-				shutil.copyfile(xmlPath, releaseXmlPath)
-			
 			for disc in release.discs:
 				if disc.id in self.discIdMap:
 					self.discIdMap[disc.id].append(releaseId)
@@ -92,22 +75,29 @@ class Catalog(object):
 
 			# 
 			# Should be a function
-			words = []
-			for field in [
-				release.title, \
-				release.artist.getName() ] + \
-				[track.title for track in release.tracks] \
-				:
-				#words.extend(field.lower().split(' '))
-				words.extend(re.findall(r"\w+", field.lower(), re.UNICODE))
+			words = self.getReleaseWords(release)
 			# Another function 
-			word_set = set(words)
-			for word in word_set:
-				if word in self.wordMap:
-					self.wordMap[word].append(releaseId)
-				else:
-					self.wordMap[word] = [releaseId]
+			self.mapWordsToRelease(words, releaseId)
 
+	def getReleaseWords(self, release):
+		words = []
+		for field in [
+			release.title, \
+			release.artist.getName() ] + \
+			[track.title for track in release.tracks] \
+			:
+			#words.extend(field.lower().split(' '))
+			words.extend(re.findall(r"\w+", field.lower(), re.UNICODE))
+		return words
+
+	def mapWordsToRelease(self, words, releaseId):
+		word_set = set(words)
+		for word in word_set:
+			if word in self.wordMap:
+				self.wordMap[word].append(releaseId)
+			else:
+				self.wordMap[word] = [releaseId]
+		
 	def _search(self, query):
 		query_words = query.lower().split(' ')
 		matches = []
@@ -126,7 +116,9 @@ class Catalog(object):
 			releaseId, ':', \
 			(release.releaseEvents[0].getDate() if len(release.releaseEvents) else ''), '-', \
 			release.artist.getName(), '-', \
-			release.title ] )
+			release.title, \
+			('['+getFormatFromUri(release.releaseEvents[0].format)+']' if len(release.releaseEvents) else ''), \
+ 			] )
 
 	def formatDiscSortKey(self, releaseId):
 		release = self.releaseIndex[releaseId]
@@ -156,14 +148,14 @@ class Catalog(object):
 		""">>> c.getSortNeighbors('oGahy0j6T2gXkGBLqSfaXqL.kMo-')
 		"""
 
-		if 'sortedList' not in self.__dict__:
-			if matchFormat:
-				self.getSortedList(
-					ReleaseFormat(
-						getFormatFromUri(
-							self.releaseIndex[releaseId].releaseEvents[0].format)))
-			else:
-				self.getSortedList()
+		if matchFormat:
+			print self.releaseIndex[releaseId].releaseEvents[0].format
+			self.getSortedList(
+				ReleaseFormat(
+					getFormatFromUri(
+						self.releaseIndex[releaseId].releaseEvents[0].format)))
+		else:
+			self.getSortedList()
 
 		index = self.sortedList.index((releaseId, self.formatDiscSortKey(releaseId)))
 		for i in range(max(0,index-neighborHood), min(len(self.sortedList), index+neighborHood)):
