@@ -17,21 +17,41 @@ def getFormatFromUri(uriStr, escape=True):
 	#return uriStr.split("#")[1].decode('ascii')
 	formatStr = uriStr.split("#", 1)[1]
 	if escape:
-		return h.unescape(uriStr)
+		return h.unescape(formatStr)
 	else:
 		return formatStr
 
+class ReleaseFormat(object):
+	def __init__(self, fmtStr=""):
+		self.fmtStr = fmtStr
+
+	def isVinyl(self):
+		return (self.fmtStr in ["Vinyl", "7\"", "10\"", "12\""])
+
+	def isCD(self):
+		return not self.isVinyl() and self.fmtStr != ""
+
+	def isAny(self):
+		return self.fmtStr == ""
+
+	def __eq__(self, other):
+		eq = (self.isVinyl() and other.isVinyl()) or \
+			(self.isCD() and other.isCD()) or \
+			(self.isAny() and other.isAny())
+		print self.fmtStr, other.fmtStr, eq
+		return eq
 
 class Catalog(object):
 	def __init__(self, rootPath='release-id'):
 		self.rootPath = rootPath
 		self.releaseIndex = dict()
-		self.wordmap = dict()
+		self.wordMap = dict()
 		self.discIdMap = dict()
 
 	def load(self):
 		self.releaseIndex = dict()
-		self.wordmap = dict()
+		self.formatMap = dict()
+		self.wordMap = dict()
 		self.discIdMap = dict()
 		for releaseId in os.listdir(self.rootPath):
 			if releaseId.startswith('.') or len(releaseId) != 36:
@@ -56,6 +76,7 @@ class Catalog(object):
 			self.releaseIndex[releaseId] = release
 		
 			if False:
+				"""This is a fix for an old implementation"""
 				releaseDir = os.path.join('release-id',releaseId)
 				if not os.path.isdir(releaseDir):
 					os.mkdir(releaseDir)
@@ -82,20 +103,20 @@ class Catalog(object):
 			# Another function 
 			word_set = set(words)
 			for word in word_set:
-				if word in self.wordmap:
-					self.wordmap[word].append(releaseId)
+				if word in self.wordMap:
+					self.wordMap[word].append(releaseId)
 				else:
-					self.wordmap[word] = [releaseId]
+					self.wordMap[word] = [releaseId]
 
 	def _search(self, query):
 		query_words = query.lower().split(' ')
 		matches = []
 		for word in query_words:
-			if word in self.wordmap:
+			if word in self.wordMap:
 				if len(matches) > 0:
-					matches = set(matches) & set(self.wordmap[word])
+					matches = set(matches) & set(self.wordMap[word])
 				else:
-					matches = set(self.wordmap[word])
+					matches = set(self.wordMap[word])
 			
 		return matches
 
@@ -114,16 +135,35 @@ class Catalog(object):
 			release.title, \
 			] ) #.encode('ascii', 'xmlcharrefreplace')
 			
-	def getSortedList(self):
+	def getSortedList(self, matchFormat=ReleaseFormat()):
 		sortKeys = [(releaseId, self.formatDiscSortKey(releaseId)) for releaseId in self.releaseIndex.keys()]
-		self.sortedList = sorted(sortKeys, key=lambda sortKey: unicode.lower(sortKey[1]))
+
+		# TODO this could be sped up using a map from ReleaseId -> Format populated at loading time
+		if not matchFormat.isAny():
+			filteredSortKeys = []
+			for sortId, sortStr in sortKeys:
+				if len(self.releaseIndex[sortId].releaseEvents):
+					releaseFmt = getFormatFromUri(self.releaseIndex[sortId].releaseEvents[0].format)
+					if ReleaseFormat(releaseFmt) == matchFormat:
+						filteredSortKeys.append((sortId, sortStr))
+		else:
+			filteredSortKeys = sortKeys
+
+		self.sortedList = sorted(filteredSortKeys, key=lambda sortKey: unicode.lower(sortKey[1]))
 		return self.sortedList
 
-	def getSortNeighbors(self, releaseId, neighborHood=5):
+	def getSortNeighbors(self, releaseId, neighborHood=5, matchFormat=False):
 		""">>> c.getSortNeighbors('oGahy0j6T2gXkGBLqSfaXqL.kMo-')
 		"""
+
 		if 'sortedList' not in self.__dict__:
-			self.getSortedList()
+			if matchFormat:
+				self.getSortedList(
+					ReleaseFormat(
+						getFormatFromUri(
+							self.releaseIndex[releaseId].releaseEvents[0].format)))
+			else:
+				self.getSortedList()
 
 		index = self.sortedList.index((releaseId, self.formatDiscSortKey(releaseId)))
 		for i in range(max(0,index-neighborHood), min(len(self.sortedList), index+neighborHood)):
@@ -146,7 +186,7 @@ class Catalog(object):
 			#print self.formatDiscInfo(releaseId)
 		print
 		print "%d release-id records" % len(self.releaseIndex)
-		print "%d words in search table" % len(self.wordmap)
+		print "%d words in search table" % len(self.wordMap)
 
 	def makeHtml(self, fileName="catalog.html"):
 		htf = open(fileName, 'w')

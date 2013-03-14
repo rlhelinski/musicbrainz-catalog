@@ -25,7 +25,7 @@ def interactiveSort(c):
 					try:
 						print "Select a match: ",
 						index = int(getInput())
-						c.getSortNeighbors(matches[index])
+						c.getSortNeighbors(matches[index], matchFormat=True)
 						break
 					except ValueError as e:
 						print e, "try again"
@@ -62,8 +62,14 @@ while (True):
 		print "t : hTml"
 		print "c : change release"
 		print "a : add release"
+		print "v : vinyl (replace me!)"
+		print "l : reLoad"
 	elif (input.startswith('s')):
 		interactiveSort(c)
+	elif (input.startswith('l')):
+		print "Reloading database...", 
+		c.load()
+		print "DONE"
 	elif (input.startswith('e')):
 		print "Edit extra data"
 		print "Enter release ID: ",
@@ -84,12 +90,15 @@ while (True):
 			ed.save()
 	elif (input.startswith('r')):
 		print "Refresh Release"
-		print "Enter release ID: ",
+		print "Enter release ID [a for all]: ",
 		releaseId = getInput()
-		if releaseId not in c.releaseIndex:
+		if releaseId == "a":
+			c.refreshAllMetaData(60*60)
+		elif releaseId not in c.releaseIndex:
 			print "Release not found"
 			continue
-		c.refreshMetaData(releaseId, olderThan=60)
+		else:
+			c.refreshMetaData(releaseId, olderThan=60)
 	elif (input.startswith('c')):
 		print "Change Release"
 		print "Enter release ID: ",
@@ -130,4 +139,5 @@ while (True):
 			else:
 				print "No release events", releaseId, "?"
 		print nv
+
 
