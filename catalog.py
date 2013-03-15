@@ -35,11 +35,9 @@ class ReleaseFormat(object):
 		return self.fmtStr == ""
 
 	def __eq__(self, other):
-		eq = (self.isVinyl() and other.isVinyl()) or \
+		return (self.isVinyl() and other.isVinyl()) or \
 			(self.isCD() and other.isCD()) or \
 			(self.isAny() and other.isAny())
-		print self.fmtStr, other.fmtStr, eq
-		return eq
 
 class Catalog(object):
 	def __init__(self, rootPath='release-id'):
@@ -50,7 +48,10 @@ class Catalog(object):
 
 	def load(self):
 		self.releaseIndex = dict()
-		self.formatMap = dict()
+		# To map ReleaseId -> Format
+		#self.formatMap = dict()
+		# It would enhance performance but is redundant. Not implemented because 
+		# performance is tolerable.
 		self.wordMap = dict()
 		self.discIdMap = dict()
 		for releaseId in os.listdir(self.rootPath):
@@ -122,11 +123,21 @@ class Catalog(object):
 
 	def formatDiscSortKey(self, releaseId):
 		release = self.releaseIndex[releaseId]
+			
+		#try:
+		#	return ' - '.join ( [
+		#		release.artist.getSortName(), \
+		#		release.releaseEvents[0].date, \
+		#		release.title, \
+		#		] ) #.encode('ascii', 'xmlcharrefreplace')
+		#except IndexError as e:
+		#	print "No date for: ", releaseId
+
 		return ' - '.join ( [
 			release.artist.getSortName(), \
 			release.title, \
 			] ) #.encode('ascii', 'xmlcharrefreplace')
-			
+
 	def getSortedList(self, matchFormat=ReleaseFormat()):
 		sortKeys = [(releaseId, self.formatDiscSortKey(releaseId)) for releaseId in self.releaseIndex.keys()]
 
@@ -190,33 +201,36 @@ class Catalog(object):
 </head>
 <body>"""
 
-		print >> htf, "<table>"
-		print >> htf, """<tr>
-<!-- <th>Sort Index</th> -->
-<th>Artist</th>
-<th>Release Title</th>
-<th>Date</th>
-<th>Country</th>
-<th>Label</th>
-<th>Catalog #</th>
-<th>Barcode</th>
-<th>Format</th>
+		for releaseType in [ReleaseFormat("CD"), ReleaseFormat("Vinyl")]:
+			sortedList = self.getSortedList(releaseType)
+			print >> htf, "<h2>" + releaseType.fmtStr + (" (%d records)" % len(sortedList)) + "</h2>"
+			print >> htf, "<table>"
+			print >> htf, """<tr>
+	<!-- <th>Sort Index</th> -->
+	<th>Artist</th>
+	<th>Release Title</th>
+	<th>Date</th>
+	<th>Country</th>
+	<th>Label</th>
+	<th>Catalog #</th>
+	<th>Barcode</th>
+	<th>Format</th>
 </tr>
-"""
-		for sortIndex, (releaseId, releaseSortStr) in enumerate(self.getSortedList()):
-			release = self.releaseIndex[releaseId]
-			print >> htf, "<tr>"
-			print >> htf, "<!-- <td>"+("%04d" % sortIndex)+"</td> -->"
-			print >> htf, "<td><a href=\""+release.artist.id+"\">"+self.releaseIndex[releaseId].artist.name.encode('ascii', 'xmlcharrefreplace')+"</a></td>"
-			print >> htf, "<td><a href=\""+release.id+"\">"+release.title.encode('ascii', 'xmlcharrefreplace')+"</a></td>"
-			print >> htf, "<td>"+(release.releaseEvents[0].date if len(release.releaseEvents) else '')+"</td>"
-			print >> htf, "<td>"+(release.releaseEvents[0].country.encode('ascii', 'xmlcharrefreplace') if len(release.releaseEvents) and release.releaseEvents[0].country else '')+"</td>"
-			print >> htf, "<td>"+("<a href=\""+release.releaseEvents[0].label.id+"\">"+release.releaseEvents[0].label.name.encode('ascii', 'xmlcharrefreplace')+"</a>" if len(release.releaseEvents) and release.releaseEvents[0].label else '')+"</td>"
-			print >> htf, "<td>"+(release.releaseEvents[0].catalogNumber if len(release.releaseEvents) and release.releaseEvents[0].catalogNumber else '')+"</td>"
-			print >> htf, "<td>"+(release.releaseEvents[0].barcode if len(release.releaseEvents) and release.releaseEvents[0].barcode else '')+"</td>"
-			print >> htf, "<td>"+("<a href=\""+release.releaseEvents[0].format+"\">"+getFormatFromUri(release.releaseEvents[0].format, escape=False)+"</a>" if len(release.releaseEvents) else '')+"</td>"
-			print >> htf, "</tr>"
-		print >> htf, "</table>"
+	"""
+			for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
+				release = self.releaseIndex[releaseId]
+				print >> htf, "<tr>"
+				print >> htf, "<!-- <td>"+("%04d" % sortIndex)+"</td> -->"
+				print >> htf, "<td><a href=\""+release.artist.id+"\">"+self.releaseIndex[releaseId].artist.name.encode('ascii', 'xmlcharrefreplace')+"</a></td>"
+				print >> htf, "<td><a href=\""+release.id+"\">"+release.title.encode('ascii', 'xmlcharrefreplace')+"</a></td>"
+				print >> htf, "<td>"+(release.releaseEvents[0].date if len(release.releaseEvents) else '')+"</td>"
+				print >> htf, "<td>"+(release.releaseEvents[0].country.encode('ascii', 'xmlcharrefreplace') if len(release.releaseEvents) and release.releaseEvents[0].country else '')+"</td>"
+				print >> htf, "<td>"+("<a href=\""+release.releaseEvents[0].label.id+"\">"+release.releaseEvents[0].label.name.encode('ascii', 'xmlcharrefreplace')+"</a>" if len(release.releaseEvents) and release.releaseEvents[0].label else '')+"</td>"
+				print >> htf, "<td>"+(release.releaseEvents[0].catalogNumber if len(release.releaseEvents) and release.releaseEvents[0].catalogNumber else '')+"</td>"
+				print >> htf, "<td>"+(release.releaseEvents[0].barcode if len(release.releaseEvents) and release.releaseEvents[0].barcode else '')+"</td>"
+				print >> htf, "<td>"+("<a href=\""+release.releaseEvents[0].format+"\">"+getFormatFromUri(release.releaseEvents[0].format, escape=False)+"</a>" if len(release.releaseEvents) else '')+"</td>"
+				print >> htf, "</tr>"
+			print >> htf, "</table>"
 			
 		print >> htf, "<p>%d release records</p>" % len(self.releaseIndex)
 
