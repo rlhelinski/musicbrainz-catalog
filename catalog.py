@@ -170,11 +170,11 @@ class Catalog(object):
 
 		index = self.sortedList.index((releaseId, self.formatDiscSortKey(releaseId)))
 		for i in range(max(0,index-neighborHood), min(len(self.sortedList), index+neighborHood)):
-			# TODO make a function to get the format type from a format URI
+			sortId, sortStr = self.sortedList[i]
 			print ('\033[92m' if i == index else "") + "%4d" % i, \
-				self.sortedList[i][0], \
-				self.sortedList[i][1], \
-				"[" + getFormatFromUri(self.releaseIndex[self.sortedList[i][0]].releaseEvents[0].format) + "]", \
+				sortId, \
+				sortStr, \
+				("[" + getFormatFromUri(self.releaseIndex[sortId].releaseEvents[0].format) + "]" if len(self.releaseIndex[sortId].releaseEvents) else ""), \
 				(" <<<" if i == index else "") + \
 				('\033[0m' if i == index else "")
 
