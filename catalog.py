@@ -45,6 +45,7 @@ class Catalog(object):
 		self.releaseIndex = dict()
 		self.wordMap = dict()
 		self.discIdMap = dict()
+		self.barCodeMap = dict()
 
 	def load(self):
 		self.releaseIndex = dict()
@@ -54,6 +55,7 @@ class Catalog(object):
 		# performance is tolerable.
 		self.wordMap = dict()
 		self.discIdMap = dict()
+		self.barCodeMap = dict()
 		for releaseId in os.listdir(self.rootPath):
 			if releaseId.startswith('.') or len(releaseId) != 36:
 				continue
@@ -74,6 +76,12 @@ class Catalog(object):
 				else:
 					self.discIdMap[disc.id] = [releaseId]
 
+			for releaseEvent in release.releaseEvents:
+				if releaseEvent.barcode:
+					if releaseEvent.barcode in self.barCodeMap:
+						self.barCodeMap[releaseEvent.barcode].append(releaseId)
+					else:
+						self.barCodeMap[releaseEvent.barcode] = [releaseId]
 			# 
 			# Should be a function
 			words = self.getReleaseWords(release)

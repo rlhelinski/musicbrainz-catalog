@@ -33,7 +33,7 @@ def interactiveSort(c):
 						print e, "try again"
 
 			elif len(matches) == 1:
-				c.getSortNeighbors(matches[0])
+				c.getSortNeighbors(matches[0], matchFormat=True)
 			else:
 				print "No matches."
 		else:
@@ -62,8 +62,8 @@ while (True):
 		print "t : hTml"
 		print "c : change release"
 		print "a : add release"
-		print "v : vinyl (replace me!)"
 		print "l : reLoad"
+		print "b : Barcode search"
 	elif (input.startswith('s')):
 		interactiveSort(c)
 	elif (input.startswith('l')):
@@ -128,16 +128,10 @@ while (True):
 			continue
 		c.refreshMetaData(releaseId)
 		
-	elif (input.startswith('v')):
-		nv = 0
-		for releaseId, release in c.releaseIndex.items():
-			if len(release.releaseEvents):
-				releaseFormat = getFormatFromUri(release.releaseEvents[0].format)
-				if releaseFormat in ["Vinyl", "12\""]:
-					print releaseId
-					nv += 1
-			else:
-				print "No release events", releaseId, "?"
-		print nv
-
+	elif (input.startswith('b')):
+		print "Enter barcode: ",
+		barCode = getInput()
+		for releaseId in c.barCodeMap[barCode]:
+			print c.formatDiscInfo(releaseId)
+		
 
