@@ -338,21 +338,6 @@ class Catalog(object):
 			print "Refreshing", releaseId, 
 			self.refreshMetaData(releaseId, olderThan)
 
-	def checkDiscIds(self):
-		"""Deprecated, remove"""
-		count = 0
-		for discId in os.listdir('disc-id'):
-			if discId.startswith('.') or len(discId) != 28: 
-				continue
-			if discId not in self.discIdMap:
-				count += 1
-				tocPath = os.path.join('disc-id', discId, 'toc.txt')
-				print "No release for", discId
-				tocf = open(tocPath, 'r')
-				print tocf.read()
-				tocf.close()
-		return count
-
 	def checkReleases(self):
 
 		for releaseId in self.releaseIndex:

@@ -65,6 +65,8 @@ def commandShell():
 			print "a : add release"
 			print "l : reLoad"
 			print "b : Barcode search"
+			print "d : Delete release"
+			print "k : Check releases"
 		elif (input.startswith('s')):
 			interactiveSort(c)
 		elif (input.startswith('l')):
@@ -137,5 +139,9 @@ def commandShell():
 		elif (input.startswith('d')):
 			print "Enter release ID to delete: ",
 			releaseId = getInput()
+		elif (input.startswith('k')):
+			print "Running checks..."
+			c.checkReleases()
+			print "DONE"
 			
 commandShell()
