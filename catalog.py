@@ -157,6 +157,8 @@ class Catalog(object):
 					releaseFmt = getFormatFromUri(self.releaseIndex[sortId].releaseEvents[0].format)
 					if ReleaseFormat(releaseFmt) == matchFormat:
 						filteredSortKeys.append((sortId, sortStr))
+				else:
+					print "No release events for " + sortId + ", " + sortStr
 		else:
 			filteredSortKeys = sortKeys
 
@@ -168,7 +170,7 @@ class Catalog(object):
 		"""
 
 		if matchFormat:
-			print self.releaseIndex[releaseId].releaseEvents[0].format
+			#print self.releaseIndex[releaseId].releaseEvents[0].format
 			self.getSortedList(
 				ReleaseFormat(
 					getFormatFromUri(
@@ -337,6 +339,7 @@ class Catalog(object):
 			self.refreshMetaData(releaseId, olderThan)
 
 	def checkDiscIds(self):
+		"""Deprecated, remove"""
 		count = 0
 		for discId in os.listdir('disc-id'):
 			if discId.startswith('.') or len(discId) != 28: 
@@ -349,5 +352,17 @@ class Catalog(object):
 				print tocf.read()
 				tocf.close()
 		return count
+
+	def checkReleases(self):
+
+		for releaseId in self.releaseIndex:
+			if self.releaseIndex[releaseId].releaseEvents:
+				if not self.releaseIndex[releaseId].releaseEvents[0].barcode:
+					print "No barcode for " + releaseId + " " + self.formatDiscSortKey(releaseId) + " (" + getFormatFromUri(self.releaseIndex[releaseId].releaseEvents[0].format) + ")"
+				if not self.releaseIndex[releaseId].releaseEvents[0].format:
+					print "No format for " + releaseId + " " + self.formatDiscSortKey(releaseId)
+
+			else:
+				print "No release events for", releaseId + " " + self.formatDiscSortKey(releaseId)
 
 
