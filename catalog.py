@@ -202,12 +202,35 @@ class Catalog(object):
 		print "%d words in search table" % len(self.wordMap)
 
 	def makeHtml(self, fileName="catalog.html"):
+		import amazonservices
 		htf = open(fileName, 'w')
 
 		print >> htf, """<!DOCTYPE HTML>
 <html>
 <head>
 <title>Music Catalog</title>
+<style type="text/css">
+.hasTooltip {
+    position:relative;
+}
+.hasTooltip span {
+    display:none;
+}
+
+.hasTooltip:hover span {
+    display:block;
+    position:absolute;
+    z-index:15;
+    background-color:black;
+    border-radius:5px;
+    color:white;
+    box-shadow:1px 1px 3px gray;
+    padding:5px;
+    top:1.3em;
+    left:0px;   
+    white-space: nowrap;
+}
+</style>
 </head>
 <body>"""
 
@@ -224,20 +247,27 @@ class Catalog(object):
 	<th>Label</th>
 	<th>Catalog #</th>
 	<th>Barcode</th>
+	<th>ASIN</th>
 	<th>Format</th>
 </tr>
 	"""
 			for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
 				release = self.releaseIndex[releaseId]
+				if release.asin:
+					coverartUrl = amazonservices.getAsinImageUrl(release.asin, amazonservices.AMAZON_SERVER["amazon.com"], 'S')
+				else:
+					coverartUrl = None
+
 				print >> htf, "<tr>"
 				print >> htf, "<!-- <td>"+("%04d" % sortIndex)+"</td> -->"
 				print >> htf, "<td><a href=\""+release.artist.id+"\">"+self.releaseIndex[releaseId].artist.name.encode('ascii', 'xmlcharrefreplace')+"</a></td>"
-				print >> htf, "<td><a href=\""+release.id+"\">"+release.title.encode('ascii', 'xmlcharrefreplace')+"</a></td>"
+				print >> htf, "<td><a href=\""+release.id+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + ">"+release.title.encode('ascii', 'xmlcharrefreplace')+("<span><img src=\""+ coverartUrl +"\"></span>" if coverartUrl else "") + "</a></td>"
 				print >> htf, "<td>"+(release.releaseEvents[0].date if len(release.releaseEvents) else '')+"</td>"
 				print >> htf, "<td>"+(release.releaseEvents[0].country.encode('ascii', 'xmlcharrefreplace') if len(release.releaseEvents) and release.releaseEvents[0].country else '')+"</td>"
 				print >> htf, "<td>"+("<a href=\""+release.releaseEvents[0].label.id+"\">"+release.releaseEvents[0].label.name.encode('ascii', 'xmlcharrefreplace')+"</a>" if len(release.releaseEvents) and release.releaseEvents[0].label else '')+"</td>"
 				print >> htf, "<td>"+(release.releaseEvents[0].catalogNumber if len(release.releaseEvents) and release.releaseEvents[0].catalogNumber else '')+"</td>"
 				print >> htf, "<td>"+(release.releaseEvents[0].barcode if len(release.releaseEvents) and release.releaseEvents[0].barcode else '')+"</td>"
+				print >> htf, "<td>"+("<a href=\"" + amazonservices.getAsinProductUrl(release.asin) + "\">" + release.asin + "</a>" if release.asin else '')+"</td>"
 				print >> htf, "<td>"+("<a href=\""+release.releaseEvents[0].format+"\">"+getFormatFromUri(release.releaseEvents[0].format, escape=False)+"</a>" if len(release.releaseEvents) else '')+"</td>"
 				print >> htf, "</tr>"
 			print >> htf, "</table>"
