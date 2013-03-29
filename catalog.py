@@ -420,3 +420,24 @@ class Catalog(object):
 		for releaseId in self.releaseIndex.keys():
 			self.getCoverArt(releaseId)
 
+	def checkLevenshteinDistances(self):
+		import Levenshtein
+		dists = []
+		for leftIdx in range(len(self.releaseIndex)):
+			for rightIdx in range(leftIdx, len(self.releaseIndex)):
+				if  leftIdx == rightIdx :
+					continue
+				leftId = self.releaseIndex.keys()[leftIdx]
+				rightId = self.releaseIndex.keys()[rightIdx]
+				dist = Levenshtein.distance(self.formatDiscSortKey(leftId),
+					self.formatDiscSortKey(rightId))
+
+				dists.append((dist,leftId, rightId))
+
+		return sorted(dists, key=lambda sortKey: sortKey[0])
+
+	def getTopSimilarities(self, number=100):
+		lds = self.checkLevenshteinDistances()
+		for i in range (number):
+			print str(lds[i][0]) + "\t" + self.formatDiscInfo(lds[i][1]) + " <-> " + self.formatDiscInfo(lds[i][2])
+
