@@ -3,6 +3,8 @@ import os, sys, time, re
 import musicbrainz2.wsxml as wsxml
 import musicbrainz2.utils as mbutils
 import musicbrainz2.webservice as ws
+import amazonservices
+import urllib2
 
 overWriteAll = False
 lastQueryTime = 0
@@ -230,13 +232,23 @@ class Catalog(object):
     left:0px;   
     white-space: nowrap;
 }
+
+.hasTooltip span img {
+    display:none !important;
+    visibility:hidden;
+}
+
+.hasTooltip:hover span img {
+    display:block;
+    visibility:visible;
+}
 </style>
 </head>
 <body>"""
 
 		for releaseType in [ReleaseFormat("CD"), ReleaseFormat("Vinyl")]:
 			sortedList = self.getSortedList(releaseType)
-			print >> htf, "<h2>" + releaseType.fmtStr + (" (%d records)" % len(sortedList)) + "</h2>"
+			print >> htf, "<h2>" + releaseType.fmtStr + (" (%d Releases)" % len(sortedList)) + "</h2>"
 			print >> htf, "<table>"
 			print >> htf, """<tr>
 	<!-- <th>Sort Index</th> -->
@@ -380,4 +392,31 @@ class Catalog(object):
 			else:
 				print "No release events for", releaseId + " " + self.formatDiscSortKey(releaseId)
 
+	def getCoverArt(self, releaseId):
+		global lastQueryTime
+		release = self.releaseIndex[releaseId]
+		if release.asin:
+			imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
+			if os.path.isfile(imgPath):
+				print "Already have it"
+			else:
+				# Don't hammer the server
+				if lastQueryTime > (time.time() - 0.1):
+					print "Waiting...", 
+					time.sleep(0.1)
+				lastQueryTime = time.time()
+				response = urllib2.urlopen(
+					amazonservices.getAsinImageUrl(release.asin,
+						amazonservices.AMAZON_SERVER["amazon.com"]))
+				imgf = open(imgPath, 'w')
+				print "Wrote %d bytes to %s" %(os.path.getsize(imgPath), imgPath)
+				imgf.write(response.read())
+				imgf.close()
+				response.close()
+		else:
+			print "No ASIN for", releaseId
+
+	def refreshCoverArt(self):
+		for releaseId in self.releaseIndex.keys():
+			self.getCoverArt(releaseId)
 
