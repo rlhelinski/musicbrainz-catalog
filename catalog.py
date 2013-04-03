@@ -84,10 +84,8 @@ class Catalog(object):
 						self.barCodeMap[releaseEvent.barcode].append(releaseId)
 					else:
 						self.barCodeMap[releaseEvent.barcode] = [releaseId]
-			# 
-			# Should be a function
+			# for searching later
 			words = self.getReleaseWords(release)
-			# Another function 
 			self.mapWordsToRelease(words, releaseId)
 
 	def getReleaseWords(self, release):
@@ -111,13 +109,15 @@ class Catalog(object):
 		
 	def _search(self, query):
 		query_words = query.lower().split(' ')
-		matches = []
+		matches = set()
 		for word in query_words:
 			if word in self.wordMap:
 				if len(matches) > 0:
-					matches = set(matches) & set(self.wordMap[word])
+					matches = matches & set(self.wordMap[word])
 				else:
 					matches = set(self.wordMap[word])
+			else:
+				matches = set()
 			
 		return matches
 
@@ -134,17 +134,18 @@ class Catalog(object):
 	def formatDiscSortKey(self, releaseId):
 		release = self.releaseIndex[releaseId]
 			
-		#try:
-		#	return ' - '.join ( [
-		#		release.artist.getSortName(), \
-		#		release.releaseEvents[0].date, \
-		#		release.title, \
-		#		] ) #.encode('ascii', 'xmlcharrefreplace')
-		#except IndexError as e:
-		#	print "No date for: ", releaseId
+		try:
+			return ' - '.join ( [
+				release.artist.getSortName(), \
+				release.releaseEvents[0].date, \
+				release.title, \
+				] ) #.encode('ascii', 'xmlcharrefreplace')
+		except IndexError as e:
+			print "No releases or date for: ", releaseId
 
 		return ' - '.join ( [
 			release.artist.getSortName(), \
+			"0", \
 			release.title, \
 			] ) #.encode('ascii', 'xmlcharrefreplace')
 
@@ -233,15 +234,6 @@ class Catalog(object):
     white-space: nowrap;
 }
 
-.hasTooltip span img {
-    display:none !important;
-    visibility:hidden;
-}
-
-.hasTooltip:hover span img {
-    display:block;
-    visibility:visible;
-}
 </style>
 </head>
 <body>"""
