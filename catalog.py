@@ -5,6 +5,8 @@ import musicbrainz2.utils as mbutils
 import musicbrainz2.webservice as ws
 import amazonservices
 import urllib2
+import extradata
+from datetime import datetime
 
 overWriteAll = False
 lastQueryTime = 0
@@ -174,10 +176,14 @@ class Catalog(object):
 
 		if matchFormat:
 			#print self.releaseIndex[releaseId].releaseEvents[0].format
-			self.getSortedList(
-				ReleaseFormat(
-					getFormatFromUri(
-						self.releaseIndex[releaseId].releaseEvents[0].format)))
+			try:
+				self.getSortedList(
+					ReleaseFormat(
+						getFormatFromUri(
+							self.releaseIndex[releaseId].releaseEvents[0].format)))
+			except IndexError as e:
+				print "No format for release"
+				self.getSortedList()
 		else:
 			self.getSortedList()
 
@@ -253,10 +259,14 @@ class Catalog(object):
 	<th>Barcode</th>
 	<th>ASIN</th>
 	<th>Format</th>
+	<th>Date Added</th>
 </tr>
 	"""
 			for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
 				release = self.releaseIndex[releaseId]
+				ed = extradata.ExtraData(releaseId)
+				ed.load()
+				
 				if release.asin:
 					coverartUrl = amazonservices.getAsinImageUrl(release.asin, amazonservices.AMAZON_SERVER["amazon.com"], 'S')
 				else:
@@ -273,6 +283,7 @@ class Catalog(object):
 				print >> htf, "<td>"+(release.releaseEvents[0].barcode if len(release.releaseEvents) and release.releaseEvents[0].barcode else '')+"</td>"
 				print >> htf, "<td>"+("<a href=\"" + amazonservices.getAsinProductUrl(release.asin) + "\">" + release.asin + "</a>" if release.asin else '')+"</td>"
 				print >> htf, "<td>"+("<a href=\""+release.releaseEvents[0].format+"\">"+getFormatFromUri(release.releaseEvents[0].format, escape=False)+"</a>" if len(release.releaseEvents) else '')+"</td>"
+				print >> htf, "<td>"+(datetime.fromtimestamp(ed.addDates[0]).strftime('%Y-%m-%d') if len(ed.addDates) else '')+"</td>"
 				print >> htf, "</tr>"
 			print >> htf, "</table>"
 			
