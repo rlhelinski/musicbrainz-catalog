@@ -120,4 +120,13 @@ from catalog import *
 c = Catalog()
 c.writeXml(releaseId, c.getReleaseMeta(releaseId))
 
+from extradata import *
+ed = ExtraData(releaseId)
+try:
+	ed.load()
+except IOError as e:
+	"Doesn't matter"
+ed.addDate()
+ed.save()
+
 # EOF
