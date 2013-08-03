@@ -48,6 +48,7 @@ else:
 
 # Command Shell
 def commandShell():
+	global c
 	while (True):
 		print "Enter command ('h' for help): ",
 		input = getInput().lower()
@@ -118,7 +119,10 @@ def commandShell():
 			c.refreshMetaData(newReleaseId, olderThan=60)
 		elif (input.startswith('t')):
 			print "Make HTML"
-			os.system("python makeHtml.py")
+			#os.system("python makeHtml.py")
+			c = Catalog()
+			c.load()
+			c.makeHtml()
 			shutil.copy('catalog.html', '../Public/catalog.html')
 		elif (input.startswith('a')):
 			print "Enter release ID: ",
@@ -144,4 +148,5 @@ def commandShell():
 			c.checkReleases()
 			print "DONE"
 			
-commandShell()
+if __name__ == "__main__":
+	commandShell()
