@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-import os, time
+import os, time, datetime
 
 import sys
 def getInput():
@@ -35,6 +35,9 @@ class ExtraData:
 		self.path = os.path.join(path, releaseId, 'extra.xml')
 		#self.root = ET.Element('extra')
 		self.purchases = []
+		self.addDates = []
+		self.comment = ""
+		self.rating = 0
 
 	def load(self):
 		tree = ET.parse(self.path)
@@ -44,6 +47,8 @@ class ExtraData:
 				purchase.attrib['date'], \
 				purchase.attrib['price'], \
 				purchase.attrib['vendor'] ) )
+		for added in root.findall('./added'):
+			self.addDates.append(float(added.attrib['date']))
 		for comment in root.findall('./comment'):
 			self.comment = comment.text
 		for rating in root.findall('./rating'):
@@ -58,6 +63,10 @@ class ExtraData:
 				'date':purchase.date, \
 				'price':purchase.price, \
 				'vendor':purchase.vendor})
+			pe.tail="\n"
+		for addDate in self.addDates:
+			pe = ET.SubElement(root, 'added', attrib={ \
+				'date':"%d" % addDate})
 			pe.tail="\n"
 		c = ET.SubElement(root, 'comment')
 		c.text=self.comment
@@ -79,6 +88,9 @@ class ExtraData:
 			"\n".join([("Purchased on "+purchase.date+" from "+purchase.vendor+" for "+purchase.price) for purchase in self.purchases]) + \
 			"\nComment: " + self.comment + \
 			"\nRating: %d / 5" % self.rating
+
+	def addDate(self, date=time.time()):
+		self.addDates.append(date)
 
 	def interactiveEntry(self):
 		print "Welcome!"
