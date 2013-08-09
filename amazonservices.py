@@ -35,33 +35,33 @@ COVERART_SITES = (
 # so we need to make sure we grab an existing image.
 AMAZON_SERVER = {
     "amazon.jp": {
-		"server": "ec1.images-amazon.com",
-		"id"    : "09",
-	},
+                "server": "ec1.images-amazon.com",
+                "id"    : "09",
+        },
     "amazon.co.jp": {
-		"server": "ec1.images-amazon.com",
-		"id"    : "09",
-	},
+                "server": "ec1.images-amazon.com",
+                "id"    : "09",
+        },
     "amazon.co.uk": {
-		"server": "ec1.images-amazon.com",
-		"id"    : "02",
-	},
+                "server": "ec1.images-amazon.com",
+                "id"    : "02",
+        },
     "amazon.de": {
-		"server": "ec2.images-amazon.com",
-		"id"    : "03",
-	},
+                "server": "ec2.images-amazon.com",
+                "id"    : "03",
+        },
     "amazon.com": {
-		"server": "ec1.images-amazon.com",
-		"id"    : "01",
-	},
+                "server": "ec1.images-amazon.com",
+                "id"    : "01",
+        },
     "amazon.ca": {
-		"server": "ec1.images-amazon.com",
-		"id"    : "01",                   # .com and .ca are identical
-	},
+                "server": "ec1.images-amazon.com",
+                "id"    : "01",                   # .com and .ca are identical
+        },
     "amazon.fr": {
-		"server": "ec1.images-amazon.com",
-		"id"    : "08"
-	},
+                "server": "ec1.images-amazon.com",
+                "id"    : "08"
+        },
 }
 
 AMAZON_IMAGE_PATH = '/images/P/%s.%s.%sZZZZZZZ.jpg'
@@ -71,18 +71,17 @@ AMAZON_ASIN_URL_REGEX = re.compile(r'^http://(?:www.)?(.*?)(?:\:[0-9]+)?/.*/([0-
 AMAZON_PRODUCT_URL = 'http://www.amazon.com/gp/product/%s?tag=musicbrainz0d-20'
 
 def getAsinFromUrl(text):
-	match = AMAZON_ASIN_URL_REGEX.match(text)
-	if match != None:
-		asinHost = match.group(1)
-        asin = match.group(2);
-        if AMAZON_SERVER.has_key(asinHost):
-            serverInfo = AMAZON_SERVER[asinHost]
-        else:
-            serverInfo = AMAZON_SERVER['amazon.com']
+    match = AMAZON_ASIN_URL_REGEX.match(text)
+    if match != None:
+        asinHost = match.group(1)
+    asin = match.group(2);
+    if AMAZON_SERVER.has_key(asinHost):
+        serverInfo = AMAZON_SERVER[asinHost]
+    else:
+        serverInfo = AMAZON_SERVER['amazon.com']
 
 def getAsinImageUrl(asin, serverInfo, size='L'):
-	return "http://" + serverInfo['server'] + "/" + AMAZON_IMAGE_PATH % (asin, serverInfo['id'], size)
+    return "http://" + serverInfo['server'] + "/" + AMAZON_IMAGE_PATH % (asin, serverInfo['id'], size)
 
 def getAsinProductUrl(asin):
-	return AMAZON_PRODUCT_URL % (asin)
-
+    return AMAZON_PRODUCT_URL % (asin)
