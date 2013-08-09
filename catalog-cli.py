@@ -10,7 +10,6 @@ c.load()
 def getInput():
     return sys.stdin.readline().strip()
 
-# Examples
 def interactiveSort(c):
     while(True):
         print "Enter search terms: ",
@@ -39,14 +38,6 @@ def interactiveSort(c):
         else:
             break
 
-if len(sys.argv) > 1:
-    search_terms = sys.argv
-    del search_terms[0]
-    c.search(' '.join(search_terms))
-else:
-    c.report()
-
-# Command Shell
 def commandShell():
     global c
     while (True):
@@ -68,12 +59,15 @@ def commandShell():
             print "b : Barcode search"
             print "d : Delete release"
             print "k : Check releases"
+
         elif (input.startswith('s')):
             interactiveSort(c)
+
         elif (input.startswith('l')):
             print "Reloading database...",
             c.load()
             print "DONE"
+
         elif (input.startswith('e')):
             print "Edit extra data"
             print "Enter release ID: ",
@@ -92,6 +86,7 @@ def commandShell():
             if modify.lower().startswith('y'):
                 ed.interactiveEntry()
                 ed.save()
+
         elif (input.startswith('r')):
             print "Refresh Release"
             print "Enter release ID [a for all]: ",
@@ -103,6 +98,7 @@ def commandShell():
                 continue
             else:
                 c.refreshMetaData(releaseId, olderThan=60)
+
         elif (input.startswith('c')):
             print "Change Release"
             print "Enter release ID: ",
@@ -117,19 +113,17 @@ def commandShell():
             c.load()
 
             c.refreshMetaData(newReleaseId, olderThan=60)
+
         elif (input.startswith('t')):
             print "Make HTML"
-            #os.system("python makeHtml.py")
             c = Catalog()
             c.load()
             c.makeHtml()
             shutil.copy('catalog.html', '../Public/catalog.html')
+
         elif (input.startswith('a')):
             print "Enter release ID: ",
             releaseId = getInput()
-            #if releaseId.startswith("http://musicbrainz.org/release/"):
-                # TODO this should be on in refreshMetaData()
-                #releaseId = releaseId.replace("http://musicbrainz.org/release/", "")
             if releaseId in c.releaseIndex:
                 print "Release already exists"
                 continue
@@ -148,13 +142,22 @@ def commandShell():
             barCode = getInput()
             for releaseId in c.barCodeMap[barCode]:
                 print c.formatDiscInfo(releaseId)
+
         elif (input.startswith('d')):
             print "Enter release ID to delete: ",
             releaseId = getInput()
+
         elif (input.startswith('k')):
             print "Running checks..."
             c.checkReleases()
             print "DONE"
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        search_terms = sys.argv
+        del search_terms[0]
+        c.search(' '.join(search_terms))
+    else:
+        c.report()
+
     commandShell()
