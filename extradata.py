@@ -33,7 +33,6 @@ class PurchaseEvent:
 class ExtraData:
     def __init__(self, releaseId, path='release-id'):
         self.path = os.path.join(path, releaseId, 'extra.xml')
-        #self.root = ET.Element('extra')
         self.purchases = []
         self.addDates = []
         self.comment = ""
@@ -77,9 +76,6 @@ class ExtraData:
         return root
 
     def save(self):
-        # <?xml version="1.0" encoding="UTF-8"?>
-
-        #ET.dump(self.tree)
         et = ET.ElementTree(self.toElement())
         et.write(self.path)
 

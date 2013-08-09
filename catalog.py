@@ -97,7 +97,6 @@ class Catalog(object):
                 release.artist.getName() ] + \
                 [track.title for track in release.tracks] \
                 :
-            #words.extend(field.lower().split(' '))
             words.extend(re.findall(r"\w+", field.lower(), re.UNICODE))
         return words
 
@@ -141,7 +140,7 @@ class Catalog(object):
                     release.artist.getSortName(), \
                     release.releaseEvents[0].date, \
                     release.title, \
-                    ] ) #.encode('ascii', 'xmlcharrefreplace')
+                    ] ) 
         except IndexError as e:
             print "No releases or date for: ", releaseId
 
@@ -149,7 +148,7 @@ class Catalog(object):
                 release.artist.getSortName(), \
                 "0", \
                 release.title, \
-                ] ) #.encode('ascii', 'xmlcharrefreplace')
+                ] ) 
 
     def getSortedList(self, matchFormat=ReleaseFormat()):
         sortKeys = [(releaseId, self.formatDiscSortKey(releaseId)) for releaseId in self.releaseIndex.keys()]
@@ -175,7 +174,6 @@ class Catalog(object):
         """
 
         if matchFormat:
-            #print self.releaseIndex[releaseId].releaseEvents[0].format
             try:
                 self.getSortedList(
                         ReleaseFormat(
@@ -204,8 +202,6 @@ class Catalog(object):
             print self.formatDiscInfo(releaseId)
 
     def report(self):
-        #for releaseId in self.releaseIndex.keys():
-            #print self.formatDiscInfo(releaseId)
         print
         print "%d release-id records" % len(self.releaseIndex)
         print "%d words in search table" % len(self.wordMap)
@@ -314,8 +310,6 @@ white-space: nowrap;
                         #ratings=True,
                         #isrcs=True
                         ))
-        #filter = ws.ReleaseFilter()
-        #results_meta = q.getReleases()
         return results_meta
 
     def writeXml(self, releaseId, metaData):
