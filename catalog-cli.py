@@ -108,11 +108,7 @@ def commandShell():
                 continue
             print "Enter new release ID: ",
             newReleaseId = getInput()
-            os.rename(os.path.join('release-id', releaseId),
-                    os.path.join('release-id', newReleaseId) )
-            c.load()
-
-            c.refreshMetaData(newReleaseId, olderThan=60)
+            c.renameRelease(releaseId, newReleaseId)
 
         elif (input.startswith('t')):
             print "Make HTML"

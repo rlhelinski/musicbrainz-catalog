@@ -63,6 +63,13 @@ class Catalog(object):
         self.discIdMap = dict()
         self.barCodeMap = dict()
 
+    def renameRelease(self, releaseId, newReleaseId):
+        os.rename(os.path.join('release-id', releaseId),
+                os.path.join('release-id', newReleaseId) )
+        self.load()
+        self.refreshMetaData(newReleaseId, olderThan=60)
+
+
     def load(self):
         self.releaseIndex = dict()
         # To map ReleaseId -> Format
@@ -215,7 +222,7 @@ class Catalog(object):
 
     def report(self):
         print
-        print "%d release-id records" % len(self.releaseIndex)
+        print "%d releases" % len(self.releaseIndex)
         print "%d words in search table" % len(self.wordMap)
 
     def makeHtml(self, fileName="catalog.html"):
@@ -301,7 +308,7 @@ white-space: nowrap;
                 print >> htf, "</tr>"
             print >> htf, "</table>"
 
-        print >> htf, "<p>%d release records</p>" % len(self.releaseIndex)
+        print >> htf, "<p>%d releases</p>" % len(self.releaseIndex)
 
         print >> htf, """</body>
 </html>"""
@@ -394,7 +401,8 @@ white-space: nowrap;
         releaseId = getReleaseId(releaseId)
         shutil.rmtree(os.path.join(self.rootPath, releaseId))
         # also drop from memory
-        del self.releaseIndex[releaseId]
+        #del self.releaseIndex[releaseId] # TODO necessary?
+        self.load()
 
     def refreshAllMetaData(self, olderThan=0):
         for releaseId in self.releaseIndex.keys():
