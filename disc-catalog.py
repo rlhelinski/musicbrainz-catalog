@@ -12,7 +12,8 @@ from musicbrainz2.disc import readDisc, getSubmissionUrl, DiscError
 import musicbrainz2.webservice as ws
 import musicbrainz2.wsxml as wsxml
 import musicbrainz2.utils as mbutils
-from extradata import *
+from mbcatalog.catalog import *
+from mbcatalog.extradata import *
 
 try:
     # Read the disc in the default disc drive. If necessary, you can pass
@@ -115,8 +116,6 @@ releaseId = mbutils.extractUuid(results_meta.releaseResults[choice].release._id)
 if not releaseId:
     print "It looks like MusicBrainz only has a CD stub for this TOC."
     sys.exit(1)
-
-from catalog import *
 
 c = Catalog()
 c.writeXml(releaseId, c.getReleaseMeta(releaseId))

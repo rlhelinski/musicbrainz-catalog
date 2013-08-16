@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-from catalog import *
-from extradata import *
+from mbcatalog.catalog import *
+from mbcatalog.extradata import *
 import os, shutil
 
 c = Catalog()
@@ -124,6 +124,9 @@ def commandShell():
         elif (input.startswith('a')):
             print "Enter release ID: ",
             releaseId = getInput()
+            if not releaseId:
+                print "No input"
+                continue
             if releaseId in c.releaseIndex:
                 print "Release already exists"
                 continue

@@ -1,4 +1,3 @@
-
 import os, sys, time, re
 import musicbrainz2.wsxml as wsxml
 import musicbrainz2.utils as mbutils
@@ -261,7 +260,10 @@ white-space: nowrap;
             for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
                 release = self.releaseIndex[releaseId]
                 ed = extradata.ExtraData(releaseId)
-                ed.load()
+                try: 
+                    ed.load()
+                except IOError as e:
+                    print "No extradata for " + releaseId
 
                 if release.asin:
                     coverartUrl = amazonservices.getAsinImageUrl(release.asin, amazonservices.AMAZON_SERVER["amazon.com"], 'S')
