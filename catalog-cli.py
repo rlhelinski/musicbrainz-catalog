@@ -48,7 +48,7 @@ def commandShell():
             break
 
         if (input.startswith('h')):
-            print "e : edit extra data"
+            print "\re : edit extra data"
             print "s : search for releases"
             print "h : this help"
             print "r : refresh"
