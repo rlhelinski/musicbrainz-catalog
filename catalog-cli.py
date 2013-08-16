@@ -130,7 +130,11 @@ def commandShell():
             if releaseId in c.releaseIndex:
                 print "Release already exists"
                 continue
-            c.refreshMetaData(releaseId)
+            try:
+                c.refreshMetaData(releaseId)
+            except ws.ResourceNotFoundError as e:
+                print "Release not found"
+                continue
 
             ed = ExtraData(releaseId)
             try:
