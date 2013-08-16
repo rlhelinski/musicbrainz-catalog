@@ -5,6 +5,7 @@ import musicbrainz2.webservice as ws
 import amazonservices
 import urllib2
 import extradata
+import shutil
 from datetime import datetime
 
 overWriteAll = False
@@ -24,15 +25,24 @@ def getFormatFromUri(uriStr, escape=True):
     else:
         return formatStr
 
+def getReleaseId(releaseId):
+    if releaseId.startswith('http'):
+        return mbutils.extractUuid(releaseId, 'release')
+    else:
+        return releaseId
+
 class ReleaseFormat(object):
     def __init__(self, fmtStr=""):
         self.fmtStr = fmtStr
 
     def isVinyl(self):
-        return (self.fmtStr in ["Vinyl", "7\"", "10\"", "12\""])
+        return self.fmtStr == "Vinyl" or \
+            self.fmtStr.endswith('7"') or \
+            self.fmtStr.endswith('10"') or \
+            self.fmtStr.endswith('12"')
 
     def isCD(self):
-        return not self.isVinyl() and self.fmtStr != ""
+        return self.fmtStr.endswith('CD')
 
     def isAny(self):
         return self.fmtStr == ""
@@ -369,17 +379,22 @@ white-space: nowrap;
     def refreshMetaData(self, releaseId, olderThan=0):
         """Should be renamed to "add release" or something"""
 
-        if releaseId.startswith('http'):
-            releaseId = mbutils.extractUuid(releaseId, 'release')
+        releaseId = getReleaseId(releaseId)
         xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
         if (os.path.isfile(xmlPath) and (os.path.getmtime(xmlPath) > (time.time() - olderThan))):
-            print "Skipping", releaseId, "because it is new"
+            print "Skipping fetch of metadata for ", releaseId, "because it is new"
             return 0
 
         results_meta = self.getReleaseMeta(releaseId)
         self.writeXml(releaseId, results_meta)
         self.load()
         self.getSortedList()
+
+    def deleteRelease(self, releaseId):
+        releaseId = getReleaseId(releaseId)
+        shutil.rmtree(os.path.join(self.rootPath, releaseId))
+        # also drop from memory
+        del self.releaseIndex[releaseId]
 
     def refreshAllMetaData(self, olderThan=0):
         for releaseId in self.releaseIndex.keys():
@@ -404,7 +419,7 @@ white-space: nowrap;
         if release.asin:
             imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
             if os.path.isfile(imgPath):
-                print "Already have it"
+                print "Already have cover art for " + releaseId
             else:
                 # Don't hammer the server
                 if lastQueryTime > (time.time() - 0.1):

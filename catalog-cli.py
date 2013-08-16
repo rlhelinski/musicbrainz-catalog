@@ -71,7 +71,7 @@ def commandShell():
         elif (input.startswith('e')):
             print "Edit extra data"
             print "Enter release ID: ",
-            releaseId = getInput()
+            releaseId = getReleaseId(getInput())
             if releaseId not in c.releaseIndex:
                 print "Release not found"
                 continue
@@ -90,7 +90,7 @@ def commandShell():
         elif (input.startswith('r')):
             print "Refresh Release"
             print "Enter release ID [a for all]: ",
-            releaseId = getInput()
+            releaseId = getReleaseId(getInput())
             if releaseId == "a":
                 c.refreshAllMetaData(60*60)
             elif releaseId not in c.releaseIndex:
@@ -102,7 +102,7 @@ def commandShell():
         elif (input.startswith('c')):
             print "Change Release"
             print "Enter release ID: ",
-            releaseId = getInput()
+            releaseId = getReleaseId(getInput())
             if releaseId not in c.releaseIndex:
                 print "Release not found"
                 continue
@@ -123,7 +123,7 @@ def commandShell():
 
         elif (input.startswith('a')):
             print "Enter release ID: ",
-            releaseId = getInput()
+            releaseId = getReleaseId(getInput())
             if not releaseId:
                 print "No input"
                 continue
@@ -152,7 +152,8 @@ def commandShell():
 
         elif (input.startswith('d')):
             print "Enter release ID to delete: ",
-            releaseId = getInput()
+            releaseId = getReleaseId(getInput())
+            c.deleteRelease(releaseId)
 
         elif (input.startswith('k')):
             print "Running checks..."
