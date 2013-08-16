@@ -44,6 +44,9 @@ class ReleaseFormat(object):
 
 class Catalog(object):
     def __init__(self, rootPath='release-id'):
+        if not os.path.isdir(rootPath):
+            os.mkdir(rootPath)
+            
         self.rootPath = rootPath
         self.releaseIndex = dict()
         self.wordMap = dict()
@@ -312,6 +315,7 @@ white-space: nowrap;
                         #ratings=True,
                         #isrcs=True
                         ))
+
         return results_meta
 
     def writeXml(self, releaseId, metaData):
