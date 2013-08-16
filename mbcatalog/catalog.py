@@ -269,14 +269,17 @@ white-space: nowrap;
                     print "No extradata for " + releaseId
 
                 if release.asin:
-                    coverartUrl = amazonservices.getAsinImageUrl(release.asin, amazonservices.AMAZON_SERVER["amazon.com"], 'S')
+                    #coverartUrl = amazonservices.getAsinImageUrl(release.asin, amazonservices.AMAZON_SERVER["amazon.com"], 'S')
+                    # Refer to local copy instead
+                    self.getCoverArt(releaseId)
+                    coverartUrl = os.path.join(self.rootPath, releaseId, 'cover.jpg')
                 else:
                     coverartUrl = None
 
                 print >> htf, "<tr>"
                 print >> htf, "<!-- <td>"+("%04d" % sortIndex)+"</td> -->"
                 print >> htf, "<td><a href=\""+release.artist.id+"\">"+self.releaseIndex[releaseId].artist.name.encode('ascii', 'xmlcharrefreplace')+"</a></td>"
-                print >> htf, "<td><a href=\""+release.id+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + ">"+release.title.encode('ascii', 'xmlcharrefreplace')+("<span><img src=\""+ coverartUrl +"\"></span>" if coverartUrl else "") + "</a></td>"
+                print >> htf, "<td><a href=\""+release.id+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + ">"+release.title.encode('ascii', 'xmlcharrefreplace')+("<span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" if coverartUrl else "") + "</a></td>"
                 print >> htf, "<td>"+(release.releaseEvents[0].date if len(release.releaseEvents) else '')+"</td>"
                 print >> htf, "<td>"+(release.releaseEvents[0].country.encode('ascii', 'xmlcharrefreplace') if len(release.releaseEvents) and release.releaseEvents[0].country else '')+"</td>"
                 print >> htf, "<td>"+("<a href=\""+release.releaseEvents[0].label.id+"\">"+release.releaseEvents[0].label.name.encode('ascii', 'xmlcharrefreplace')+"</a>" if len(release.releaseEvents) and release.releaseEvents[0].label else '')+"</td>"
@@ -408,13 +411,13 @@ white-space: nowrap;
                     print "Waiting...",
                     time.sleep(0.1)
                 lastQueryTime = time.time()
-                response = urllib2.urlopen(
-                        amazonservices.getAsinImageUrl(release.asin,
-                                amazonservices.AMAZON_SERVER["amazon.com"]))
+                imgUrl = amazonservices.getAsinImageUrl(release.asin, amazonservices.AMAZON_SERVER["amazon.com"])
+                print imgUrl
+                response = urllib2.urlopen( imgUrl )
                 imgf = open(imgPath, 'w')
-                print "Wrote %d bytes to %s" %(os.path.getsize(imgPath), imgPath)
                 imgf.write(response.read())
                 imgf.close()
+                print "Wrote %d bytes to %s" %(os.path.getsize(imgPath), imgPath)
                 response.close()
         else:
             print "No ASIN for", releaseId
