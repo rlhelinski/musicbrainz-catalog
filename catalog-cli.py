@@ -44,7 +44,7 @@ def commandShell():
         print "Enter command ('h' for help): ",
         input = getInput().lower()
 
-        if not input:
+        if not input or input.startswith('q'):
             break
 
         if (input.startswith('h')):
@@ -59,6 +59,7 @@ def commandShell():
             print "b : Barcode search"
             print "d : Delete release"
             print "k : Check releases"
+            print "q : quit"
 
         elif (input.startswith('s')):
             interactiveSort(c)
