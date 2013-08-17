@@ -288,7 +288,7 @@ white-space: nowrap;
                 if release.asin:
                     #coverartUrl = amazonservices.getAsinImageUrl(release.asin, amazonservices.AMAZON_SERVER["amazon.com"], 'S')
                     # Refer to local copy instead
-                    self.getCoverArt(releaseId)
+                    self.getCoverArt(releaseId, quiet=True)
                     coverartUrl = os.path.join(self.rootPath, releaseId, 'cover.jpg')
                 else:
                     coverartUrl = None
@@ -421,13 +421,15 @@ white-space: nowrap;
             else:
                 print "No release events for", releaseId + " " + self.formatDiscSortKey(releaseId)
 
-    def getCoverArt(self, releaseId):
+    def getCoverArt(self, releaseId, quiet=False):
         global lastQueryTime
         release = self.releaseIndex[releaseId]
         if release.asin:
             imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
             if os.path.isfile(imgPath):
-                print "Already have cover art for " + releaseId
+                if not quiet:
+                    print "Already have cover art for " + releaseId + ", skipping"
+                return
             else:
                 # Don't hammer the server
                 if lastQueryTime > (time.time() - 0.1):
