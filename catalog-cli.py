@@ -38,6 +38,25 @@ def interactiveSort(c):
         else:
             break
 
+
+
+shellCommands = {
+    'e' : 'edit extra data',
+    's' : 'search for releases',
+    'h' : 'this help',
+    'r' : 'refresh',
+    't' : 'hTml',
+    'c' : 'change release',
+    'a' : 'add release',
+    'l' : 'reLoad',
+    'b' : 'barcode search',
+    'd' : 'delete release',
+    'k' : 'check releases',
+    'q' : 'quit',
+    }
+
+
+
 def commandShell():
     global c
     while (True):
@@ -48,18 +67,10 @@ def commandShell():
             break
 
         if (input.startswith('h')):
-            print "\re : edit extra data"
-            print "s : search for releases"
-            print "h : this help"
-            print "r : refresh"
-            print "t : hTml"
-            print "c : change release"
-            print "a : add release"
-            print "l : reLoad"
-            print "b : Barcode search"
-            print "d : Delete release"
-            print "k : Check releases"
-            print "q : quit"
+            print "\r",
+            #for letter, descr in shellCommands.items():
+            for letter in sorted(shellCommands.keys()):
+                print letter + " : " + shellCommands[letter]
 
         elif (input.startswith('s')):
             interactiveSort(c)
