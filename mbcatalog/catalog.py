@@ -36,7 +36,7 @@ class ReleaseFormat(object):
         self.fmtStr = fmtStr
 
     def isVinyl(self):
-        return self.fmtStr == "Vinyl" or \
+        return self.fmtStr.endswith('Vinyl') or \
             self.fmtStr.endswith('7"') or \
             self.fmtStr.endswith('10"') or \
             self.fmtStr.endswith('12"')
@@ -178,6 +178,8 @@ class Catalog(object):
             for sortId, sortStr in sortKeys:
                 if len(self.releaseIndex[sortId].releaseEvents):
                     releaseFmt = getFormatFromUri(self.releaseIndex[sortId].releaseEvents[0].format)
+                    if 'unknown' in releaseFmt:
+                        print releaseFmt + " format for release " + sortId + ", " + sortStr
                     if ReleaseFormat(releaseFmt) == matchFormat:
                         filteredSortKeys.append((sortId, sortStr))
                 else:
