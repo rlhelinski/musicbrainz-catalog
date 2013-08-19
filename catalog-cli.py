@@ -10,7 +10,7 @@ c.load()
 def getInput():
     return sys.stdin.readline().strip()
 
-def interactiveSort(c):
+def shellSearch(c):
     while(True):
         print "Enter search terms: ",
         input = getInput()
@@ -39,20 +39,117 @@ def interactiveSort(c):
             break
 
 
+def shellReload():
+    global c # should rap into a class?
+    print "Reloading database...",
+    c.load()
+    print "DONE"
+
+def shellEditExtra():
+    global c
+    print "Enter release ID: ",
+    releaseId = getReleaseId(getInput())
+    if releaseId not in c.releaseIndex:
+        print "Release not found"
+        return
+    ed = ExtraData(releaseId)
+    try:
+        ed.load()
+        print str(ed)
+        print "Modify? [y/N]",
+    except IOError as e:
+        print "Add? [y/N]",
+    modify = getInput()
+    if modify.lower().startswith('y'):
+        ed.interactiveEntry()
+        ed.save()
+
+def shellRefresh():
+    global c
+    print "Enter release ID [a for all]: ",
+    releaseId = getReleaseId(getInput())
+    if releaseId == "a":
+        c.refreshAllMetaData(60*60)
+    elif releaseId not in c.releaseIndex:
+        print "Release not found"
+        return
+    else:
+        c.refreshMetaData(releaseId, olderThan=60)
+
+def shellChange():
+    global c
+    print "Enter release ID: ",
+    releaseId = getReleaseId(getInput())
+    if releaseId not in c.releaseIndex:
+        print "Release not found"
+        return
+    print "Enter new release ID: ",
+    newReleaseId = getInput()
+    c.renameRelease(releaseId, newReleaseId)
+
+def shellHtml():
+    global c
+    c = Catalog()
+    c.load()
+    c.makeHtml()
+    shutil.copy('catalog.html', '../Public/catalog.html')
+
+def shellAdd():
+    global c
+    print "Enter release ID: ",
+    releaseId = getReleaseId(getInput())
+    if not releaseId:
+        print "No input"
+        return
+    if releaseId in c.releaseIndex:
+        print "Release already exists"
+        return
+    try:
+        c.refreshMetaData(releaseId)
+    except ws.ResourceNotFoundError as e:
+        print "Release not found"
+        return
+
+    ed = ExtraData(releaseId)
+    try:
+        ed.load()
+    except IOError as e:
+        "Doesn't matter"
+    ed.addDate()
+    ed.save()
+
+def shellBarcodeSearch():
+    global c
+    print "Enter barcode: ",
+    barCode = getInput()
+    for releaseId in c.barCodeMap[barCode]:
+        print c.formatDiscInfo(releaseId)
+
+def shellDelete():
+    global c
+    print "Enter release ID to delete: ",
+    releaseId = getReleaseId(getInput())
+    c.deleteRelease(releaseId)
+
+def shellCheck():
+    global c
+    print "Running checks..."
+    c.checkReleases()
+    print "DONE"
 
 shellCommands = {
-    'e' : 'edit extra data',
-    's' : 'search for releases',
-    'h' : 'this help',
-    'r' : 'refresh',
-    't' : 'hTml',
-    'c' : 'change release',
-    'a' : 'add release',
-    'l' : 'reLoad',
-    'b' : 'barcode search',
-    'd' : 'delete release',
-    'k' : 'check releases',
-    'q' : 'quit',
+    'h' : (None, 'this help'),
+    'q' : (None, 'quit'),
+    'e' : (shellEditExtra, 'edit extra data'),
+    's' : (shellSearch, 'search for releases'),
+    'r' : (shellRefresh, 'refresh XML metadata from musicbrainz'),
+    't' : (shellHtml, 'write hTml'),
+    'c' : (shellChange, 'change release'),
+    'a' : (shellAdd, 'add release'),
+    'l' : (shellReload, 'reLoad database from disk'),
+    'b' : (shellBarcodeSearch, 'barcode search'),
+    'd' : (shellDelete, 'delete release'),
+    'k' : (shellCheck, 'check releases'),
     }
 
 
@@ -70,103 +167,16 @@ def commandShell():
             print "\r",
             #for letter, descr in shellCommands.items():
             for letter in sorted(shellCommands.keys()):
-                print letter + " : " + shellCommands[letter]
+                print letter + " : " + shellCommands[letter][1]
 
-        elif (input.startswith('s')):
-            interactiveSort(c)
+        elif input[0] in shellCommands.keys():
+            print shellCommands[input[0]][1]
+            # Call the function
+            (shellCommands[input[0]][0])()
 
-        elif (input.startswith('l')):
-            print "Reloading database...",
-            c.load()
-            print "DONE"
+        else:
+            print "Invalid command"
 
-        elif (input.startswith('e')):
-            print "Edit extra data"
-            print "Enter release ID: ",
-            releaseId = getReleaseId(getInput())
-            if releaseId not in c.releaseIndex:
-                print "Release not found"
-                continue
-            ed = ExtraData(releaseId)
-            try:
-                ed.load()
-                print str(ed)
-                print "Modify? [y/N]",
-            except IOError as e:
-                print "Add? [y/N]",
-            modify = getInput()
-            if modify.lower().startswith('y'):
-                ed.interactiveEntry()
-                ed.save()
-
-        elif (input.startswith('r')):
-            print "Refresh Release"
-            print "Enter release ID [a for all]: ",
-            releaseId = getReleaseId(getInput())
-            if releaseId == "a":
-                c.refreshAllMetaData(60*60)
-            elif releaseId not in c.releaseIndex:
-                print "Release not found"
-                continue
-            else:
-                c.refreshMetaData(releaseId, olderThan=60)
-
-        elif (input.startswith('c')):
-            print "Change Release"
-            print "Enter release ID: ",
-            releaseId = getReleaseId(getInput())
-            if releaseId not in c.releaseIndex:
-                print "Release not found"
-                continue
-            print "Enter new release ID: ",
-            newReleaseId = getInput()
-            c.renameRelease(releaseId, newReleaseId)
-
-        elif (input.startswith('t')):
-            print "Make HTML"
-            c = Catalog()
-            c.load()
-            c.makeHtml()
-            shutil.copy('catalog.html', '../Public/catalog.html')
-
-        elif (input.startswith('a')):
-            print "Enter release ID: ",
-            releaseId = getReleaseId(getInput())
-            if not releaseId:
-                print "No input"
-                continue
-            if releaseId in c.releaseIndex:
-                print "Release already exists"
-                continue
-            try:
-                c.refreshMetaData(releaseId)
-            except ws.ResourceNotFoundError as e:
-                print "Release not found"
-                continue
-
-            ed = ExtraData(releaseId)
-            try:
-                ed.load()
-            except IOError as e:
-                "Doesn't matter"
-            ed.addDate()
-            ed.save()
-
-        elif (input.startswith('b')):
-            print "Enter barcode: ",
-            barCode = getInput()
-            for releaseId in c.barCodeMap[barCode]:
-                print c.formatDiscInfo(releaseId)
-
-        elif (input.startswith('d')):
-            print "Enter release ID to delete: ",
-            releaseId = getReleaseId(getInput())
-            c.deleteRelease(releaseId)
-
-        elif (input.startswith('k')):
-            print "Running checks..."
-            c.checkReleases()
-            print "DONE"
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
