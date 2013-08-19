@@ -92,7 +92,6 @@ def shellHtml():
     c = Catalog()
     c.load()
     c.makeHtml()
-    shutil.copy('catalog.html', '../Public/catalog.html')
 
 def shellAdd():
     global c
