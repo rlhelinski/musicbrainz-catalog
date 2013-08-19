@@ -42,7 +42,11 @@ class ReleaseFormat(object):
             self.fmtStr.endswith('12"')
 
     def isCD(self):
-        return self.fmtStr.endswith('CD')
+        # There are many CDs labeled as '(unknown)' type
+        return self.fmtStr.endswith('CD') or not self.isVinyl()
+
+    def isOther(self):
+        return (not self.isVinyl()) and (not self.isCD())
 
     def isAny(self):
         return self.fmtStr == ""
@@ -161,7 +165,7 @@ class Catalog(object):
                     release.title, \
                     ] ) 
         except IndexError as e:
-            print "No releases or date for: ", releaseId
+            print "No releases or date for: ", releaseId, "-", release.artist.getSortName(), "-", release.title
 
         return ' - '.join ( [
                 release.artist.getSortName(), \
@@ -169,22 +173,23 @@ class Catalog(object):
                 release.title, \
                 ] ) 
 
-    def getSortedList(self, matchFormat=ReleaseFormat()):
+    def getSortedList(self, matchFun=ReleaseFormat.isAny):
         sortKeys = [(releaseId, self.formatDiscSortKey(releaseId)) for releaseId in self.releaseIndex.keys()]
 
         # TODO this could be sped up using a map from ReleaseId -> Format populated at loading time
-        if not matchFormat.isAny():
+        if matchFun != ReleaseFormat.isAny:
             filteredSortKeys = []
             for sortId, sortStr in sortKeys:
                 if len(self.releaseIndex[sortId].releaseEvents):
                     releaseFmt = getFormatFromUri(self.releaseIndex[sortId].releaseEvents[0].format)
                     if 'unknown' in releaseFmt:
                         print releaseFmt + " format for release " + sortId + ", " + sortStr
-                    if ReleaseFormat(releaseFmt) == matchFormat:
+                    if matchFun(ReleaseFormat(releaseFmt)):
                         filteredSortKeys.append((sortId, sortStr))
                 else:
                     print "No release events for " + sortId + ", " + sortStr
         else:
+            # Skip all the fun
             filteredSortKeys = sortKeys
 
         self.sortedList = sorted(filteredSortKeys, key=lambda sortKey: unicode.lower(sortKey[1]))
@@ -261,9 +266,9 @@ white-space: nowrap;
 </head>
 <body>"""
 
-        for releaseType in [ReleaseFormat("CD"), ReleaseFormat("Vinyl")]:
-            sortedList = self.getSortedList(releaseType)
-            print >> htf, "<h2>" + releaseType.fmtStr + (" (%d Releases)" % len(sortedList)) + "</h2>"
+        for releaseType, releaseTypeFun in [('CD', ReleaseFormat.isCD), ('Vinyl', ReleaseFormat.isVinyl)]:
+            sortedList = self.getSortedList(releaseTypeFun)
+            print >> htf, "<h2>" + releaseType + (" (%d Releases)" % len(sortedList)) + "</h2>"
             print >> htf, "<table>"
             print >> htf, """<tr>
 <!-- <th>Sort Index</th> -->
