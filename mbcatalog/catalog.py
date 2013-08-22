@@ -56,6 +56,9 @@ class ReleaseFormat(object):
                 (self.isCD() and other.isCD()) or \
                 (self.isAny() and other.isAny())
 
+    def __str__(self):
+        return self.fmtStr
+
 class Catalog(object):
     def __init__(self, rootPath='release-id'):
         if not os.path.isdir(rootPath):
@@ -173,18 +176,19 @@ class Catalog(object):
                 release.title, \
                 ] ) 
 
-    def getSortedList(self, matchFun=ReleaseFormat.isAny):
+    def getSortedList(self, matchFmt=ReleaseFormat()):
         sortKeys = [(releaseId, self.formatDiscSortKey(releaseId)) for releaseId in self.releaseIndex.keys()]
 
         # TODO this could be sped up using a map from ReleaseId -> Format populated at loading time
-        if matchFun != ReleaseFormat.isAny:
+        # if matching any format
+        if matchFmt != ReleaseFormat():
             filteredSortKeys = []
             for sortId, sortStr in sortKeys:
                 if len(self.releaseIndex[sortId].releaseEvents):
                     releaseFmt = getFormatFromUri(self.releaseIndex[sortId].releaseEvents[0].format)
                     if 'unknown' in releaseFmt:
                         print releaseFmt + " format for release " + sortId + ", " + sortStr
-                    if matchFun(ReleaseFormat(releaseFmt)):
+                    if matchFmt == ReleaseFormat(releaseFmt):
                         filteredSortKeys.append((sortId, sortStr))
                 else:
                     print "No release events for " + sortId + ", " + sortStr
@@ -266,9 +270,9 @@ white-space: nowrap;
 </head>
 <body>"""
 
-        for releaseType, releaseTypeFun in [('CD', ReleaseFormat.isCD), ('Vinyl', ReleaseFormat.isVinyl)]:
-            sortedList = self.getSortedList(releaseTypeFun)
-            print >> htf, "<h2>" + releaseType + (" (%d Releases)" % len(sortedList)) + "</h2>"
+        for releaseType in [ReleaseFormat('CD'), ReleaseFormat('Vinyl')]:
+            sortedList = self.getSortedList(releaseType)
+            print >> htf, "<h2>" + str(releaseType) + (" (%d Releases)" % len(sortedList)) + "</h2>"
             print >> htf, "<table>"
             print >> htf, """<tr>
 <!-- <th>Sort Index</th> -->
