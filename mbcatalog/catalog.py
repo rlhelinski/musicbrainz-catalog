@@ -191,7 +191,11 @@ class Catalog(object):
                     if matchFmt == ReleaseFormat(releaseFmt):
                         filteredSortKeys.append((sortId, sortStr))
                 else:
-                    print "No release events for " + sortId + ", " + sortStr
+                    #print "No release events for " + sortId + ", " + sortStr
+                    # Assume that if the release does not have a release event (and therefore no
+                    # format), that it is a CD
+                    if matchFmt == ReleaseFormat('CD'):
+                        filteredSortKeys.append((sortId, sortStr))
         else:
             # Skip all the fun
             filteredSortKeys = sortKeys
@@ -200,8 +204,6 @@ class Catalog(object):
         return self.sortedList
 
     def getSortNeighbors(self, releaseId, neighborHood=5, matchFormat=False):
-        """>>> c.getSortNeighbors('oGahy0j6T2gXkGBLqSfaXqL.kMo-')
-        """
 
         if matchFormat:
             try:
@@ -405,6 +407,7 @@ white-space: nowrap;
 
         results_meta = self.getReleaseMeta(releaseId)
         self.writeXml(releaseId, results_meta)
+        # TODO this is done each time when refreshing all ?
         self.load()
         self.getSortedList()
 
