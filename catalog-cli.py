@@ -10,7 +10,8 @@ c.load()
 def getInput():
     return sys.stdin.readline().strip()
 
-def shellSearch(c):
+def shellSearch():
+    global c
     while(True):
         print "Enter search terms: ",
         input = getInput()
