@@ -1,6 +1,7 @@
 import os, time, datetime, sys
 import xml.etree.ElementTree as ET
 import musicbrainz2.utils as mbutils
+from StringIO import StringIO
 
 def getInput():
     return sys.stdin.readline().strip()
@@ -30,6 +31,8 @@ class PurchaseEvent:
 
     price = property(getPrice, setPrice, doc='purchase price')
 
+# TODO add list of listening events
+# TODO add path to audio files on system
 class ExtraData:
     def __init__(self, releaseId, path='release-id'):
         if releaseId.startswith('http'):
@@ -80,6 +83,14 @@ class ExtraData:
     def save(self):
         et = ET.ElementTree(self.toElement())
         et.write(self.path)
+
+    def toString(self):
+        memF = StringIO()
+        et = ET.ElementTree(self.toElement())
+        et.write(memF)
+        memF.seek(0)
+        return memF.read()
+
 
     def __str__(self):
         return "Extra Data:\n" + \

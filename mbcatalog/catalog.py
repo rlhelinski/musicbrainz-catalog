@@ -60,11 +60,12 @@ class ReleaseFormat(object):
         return self.fmtStr
 
 class Catalog(object):
-    def __init__(self, rootPath='release-id'):
-        if not os.path.isdir(rootPath):
-            os.mkdir(rootPath)
+    rootPath='release-id'
+
+    def __init__(self):
+        if not os.path.isdir(self.rootPath):
+            os.mkdir(self.rootPath)
             
-        self.rootPath = rootPath
         self.releaseIndex = dict()
         self.wordMap = dict()
         self.discIdMap = dict()
@@ -86,6 +87,7 @@ class Catalog(object):
         self.wordMap = dict()
         self.discIdMap = dict()
         self.barCodeMap = dict()
+        XmlParser = wsxml.MbXmlParser()
         for releaseId in os.listdir(self.rootPath):
             if releaseId.startswith('.') or len(releaseId) != 36:
                 continue
@@ -93,10 +95,8 @@ class Catalog(object):
             if (not os.path.isfile(xmlPath)):
                 print "No metadata for", releaseId
                 continue
-            xmlf = open(xmlPath, 'r')
-            XmlParser = wsxml.MbXmlParser()
-            metadata = XmlParser.parse(xmlf)
-            xmlf.close()
+            with open(xmlPath, 'r') as xmlf:
+                metadata = XmlParser.parse(xmlf)
             release = metadata.getRelease()
             self.releaseIndex[releaseId] = release
 
@@ -115,6 +115,39 @@ class Catalog(object):
             # for searching later
             words = self.getReleaseWords(release)
             self.mapWordsToRelease(words, releaseId)
+
+    def saveZip(self, zipName='catalog.zip'):
+        import zipfile, StringIO
+
+        zf = zipfile.ZipFile(zipName, 'w')
+        xml_writer = wsxml.MbXmlWriter()
+        for releaseId, release in self.releaseIndex.items():
+            # TODO change releaseIndex to metaIndex and store entire metadata
+            # then, change references to releaseIndex to calls to getRelease(),
+            # a new function that will take the release ID, and call getRelease()
+            # on the appropriate metadata
+            xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
+            XmlParser = wsxml.MbXmlParser()
+            with open(xmlPath, 'r') as xmlf:
+                metadata = XmlParser.parse(xmlf)
+
+            memXmlF = StringIO.StringIO()
+            xml_writer.write(memXmlF, metadata)
+            memXmlF.seek(0)
+            zf.writestr('release-id/'+releaseId+'/metadata.xml', \
+                    memXmlF.read())
+
+            ed = extradata.ExtraData(releaseId)
+            try: 
+                # TODO again, extradata should be loaded in load()
+                ed.load()
+                # TODO write a function to produce these paths
+                zf.writestr('release-id/'+releaseId+'/extra.xml', ed.toString())
+            except IOError as e:
+                print "No extradata for " + releaseId
+
+
+        zf.close()
 
     def getReleaseWords(self, release):
         words = []
@@ -292,6 +325,7 @@ white-space: nowrap;
 """
             for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
                 release = self.releaseIndex[releaseId]
+                # TODO extradata should be cached at load time 
                 ed = extradata.ExtraData(releaseId)
                 try: 
                     ed.load()
@@ -316,7 +350,7 @@ white-space: nowrap;
                 print >> htf, "<td>"+(release.releaseEvents[0].catalogNumber if len(release.releaseEvents) and release.releaseEvents[0].catalogNumber else '')+"</td>"
                 print >> htf, "<td>"+(release.releaseEvents[0].barcode if len(release.releaseEvents) and release.releaseEvents[0].barcode else '')+"</td>"
                 print >> htf, "<td>"+("<a href=\"" + amazonservices.getAsinProductUrl(release.asin) + "\">" + release.asin + "</a>" if release.asin else '')+"</td>"
-                print >> htf, "<td>"+("<a href=\""+release.releaseEvents[0].format+"\">"+getFormatFromUri(release.releaseEvents[0].format, escape=False)+"</a>" if len(release.releaseEvents) else '')+"</td>"
+                print >> htf, "<td>"+("<a href='"+release.releaseEvents[0].format+"'>"+getFormatFromUri(release.releaseEvents[0].format, escape=False)+"</a>" if len(release.releaseEvents) else '')+"</td>"
                 print >> htf, "<td>"+(datetime.fromtimestamp(ed.addDates[0]).strftime('%Y-%m-%d') if len(ed.addDates) else '')+"</td>"
                 print >> htf, "</tr>"
             print >> htf, "</table>"
