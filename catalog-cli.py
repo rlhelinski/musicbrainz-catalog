@@ -50,7 +50,7 @@ def shellEditExtra():
     global c
     print "Enter release ID: ",
     releaseId = getReleaseId(getInput())
-    if releaseId not in c.releaseIndex:
+    if releaseId not in c:
         print "Release not found"
         return
     ed = ExtraData(releaseId)
@@ -71,7 +71,7 @@ def shellRefresh():
     releaseId = getReleaseId(getInput())
     if releaseId == "a":
         c.refreshAllMetaData(60*60)
-    elif releaseId not in c.releaseIndex:
+    elif releaseId not in c:
         print "Release not found"
         return
     else:
@@ -81,7 +81,7 @@ def shellChange():
     global c
     print "Enter release ID: ",
     releaseId = getReleaseId(getInput())
-    if releaseId not in c.releaseIndex:
+    if releaseId not in c:
         print "Release not found"
         return
     print "Enter new release ID: ",
@@ -101,7 +101,7 @@ def shellAdd():
     if not releaseId:
         print "No input"
         return
-    if releaseId in c.releaseIndex:
+    if releaseId in c:
         print "Release already exists"
         return
     try:

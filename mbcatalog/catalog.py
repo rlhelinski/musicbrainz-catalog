@@ -66,7 +66,7 @@ class Catalog(object):
         if not os.path.isdir(self.rootPath):
             os.mkdir(self.rootPath)
             
-        self.releaseIndex = dict()
+        self.metaIndex = dict()
         self.wordMap = dict()
         self.discIdMap = dict()
         self.barCodeMap = dict()
@@ -77,9 +77,24 @@ class Catalog(object):
         self.load()
         self.refreshMetaData(newReleaseId, olderThan=60)
 
+    def getReleaseIds(self):
+        return self.metaIndex.keys()
+
+    def getRelease(self, releaseId):
+        return self.metaIndex[releaseId].getRelease()
+
+    def getReleases(self):
+        for releaseId, metadata in self.metaIndex.items():
+            yield releaseId, metaIndex.getRelease()
+
+    def __len__(self):
+        return len(self.metaIndex)
+
+    def __contains__(self, releaseId):
+        return releaseId in self.metaIndex
 
     def load(self):
-        self.releaseIndex = dict()
+        self.metaIndex = dict()
         # To map ReleaseId -> Format
         #self.formatMap = dict()
         # It would enhance performance but is redundant. Not implemented because
@@ -97,23 +112,23 @@ class Catalog(object):
                 continue
             with open(xmlPath, 'r') as xmlf:
                 metadata = XmlParser.parse(xmlf)
-            release = metadata.getRelease()
-            self.releaseIndex[releaseId] = release
+            self.metaIndex[releaseId] = metadata
 
-            for disc in release.discs:
+            # populate DiscId map
+            for disc in metadata.getRelease().discs:
                 if disc.id in self.discIdMap:
                     self.discIdMap[disc.id].append(releaseId)
                 else:
                     self.discIdMap[disc.id] = [releaseId]
 
-            for releaseEvent in release.releaseEvents:
+            for releaseEvent in metadata.getRelease().releaseEvents:
                 if releaseEvent.barcode:
                     if releaseEvent.barcode in self.barCodeMap:
                         self.barCodeMap[releaseEvent.barcode].append(releaseId)
                     else:
                         self.barCodeMap[releaseEvent.barcode] = [releaseId]
             # for searching later
-            words = self.getReleaseWords(release)
+            words = self.getReleaseWords(metadata.getRelease())
             self.mapWordsToRelease(words, releaseId)
 
     def saveZip(self, zipName='catalog.zip'):
@@ -121,7 +136,7 @@ class Catalog(object):
 
         zf = zipfile.ZipFile(zipName, 'w')
         xml_writer = wsxml.MbXmlWriter()
-        for releaseId, release in self.releaseIndex.items():
+        for releaseId, release in self.getReleases():
             # TODO change releaseIndex to metaIndex and store entire metadata
             # then, change references to releaseIndex to calls to getRelease(),
             # a new function that will take the release ID, and call getRelease()
@@ -148,6 +163,9 @@ class Catalog(object):
 
 
         zf.close()
+
+    def loadZip(self, zipName='catalog.zip'):
+        return "Blargh"
 
     def getReleaseWords(self, release):
         words = []
@@ -182,7 +200,7 @@ class Catalog(object):
         return matches
 
     def formatDiscInfo(self, releaseId):
-        release = self.releaseIndex[releaseId]
+        release = self.getRelease(releaseId)
         return ' '.join( [
                 releaseId, ':', \
                 (release.releaseEvents[0].getDate() if len(release.releaseEvents) else ''), '-', \
@@ -192,7 +210,7 @@ class Catalog(object):
                 ] )
 
     def formatDiscSortKey(self, releaseId):
-        release = self.releaseIndex[releaseId]
+        release = self.getRelease(releaseId)
 
         try:
             return ' - '.join ( [
@@ -210,15 +228,15 @@ class Catalog(object):
                 ] ) 
 
     def getSortedList(self, matchFmt=ReleaseFormat()):
-        sortKeys = [(releaseId, self.formatDiscSortKey(releaseId)) for releaseId in self.releaseIndex.keys()]
+        sortKeys = [(releaseId, self.formatDiscSortKey(releaseId)) for releaseId in self.getReleaseIds()]
 
         # TODO this could be sped up using a map from ReleaseId -> Format populated at loading time
         # if matching any format
         if matchFmt != ReleaseFormat():
             filteredSortKeys = []
             for sortId, sortStr in sortKeys:
-                if len(self.releaseIndex[sortId].releaseEvents):
-                    releaseFmt = getFormatFromUri(self.releaseIndex[sortId].releaseEvents[0].format)
+                if len(self.getRelease(sortId).releaseEvents):
+                    releaseFmt = getFormatFromUri(self.getRelease(sortId).releaseEvents[0].format)
                     if 'unknown' in releaseFmt:
                         print releaseFmt + " format for release " + sortId + ", " + sortStr
                     if matchFmt == ReleaseFormat(releaseFmt):
@@ -243,7 +261,7 @@ class Catalog(object):
                 self.getSortedList(
                         ReleaseFormat(
                                 getFormatFromUri(
-                                        self.releaseIndex[releaseId].releaseEvents[0].format)))
+                                        self.getRelease(releaseId).releaseEvents[0].format)))
             except IndexError as e:
                 print "No format for release"
                 self.getSortedList()
@@ -256,7 +274,7 @@ class Catalog(object):
             print ('\033[92m' if i == index else "") + "%4d" % i, \
                     sortId, \
                     sortStr, \
-                    ("[" + getFormatFromUri(self.releaseIndex[sortId].releaseEvents[0].format) + "]" if len(self.releaseIndex[sortId].releaseEvents) else ""), \
+                    ("[" + getFormatFromUri(self.getRelease(sortId).releaseEvents[0].format) + "]" if len(self.getRelease(sortId).releaseEvents) else ""), \
                     (" <<<" if i == index else "") + \
                     ('\033[0m' if i == index else "")
 
@@ -268,7 +286,7 @@ class Catalog(object):
 
     def report(self):
         print
-        print "%d releases" % len(self.releaseIndex)
+        print "%d releases" % len(self)
         print "%d words in search table" % len(self.wordMap)
 
     def makeHtml(self, fileName="catalog.html"):
@@ -324,7 +342,7 @@ white-space: nowrap;
 </tr>
 """
             for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
-                release = self.releaseIndex[releaseId]
+                release = self.getRelease(releaseId)
                 # TODO extradata should be cached at load time 
                 ed = extradata.ExtraData(releaseId)
                 try: 
@@ -342,7 +360,7 @@ white-space: nowrap;
 
                 print >> htf, "<tr>"
                 print >> htf, "<!-- <td>"+("%04d" % sortIndex)+"</td> -->"
-                print >> htf, "<td><a href=\""+release.artist.id+"\">"+self.releaseIndex[releaseId].artist.name.encode('ascii', 'xmlcharrefreplace')+"</a></td>"
+                print >> htf, "<td><a href=\""+release.artist.id+"\">"+release.artist.name.encode('ascii', 'xmlcharrefreplace')+"</a></td>"
                 print >> htf, "<td><a href=\""+release.id+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + ">"+release.title.encode('ascii', 'xmlcharrefreplace')+("<span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" if coverartUrl else "") + "</a></td>"
                 print >> htf, "<td>"+(release.releaseEvents[0].date if len(release.releaseEvents) else '')+"</td>"
                 print >> htf, "<td>"+(release.releaseEvents[0].country.encode('ascii', 'xmlcharrefreplace') if len(release.releaseEvents) and release.releaseEvents[0].country else '')+"</td>"
@@ -355,7 +373,7 @@ white-space: nowrap;
                 print >> htf, "</tr>"
             print >> htf, "</table>"
 
-        print >> htf, "<p>%d releases</p>" % len(self.releaseIndex)
+        print >> htf, "<p>%d releases</p>" % len(self)
 
         print >> htf, """</body>
 </html>"""
@@ -453,17 +471,17 @@ white-space: nowrap;
         self.load()
 
     def refreshAllMetaData(self, olderThan=0):
-        for releaseId in self.releaseIndex.keys():
+        for releaseId in self.getReleaseIds():
             print "Refreshing", releaseId,
             self.refreshMetaData(releaseId, olderThan)
 
     def checkReleases(self):
 
-        for releaseId in self.releaseIndex:
-            if self.releaseIndex[releaseId].releaseEvents:
-                if not self.releaseIndex[releaseId].releaseEvents[0].barcode:
-                    print "No barcode for " + releaseId + " " + self.formatDiscSortKey(releaseId) + " (" + getFormatFromUri(self.releaseIndex[releaseId].releaseEvents[0].format) + ")"
-                if not self.releaseIndex[releaseId].releaseEvents[0].format:
+        for releaseId, release in self.getReleases():
+            if release.releaseEvents:
+                if not release.releaseEvents[0].barcode:
+                    print "No barcode for " + releaseId + " " + self.formatDiscSortKey(releaseId) + " (" + getFormatFromUri(release.releaseEvents[0].format) + ")"
+                if not release.releaseEvents[0].format:
                     print "No format for " + releaseId + " " + self.formatDiscSortKey(releaseId)
 
             else:
@@ -471,7 +489,7 @@ white-space: nowrap;
 
     def getCoverArt(self, releaseId, quiet=False):
         global lastQueryTime
-        release = self.releaseIndex[releaseId]
+        release = self.getRelease(releaseId)
         if release.asin:
             imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
             if os.path.isfile(imgPath):
@@ -496,18 +514,18 @@ white-space: nowrap;
             print "No ASIN for", releaseId
 
     def refreshCoverArt(self):
-        for releaseId in self.releaseIndex.keys():
+        for releaseId in self.getReleaseIds():
             self.getCoverArt(releaseId)
 
     def checkLevenshteinDistances(self):
         import Levenshtein
         dists = []
-        for leftIdx in range(len(self.releaseIndex)):
-            for rightIdx in range(leftIdx, len(self.releaseIndex)):
+        for leftIdx in range(len(self)):
+            for rightIdx in range(leftIdx, len(self)):
                 if  leftIdx == rightIdx :
                     continue
-                leftId = self.releaseIndex.keys()[leftIdx]
-                rightId = self.releaseIndex.keys()[rightIdx]
+                leftId = self.getReleaseIds()[leftIdx]
+                rightId = self.getReleaseIds()[rightIdx]
                 dist = Levenshtein.distance(self.formatDiscSortKey(leftId),
                         self.formatDiscSortKey(rightId))
 
