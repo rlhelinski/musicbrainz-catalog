@@ -7,6 +7,7 @@ import urllib2
 import extradata
 import shutil
 from datetime import datetime
+from collections import defaultdict
 
 overWriteAll = False
 lastQueryTime = 0
@@ -68,8 +69,8 @@ class Catalog(object):
             
         self.metaIndex = dict()
         self.wordMap = dict()
-        self.discIdMap = dict()
-        self.barCodeMap = dict()
+        self.discIdMap = defaultdict(list)
+        self.barCodeMap = defaultdict(list)
 
     def renameRelease(self, releaseId, newReleaseId):
         os.rename(os.path.join('release-id', releaseId),
@@ -94,14 +95,10 @@ class Catalog(object):
         return releaseId in self.metaIndex
 
     def load(self):
-        self.metaIndex = dict()
         # To map ReleaseId -> Format
         #self.formatMap = dict()
         # It would enhance performance but is redundant. Not implemented because
         # performance is tolerable.
-        self.wordMap = dict()
-        self.discIdMap = dict()
-        self.barCodeMap = dict()
         XmlParser = wsxml.MbXmlParser()
         for releaseId in os.listdir(self.rootPath):
             if releaseId.startswith('.') or len(releaseId) != 36:
@@ -116,17 +113,13 @@ class Catalog(object):
 
             # populate DiscId map
             for disc in metadata.getRelease().discs:
-                if disc.id in self.discIdMap:
-                    self.discIdMap[disc.id].append(releaseId)
-                else:
-                    self.discIdMap[disc.id] = [releaseId]
+                self.discIdMap[disc.id].append(releaseId)
 
+            # populate barcode map
             for releaseEvent in metadata.getRelease().releaseEvents:
                 if releaseEvent.barcode:
-                    if releaseEvent.barcode in self.barCodeMap:
-                        self.barCodeMap[releaseEvent.barcode].append(releaseId)
-                    else:
-                        self.barCodeMap[releaseEvent.barcode] = [releaseId]
+                    self.barCodeMap[releaseEvent.barcode].append(releaseId)
+                    
             # for searching later
             words = self.getReleaseWords(metadata.getRelease())
             self.mapWordsToRelease(words, releaseId)
@@ -134,38 +127,49 @@ class Catalog(object):
     def saveZip(self, zipName='catalog.zip'):
         import zipfile, StringIO
 
-        zf = zipfile.ZipFile(zipName, 'w')
-        xml_writer = wsxml.MbXmlWriter()
-        for releaseId, release in self.getReleases():
-            # TODO change releaseIndex to metaIndex and store entire metadata
-            # then, change references to releaseIndex to calls to getRelease(),
-            # a new function that will take the release ID, and call getRelease()
-            # on the appropriate metadata
-            xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
-            XmlParser = wsxml.MbXmlParser()
-            with open(xmlPath, 'r') as xmlf:
-                metadata = XmlParser.parse(xmlf)
+        with zipfile.ZipFile(zipName, 'w') as zf:
+            xml_writer = wsxml.MbXmlWriter()
+            for releaseId, release in self.getReleases():
+                # TODO change releaseIndex to metaIndex and store entire metadata
+                # then, change references to releaseIndex to calls to getRelease(),
+                # a new function that will take the release ID, and call getRelease()
+                # on the appropriate metadata
+                xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
+                XmlParser = wsxml.MbXmlParser()
+                with open(xmlPath, 'r') as xmlf:
+                    metadata = XmlParser.parse(xmlf)
 
-            memXmlF = StringIO.StringIO()
-            xml_writer.write(memXmlF, metadata)
-            memXmlF.seek(0)
-            zf.writestr('release-id/'+releaseId+'/metadata.xml', \
-                    memXmlF.read())
+                memXmlF = StringIO.StringIO()
+                xml_writer.write(memXmlF, metadata)
+                memXmlF.seek(0)
+                zf.writestr('release-id/'+releaseId+'/metadata.xml', \
+                        memXmlF.read())
 
-            ed = extradata.ExtraData(releaseId)
-            try: 
-                # TODO again, extradata should be loaded in load()
-                ed.load()
-                # TODO write a function to produce these paths
-                zf.writestr('release-id/'+releaseId+'/extra.xml', ed.toString())
-            except IOError as e:
-                print "No extradata for " + releaseId
-
-
-        zf.close()
+                ed = extradata.ExtraData(releaseId)
+                try: 
+                    # TODO again, extradata should be loaded in load()
+                    ed.load()
+                    # TODO write a function to produce these paths
+                    zf.writestr('release-id/'+releaseId+'/extra.xml', ed.toString())
+                except IOError as e:
+                    print "No extradata for " + releaseId
 
     def loadZip(self, zipName='catalog.zip'):
-        return "Blargh"
+        import zipfile, StringIO
+
+        zf = zipfile.ZipFile(zipName, 'r')
+        XmlParser = wsxml.MbXmlParser()
+        for fInfo in zf.infolist():
+            if not fInfo.filename.startswith('release-id') or not fInfo.filename.endswith('metadata.xml'):
+                continue
+
+            rootPath, releaseId, fileName = fInfo.filename.split('/')
+            memXmlF = StringIO.StringIO()
+            memXmlF.write(zf.read(fInfo))
+            memXmlF.seek(0)
+            metadata = XmlParser.parse(memXmlF)
+            self.metaIndex[releaseId] = metadata
+        zf.close()
 
     def getReleaseWords(self, release):
         words = []

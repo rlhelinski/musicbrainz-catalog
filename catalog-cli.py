@@ -42,6 +42,7 @@ def shellSearch():
 
 def shellReload():
     global c # should rap into a class?
+    del c 
     print "Reloading database...",
     c.load()
     print "DONE"
