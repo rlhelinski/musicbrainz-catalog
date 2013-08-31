@@ -56,7 +56,7 @@ class Shell:
         print "DONE"
 
     def EditExtra(self):
-        releaseId = shellSearch()
+        releaseId = self.Search()
         ed = ExtraData(releaseId)
         try:
             ed.load()
@@ -81,7 +81,7 @@ class Shell:
             self.c.refreshMetaData(releaseId, olderThan=60)
 
     def Change(self):
-        releaseId = shellSearch()
+        releaseId = self.Search()
         print "Enter new release ID: ",
         newReleaseId = getInput()
         self.c.renameRelease(releaseId, newReleaseId)
@@ -125,7 +125,7 @@ class Shell:
 
     def Delete(self):
         print "Enter release ID to delete: ",
-        releaseId = getReleaseId(getInput())
+        releaseId = self.Search()
         self.c.deleteRelease(releaseId)
 
     def Check(self):
@@ -134,7 +134,7 @@ class Shell:
         print "DONE"
 
     def Lend(self):
-        releaseId = shellSearch()
+        releaseId = self.Search()
         ed = ExtraData(releaseId)
         try:
             ed.load()
@@ -152,7 +152,7 @@ class Shell:
         ed.save()
         
     def Path(self):
-        releaseId = shellSearch()
+        releaseId = self.Search()
         ed = ExtraData(releaseId)
         try:
             ed.load()
@@ -171,18 +171,18 @@ class Shell:
     shellCommands = {
         'h' : (None, 'this help'),
         'q' : (None, 'quit'),
-        'e' : (EditExtra, 'edit extra data'),
-        's' : (Search, 'search for releases'),
-        'r' : (Refresh, 'refresh XML metadata from musicbrainz'),
-        't' : (Html, 'write hTml'),
-        'c' : (Change, 'change release'),
-        'a' : (Add, 'add release'),
-        'l' : (Reload, 'reLoad database from disk'),
-        'b' : (BarcodeSearch, 'barcode search'),
-        'd' : (Delete, 'delete release'),
-        'k' : (Check, 'check releases'),
-        'n' : (Lend, 'leNd (checkout) release'),
-        'p' : (Path, 'add Path to release'),
+        'extra' : (EditExtra, 'edit extra data'), # TODO replace this command
+        'search' : (Search, 'search for releases'),
+        'refresh' : (Refresh, 'refresh XML metadata from musicbrainz'),
+        'html' : (Html, 'write HTML'),
+        'change' : (Change, 'change release ID'),
+        'add' : (Add, 'add release'),
+        'reload' : (Reload, 'reload database from disk'),
+        'barcode' : (BarcodeSearch, 'barcode search'),
+        'delete' : (Delete, 'delete release'),
+        'check' : (Check, 'check releases'),
+        'lend' : (Lend, 'lend (checkout) release'),
+        'path' : (Path, 'add Path to release'),
         }
 
     def main(self):
@@ -193,16 +193,16 @@ class Shell:
             if not input or input.startswith('q'):
                 break
 
-            if (input.startswith('h')):
+            if (input == 'h' or input == 'help'):
                 print "\r",
                 for letter in sorted(self.shellCommands.keys()):
                     print letter + " : " + self.shellCommands[letter][1]
 
-            elif input[0] in self.shellCommands.keys():
-                print self.shellCommands[input[0]][1]
+            elif input in self.shellCommands.keys():
+                print self.shellCommands[input][1]
                 # Call the function
                 try:
-                    (self.shellCommands[input[0]][0])(self)
+                    (self.shellCommands[input][0])(self)
                 except ValueError as e:
                     print e
 
