@@ -6,20 +6,22 @@ from StringIO import StringIO
 def getInput():
     return sys.stdin.readline().strip()
 
+dateFmtStr = '%m/%d/%Y'
+dateFmtUsr = 'MM/DD/YYYY'
+
 class PurchaseEvent:
-    dateFmtStr = '%m/%d/%Y'
-    dateFmtUsr = 'MM/DD/YYYY'
 
     def __init__(self, date, price, vendor):
+        # Do these calls use the implicit property calls?
         self.date = date
         self.price = price
         self.vendor = vendor
 
     def getDate(self):
-        return time.strftime(self.dateFmtStr, self._date)
+        return time.strftime(dateFmtStr, time.localtime(self._date))
 
     def setDate(self, date):
-        self._date = time.strptime(date, self.dateFmtStr)
+        self._date = time.strptime(date, dateFmtStr)
 
     date = property(getDate, setDate, doc='purchase date')
 
@@ -31,6 +33,25 @@ class PurchaseEvent:
 
     price = property(getPrice, setPrice, doc='purchase price')
 
+    def __str__(self):
+        return "Purchased on "+self.date+" from "+self.vendor+" for "+self.price
+
+class LendEvent:
+    def __init__(self, borrower, date):
+        self._date = date
+        self.borrower = borrower 
+
+    def getDate(self):
+        return time.strftime(dateFmtStr, time.localtime(self._date))
+
+    def setDate(self, date):
+        self._date = time.strptime(date, dateFmtStr)
+
+    date = property(getDate, setDate, doc='purchase date')
+
+    def __str__(self):
+        return "Lent on: " + self.date + " to: " + self.borrower
+
 # TODO add list of listening events
 # TODO add path to audio files on system
 class ExtraData:
@@ -40,6 +61,9 @@ class ExtraData:
         self.path = os.path.join(path, releaseId, 'extra.xml')
         self.purchases = []
         self.addDates = []
+        self.lendEvents = []
+        self.listenEvents = []
+        # others?
         self.comment = ""
         self.rating = 0
 
@@ -57,6 +81,12 @@ class ExtraData:
             self.comment = comment.text
         for rating in root.findall('./rating'):
             self.rating = int(rating.text)
+        for lendList in root.findall('./lendlist'):
+            for lend in lendList:
+                # TODO check the tag is 'lent'
+                self.lendEvents.append(LendEvent(lend.attrib['who'], \
+                    int(lend.attrib['date'])))
+        
         return root
 
     def toElement(self):
@@ -78,6 +108,14 @@ class ExtraData:
         r = ET.SubElement(root, 'rating')
         r.text=str(self.rating)
         r.tail="\n"
+        ll = ET.SubElement(root, 'lendlist')
+        ll.tail="\n"
+        for lendEvent in self.lendEvents:
+            le = ET.SubElement(ll, 'lent', \
+                    attrib={
+                        'date':'%d' % lendEvent._date,
+                        'who':lendEvent.borrower})
+            le.tail="\n"
         return root
 
     def save(self):
@@ -94,16 +132,23 @@ class ExtraData:
 
     def __str__(self):
         return "Extra Data:\n" + \
-                "\n".join([("Purchased on "+purchase.date+" from "+purchase.vendor+" for "+purchase.price) for purchase in self.purchases]) + \
-                "\nComment: " + self.comment + \
-                "\nRating: %d / 5" % self.rating
+                "\n".join([str(purchase) for purchase in self.purchases]) + \
+                ("\nComment: " + self.comment if self.comment else "") + \
+                ("\nRating: %d / 5" % self.rating) + \
+                ("\n" + ("\n".join([str(lend) for lend in self.lendEvents])) if self.lendEvents else "")
 
     def addDate(self, date=time.time()):
         self.addDates.append(date)
 
+    def addLend(self, borrower, date):
+        if not date:
+            #date = time.strftime(dateFmtStr)
+            date = time.time()
+        self.lendEvents.append(LendEvent(borrower, date))
+
     def interactiveEntry(self):
         print "Welcome!"
-        print "Purchase date ("+PurchaseEvent.dateFmtUsr+"): ",
+        print "Purchase date ("+dateFmtUsr+"): ",
         dateStr = getInput()
         print "Vendor: ",
         vendorStr = getInput()

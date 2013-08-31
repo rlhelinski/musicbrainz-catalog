@@ -13,9 +13,13 @@ def getInput():
 def shellSearch():
     global c
     while(True):
-        print "Enter search terms: ",
+        print "Enter search terms (or release ID): ",
         input = getInput()
         if input:
+            if len(getReleaseId(input)) == 36:
+                releaseId = getReleaseId(input)
+                c.getSortNeighbors(releaseId, matchFormat=True)
+                return releaseId
             matches = list(c._search(input))
             if len(matches) > 1:
                 print len(matches), "matches found:"
@@ -26,7 +30,7 @@ def shellSearch():
                         print "Select a match: ",
                         index = int(getInput())
                         c.getSortNeighbors(matches[index], matchFormat=True)
-                        break
+                        return matches[index]
                     except ValueError as e:
                         print e, "try again"
                     except IndexError as e:
@@ -34,6 +38,7 @@ def shellSearch():
 
             elif len(matches) == 1:
                 c.getSortNeighbors(matches[0], matchFormat=True)
+                return matches[0]
             else:
                 print "No matches."
         else:
@@ -43,16 +48,15 @@ def shellSearch():
 def shellReload():
     global c # should rap into a class?
     del c 
+    c = Catalog()
     print "Reloading database...",
     c.load()
     print "DONE"
 
 def shellEditExtra():
     global c
-    print "Enter release ID: ",
-    releaseId = getReleaseId(getInput())
-    if releaseId not in c:
-        print "Release not found"
+    releaseId = shellSearch()
+    if not releaseId:
         return
     ed = ExtraData(releaseId)
     try:
@@ -138,6 +142,28 @@ def shellCheck():
     c.checkReleases()
     print "DONE"
 
+def shellLend():
+    global c
+    releaseId = shellSearch()
+    if not releaseId:
+        return
+    ed = ExtraData(releaseId)
+    try:
+        ed.load()
+        print str(ed)
+    except IOError as e:
+        pass
+
+    print "Borrower (leave empty to return): ",
+    borrower = getInput()
+    if not borrower:
+        borrower = '[returned]'
+    print "Lend date (leave empty for today): ",
+    date = getInput()
+    ed.addLend(borrower, date)
+    ed.save()
+    
+
 shellCommands = {
     'h' : (None, 'this help'),
     'q' : (None, 'quit'),
@@ -151,6 +177,7 @@ shellCommands = {
     'b' : (shellBarcodeSearch, 'barcode search'),
     'd' : (shellDelete, 'delete release'),
     'k' : (shellCheck, 'check releases'),
+    'n' : (shellLend, 'leNd (checkout) release'),
     }
 
 
