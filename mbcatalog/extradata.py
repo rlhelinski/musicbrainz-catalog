@@ -68,7 +68,7 @@ class ExtraData:
         self.addDates = []
         self.lendEvents = []
         self.listenEvents = []
-        self.digitalPath = "" # this could be a list with different format types
+        self.digitalPaths = [] 
         self.comment = ""
         self.rating = 0
 
@@ -91,6 +91,10 @@ class ExtraData:
                 # TODO check the tag is 'lent'
                 self.lendEvents.append(LendEvent(lend.attrib['who'], \
                     int(lend.attrib['date'])))
+        for pathList in root.findall('./digital'):
+            for path in pathList:
+                # TODO check the tag is 'path'
+                self.addPath(path.text)
         
         return root
 
@@ -121,6 +125,12 @@ class ExtraData:
                         'date':'%d' % lendEvent._date,
                         'who':lendEvent.borrower})
             le.tail="\n"
+        dl = ET.SubElement(root, 'digital')
+        dl.tail="\n"
+        for path in self.digitalPaths:
+            de = ET.SubElement(dl, 'path') # TODO could add format as attrib
+            de.text=path
+            de.tail="\n"
         return root
 
     def save(self):
@@ -169,3 +179,6 @@ class ExtraData:
         self.comment = getInput()
         print "Rating (x/5): ",
         self.rating = int(getInput())
+
+    def addPath(self, path):
+        self.digitalPaths.append(path)

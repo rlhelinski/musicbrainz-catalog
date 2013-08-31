@@ -162,6 +162,24 @@ def shellLend():
     ed.addLend(borrower, date)
     ed.save()
     
+def shellPath():
+    global c
+    releaseId = shellSearch()
+    if not releaseId:
+        return
+    ed = ExtraData(releaseId)
+    try:
+        ed.load()
+        print str(ed)
+    except IOError as e:
+        pass
+
+    print "Enter path: ",
+    path = getInput()
+    if path.startswith("'") and path.endswith("'"):
+        path = path[1:-1]
+    ed.addPath(path)
+    ed.save()
 
 shellCommands = {
     'h' : (None, 'this help'),
@@ -177,6 +195,7 @@ shellCommands = {
     'd' : (shellDelete, 'delete release'),
     'k' : (shellCheck, 'check releases'),
     'n' : (shellLend, 'leNd (checkout) release'),
+    'p' : (shellPath, 'add Path to release'),
     }
 
 
