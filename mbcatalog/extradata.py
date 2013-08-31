@@ -52,6 +52,11 @@ class LendEvent:
     def __str__(self):
         return "Lent on: " + self.date + " to: " + self.borrower
 
+class DigitalPath:
+    def __init__(self, path, digiFormat):
+        self.path=path
+        self.digiFormat=digiFormat
+
 # TODO add list of listening events
 # TODO add path to audio files on system
 class ExtraData:
@@ -63,7 +68,7 @@ class ExtraData:
         self.addDates = []
         self.lendEvents = []
         self.listenEvents = []
-        # others?
+        self.digitalPath = "" # this could be a list with different format types
         self.comment = ""
         self.rating = 0
 

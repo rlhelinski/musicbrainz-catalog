@@ -84,10 +84,9 @@ def shellRefresh():
 
 def shellChange():
     global c
-    print "Enter release ID: ",
-    releaseId = getReleaseId(getInput())
-    if releaseId not in c:
-        print "Release not found"
+    # TODO shellSearch should raise ValueError exception when nothing found, should be caught by main shell loop
+    releaseId = shellSearch()
+    if not releaseId:
         return
     print "Enter new release ID: ",
     newReleaseId = getInput()
