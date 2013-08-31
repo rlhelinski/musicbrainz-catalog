@@ -40,9 +40,9 @@ def shellSearch():
                 c.getSortNeighbors(matches[0], matchFormat=True)
                 return matches[0]
             else:
-                print "No matches."
+                raise ValueError ("No matches")
         else:
-            break
+            raise ValueError ('No release specified')
 
 
 def shellReload():
@@ -56,8 +56,6 @@ def shellReload():
 def shellEditExtra():
     global c
     releaseId = shellSearch()
-    if not releaseId:
-        return
     ed = ExtraData(releaseId)
     try:
         ed.load()
@@ -84,10 +82,7 @@ def shellRefresh():
 
 def shellChange():
     global c
-    # TODO shellSearch should raise ValueError exception when nothing found, should be caught by main shell loop
     releaseId = shellSearch()
-    if not releaseId:
-        return
     print "Enter new release ID: ",
     newReleaseId = getInput()
     c.renameRelease(releaseId, newReleaseId)
@@ -112,6 +107,9 @@ def shellAdd():
         c.refreshMetaData(releaseId)
     except ws.ResourceNotFoundError as e:
         print "Release not found"
+        return
+    except ws.RequestError as e:
+        print e
         return
 
     ed = ExtraData(releaseId)
@@ -144,8 +142,6 @@ def shellCheck():
 def shellLend():
     global c
     releaseId = shellSearch()
-    if not releaseId:
-        return
     ed = ExtraData(releaseId)
     try:
         ed.load()
@@ -165,8 +161,6 @@ def shellLend():
 def shellPath():
     global c
     releaseId = shellSearch()
-    if not releaseId:
-        return
     ed = ExtraData(releaseId)
     try:
         ed.load()
@@ -218,7 +212,10 @@ def commandShell():
         elif input[0] in shellCommands.keys():
             print shellCommands[input[0]][1]
             # Call the function
-            (shellCommands[input[0]][0])()
+            try:
+                (shellCommands[input[0]][0])()
+            except ValueError as e:
+                print e
 
         else:
             print "Invalid command"
