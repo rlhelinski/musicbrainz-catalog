@@ -57,13 +57,9 @@ class Shell:
 
     def EditExtra(self):
         releaseId = self.Search()
-        ed = ExtraData(releaseId)
-        try:
-            ed.load()
-            print str(ed)
-            print "Modify? [y/N]",
-        except IOError as e:
-            print "Add? [y/N]",
+        ed = self.c.extraIndex[releaseId] 
+        print str(ed)
+        print "Modify? [y/N]",
         modify = getInput()
         if modify.lower().startswith('y'):
             ed.interactiveEntry()
@@ -109,11 +105,7 @@ class Shell:
             print e
             return
 
-        ed = ExtraData(releaseId)
-        try:
-            ed.load()
-        except IOError as e:
-            "Doesn't matter"
+        ed = self.c.extraIndex[releaseId]
         ed.addDate()
         ed.save()
 
@@ -135,12 +127,8 @@ class Shell:
 
     def Lend(self):
         releaseId = self.Search()
-        ed = ExtraData(releaseId)
-        try:
-            ed.load()
-            print str(ed)
-        except IOError as e:
-            pass
+        self.c.extraIndex[releaseId]
+        print str(ed)
 
         print "Borrower (leave empty to return): ",
         borrower = getInput()
@@ -153,12 +141,8 @@ class Shell:
         
     def Path(self):
         releaseId = self.Search()
-        ed = ExtraData(releaseId)
-        try:
-            ed.load()
-            print str(ed)
-        except IOError as e:
-            pass
+        ed = self.c.extraIndex[releaseId]
+        print str(ed)
 
         print "Enter path: ",
         path = getInput()
@@ -170,7 +154,7 @@ class Shell:
 
     shellCommands = {
         'h' : (None, 'this help'),
-        'q' : (None, 'quit'),
+        'q' : (None, 'quit (or press enter)'),
         'extra' : (EditExtra, 'edit extra data'), # TODO replace this command
         'search' : (Search, 'search for releases'),
         'refresh' : (Refresh, 'refresh XML metadata from musicbrainz'),

@@ -8,6 +8,7 @@ import extradata
 import shutil
 from datetime import datetime
 from collections import defaultdict
+from extradata import *
 
 overWriteAll = False
 lastQueryTime = 0
@@ -68,6 +69,7 @@ class Catalog(object):
             os.mkdir(self.rootPath)
             
         self.metaIndex = dict()
+        self.extraIndex = dict()
         self.wordMap = dict()
         self.discIdMap = defaultdict(list)
         self.barCodeMap = defaultdict(list)
@@ -111,6 +113,14 @@ class Catalog(object):
                 metadata = XmlParser.parse(xmlf)
             self.metaIndex[releaseId] = metadata
 
+            # load extra data
+            self.extraIndex[releaseId] = ExtraData(releaseId)
+            try:
+                self.extraIndex[releaseId].load()
+            except IOError as e:
+                # write an empty XML for next time
+                self.extraIndex[releaseId].save()
+
             # populate DiscId map
             for disc in metadata.getRelease().discs:
                 self.discIdMap[disc.id].append(releaseId)
@@ -145,14 +155,8 @@ class Catalog(object):
                 zf.writestr('release-id/'+releaseId+'/metadata.xml', \
                         memXmlF.read())
 
-                ed = extradata.ExtraData(releaseId)
-                try: 
-                    # TODO again, extradata should be loaded in load()
-                    ed.load()
-                    # TODO write a function to produce these paths
-                    zf.writestr('release-id/'+releaseId+'/extra.xml', ed.toString())
-                except IOError as e:
-                    print "No extradata for " + releaseId
+                # TODO write a function to produce these paths
+                zf.writestr('release-id/'+releaseId+'/extra.xml', self.extraIndex[releaseId].toString())
 
     def loadZip(self, zipName='catalog.zip'):
         import zipfile, StringIO
@@ -347,12 +351,6 @@ white-space: nowrap;
 """
             for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
                 release = self.getRelease(releaseId)
-                # TODO extradata should be cached at load time 
-                ed = extradata.ExtraData(releaseId)
-                try: 
-                    ed.load()
-                except IOError as e:
-                    print "No extradata for " + releaseId
 
                 if release.asin:
                     #coverartUrl = amazonservices.getAsinImageUrl(release.asin, amazonservices.AMAZON_SERVER["amazon.com"], 'S')
@@ -365,7 +363,10 @@ white-space: nowrap;
                 print >> htf, "<tr>"
                 print >> htf, "<!-- <td>"+("%04d" % sortIndex)+"</td> -->"
                 print >> htf, "<td><a href=\""+release.artist.id+"\">"+release.artist.name.encode('ascii', 'xmlcharrefreplace')+"</a></td>"
-                print >> htf, "<td><a href=\""+release.id+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + ">"+release.title.encode('ascii', 'xmlcharrefreplace')+("<img width=24 height=24 src='tango/Image-x-generic.svg'><span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" if coverartUrl else "") + "</a>" + (''.join("<a href='"+path+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in ed.digitalPaths) if ed.digitalPaths else "") + "</td>"
+                print >> htf, "<td><a href=\""+release.id+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
+                    ">"+release.title.encode('ascii', 'xmlcharrefreplace')+("<img width=24 height=24 src='tango/Image-x-generic.svg'><span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" \
+                    if coverartUrl else "") + "</a>" + (''.join("<a href='"+path+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
+                    if self.extraIndex[releaseId].digitalPaths else "") + "</td>"
                 print >> htf, "<td>"+(release.releaseEvents[0].date if len(release.releaseEvents) else '')+"</td>"
                 print >> htf, "<td>"+(release.releaseEvents[0].country.encode('ascii', 'xmlcharrefreplace') if len(release.releaseEvents) and release.releaseEvents[0].country else '')+"</td>"
                 print >> htf, "<td>"+("<a href=\""+release.releaseEvents[0].label.id+"\">"+release.releaseEvents[0].label.name.encode('ascii', 'xmlcharrefreplace')+"</a>" if len(release.releaseEvents) and release.releaseEvents[0].label else '')+"</td>"
@@ -373,7 +374,9 @@ white-space: nowrap;
                 print >> htf, "<td>"+(release.releaseEvents[0].barcode if len(release.releaseEvents) and release.releaseEvents[0].barcode else '')+"</td>"
                 print >> htf, "<td>"+("<a href=\"" + amazonservices.getAsinProductUrl(release.asin) + "\">" + release.asin + "</a>" if release.asin else '')+"</td>"
                 print >> htf, "<td>"+("<a href='"+release.releaseEvents[0].format+"'>"+getFormatFromUri(release.releaseEvents[0].format, escape=False)+"</a>" if len(release.releaseEvents) else '')+"</td>"
-                print >> htf, "<td>"+(datetime.fromtimestamp(ed.addDates[0]).strftime('%Y-%m-%d') if len(ed.addDates) else '')+"</td>"
+                print >> htf, \
+                    "<td>"+(datetime.fromtimestamp(self.extraIndex[releaseId].addDates[0]).strftime('%Y-%m-%d') if \
+                    len(self.extraIndex[releaseId].addDates) else '')+"</td>"
                 print >> htf, "</tr>"
             print >> htf, "</table>"
 

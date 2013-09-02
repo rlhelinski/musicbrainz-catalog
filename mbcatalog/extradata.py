@@ -1,4 +1,4 @@
-import os, time, datetime, sys
+import os, time, sys
 import xml.etree.ElementTree as ET
 import musicbrainz2.utils as mbutils
 from StringIO import StringIO
