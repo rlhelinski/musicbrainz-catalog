@@ -96,13 +96,20 @@ class Catalog(object):
     def __contains__(self, releaseId):
         return releaseId in self.metaIndex
 
-    def load(self):
+    def load(self, releaseIds=None):
+        """Load the various tables from the XML metadata on disk"""
+
+
         # To map ReleaseId -> Format
         #self.formatMap = dict()
         # It would enhance performance but is redundant. Not implemented because
         # performance is tolerable.
         XmlParser = wsxml.MbXmlParser()
-        for releaseId in os.listdir(self.rootPath):
+        if not releaseIds:
+            releaseIds = os.listdir(self.rootPath)
+        if type(releaseIds) != type([]):
+            releaseIds = [releaseIds]
+        for releaseId in releaseIds:
             if releaseId.startswith('.') or len(releaseId) != 36:
                 continue
             xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
@@ -135,9 +142,10 @@ class Catalog(object):
             self.mapWordsToRelease(words, releaseId)
 
     def saveZip(self, zipName='catalog.zip'):
+        """Exports the database as a ZIP archive"""
         import zipfile, StringIO
 
-        with zipfile.ZipFile(zipName, 'w') as zf:
+        with zipfile.ZipFile(zipName, 'w', zipfile.ZIP_DEFLATE) as zf:
             xml_writer = wsxml.MbXmlWriter()
             for releaseId, release in self.getReleases():
                 # TODO change releaseIndex to metaIndex and store entire metadata
@@ -467,7 +475,7 @@ white-space: nowrap;
         results_meta = self.getReleaseMeta(releaseId)
         self.writeXml(releaseId, results_meta)
         # TODO this is done each time when refreshing all ?
-        self.load()
+        self.load(releaseId)
         self.getSortedList()
 
     def deleteRelease(self, releaseId):
