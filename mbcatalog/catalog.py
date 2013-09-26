@@ -88,7 +88,7 @@ class Catalog(object):
 
     def getReleases(self):
         for releaseId, metadata in self.metaIndex.items():
-            yield releaseId, metaIndex.getRelease()
+            yield releaseId, self.getRelease(releaseId)
 
     def __len__(self):
         return len(self.metaIndex)
@@ -145,7 +145,7 @@ class Catalog(object):
         """Exports the database as a ZIP archive"""
         import zipfile, StringIO
 
-        with zipfile.ZipFile(zipName, 'w', zipfile.ZIP_DEFLATE) as zf:
+        with zipfile.ZipFile(zipName, 'w', zipfile.ZIP_DEFLATED) as zf:
             xml_writer = wsxml.MbXmlWriter()
             for releaseId, release in self.getReleases():
                 # TODO change releaseIndex to metaIndex and store entire metadata
@@ -206,12 +206,17 @@ class Catalog(object):
         matches = set()
         for word in query_words:
             if word in self.wordMap:
-                if len(matches) > 0:
-                    matches = matches & set(self.wordMap[word])
-                else:
+                # for the first word
+                if word == query_words[0]:
+                    # use the whole set of releases that have this word
                     matches = set(self.wordMap[word])
+                else:
+                    # intersect the releases that have this word with the current release set 
+                    matches = matches & set(self.wordMap[word])
             else:
+                # this word is not contained in any releases
                 matches = set()
+                break
 
         return matches
 
