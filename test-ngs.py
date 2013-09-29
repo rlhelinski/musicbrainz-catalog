@@ -17,8 +17,13 @@ releaseId = 'f50a3fce-abf3-4903-a470-69d90de1ca55'
 #xmlPath = 'release-id/%s/metadata.xml' % releaseId
 xmlPath = 'test-ngs.xml'
 
-metadata_fresh = mb.get_release_by_id(releaseId, includes=['media', 'labels', 'recordings'])
-rel = metadata_fresh['release']
+metadata_xml = mb.get_release_by_id(releaseId, includes=['media', 'labels', 'recordings'], raw=True)
+with open(xmlPath, 'w') as xmlf:
+    resp = xmlf.write(metadata_xml)
+
+metadata_dict = mbxml.parse_message(metadata_xml)
+rel = metadata_dict['release']
+
 print releaseId, rel['title'] + (' ('+rel['disambiguation']+')' if 'disambiguation' else '')
 print 'Barcode: ' + (rel['barcode'] if rel['barcode'] else '[none]'), 
 for info in rel['label-info-list']:
@@ -28,13 +33,12 @@ for medium in rel['medium-list']:
     for recording in medium['track-list']:
         print recording['position'], recording['recording']['title']
 
-with open(xmlPath, 'w') as xmlf:
-    resp = xmlf.write(mb.get_release_by_id(releaseId, includes=['media', 'labels', 'recordings'], raw=True))
-
 
 # Test loading from file 
 with open(xmlPath, 'r') as xmlf:
     resp = xmlf.read()
 
 metadata_file = mbxml.parse_message(resp)
+if metadata_dict != metadata_file:
+    print "Data read back from disk does not match"
 
