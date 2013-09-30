@@ -1,7 +1,7 @@
 import os, sys, time, re
-import musicbrainz2.wsxml as wsxml
-import musicbrainz2.utils as mbutils
-import musicbrainz2.webservice as ws
+import musicbrainzngs.mbxml as mbxml
+import musicbrainzngs.util as mbutil
+import musicbrainzngs.musicbrainz as mb
 import amazonservices
 import urllib2
 import extradata
@@ -11,7 +11,23 @@ from collections import defaultdict
 from extradata import *
 
 overWriteAll = False
-lastQueryTime = 0
+lastQueryTime = 0 # still using this for Amazon cover art
+
+# Have to give an identity for musicbrainzngs
+mb.set_useragent(
+    "python-musicbrainz-ngs-catalog",
+    "0.1",
+    "https://github.com/rlhelinski/musicbrainz-catalog/",
+)
+
+# Get the XML parsing exceptions to catch. The behavior chnaged with Python 2.7
+# and ElementTree 1.3.
+import xml.etree.ElementTree as etree
+from xml.parsers import expat
+if hasattr(etree, 'ParseError'):
+    ETREE_EXCEPTIONS = (etree.ParseError, expat.ExpatError)
+else:
+    ETREE_EXCEPTIONS = (expat.ExpatError)
 
 def releaseSortCmp(a, b):
     return unicode.lower(a[1]) < unicode.lower(b[1])
@@ -28,6 +44,7 @@ def getFormatFromUri(uriStr, escape=True):
         return formatStr
 
 def getReleaseId(releaseId):
+    """Should be renamed to get releaseIdFromInput or something"""
     if releaseId.startswith('http'):
         return mbutils.extractUuid(releaseId, 'release')
     else:
@@ -74,9 +91,13 @@ class Catalog(object):
         self.discIdMap = defaultdict(list)
         self.barCodeMap = defaultdict(list)
 
+    def _get_xml_path(self, releaseId, fileName='metadata.xml'):
+        return os.path.join(self.rootPath, releaseId, fileName)
+
     def renameRelease(self, releaseId, newReleaseId):
         os.rename(os.path.join('release-id', releaseId),
                 os.path.join('release-id', newReleaseId) )
+        # TODO this is lazy!
         self.load()
         self.refreshMetaData(newReleaseId, olderThan=60)
 
@@ -96,29 +117,30 @@ class Catalog(object):
     def __contains__(self, releaseId):
         return releaseId in self.metaIndex
 
+    def loadReleaseIds(self):
+        fileList = os.listdir(self.rootPath)
+        for releaseId in fileList:
+            if len(releaseId) == 36:
+                yield releaseId
+
     def load(self, releaseIds=None):
         """Load the various tables from the XML metadata on disk"""
-
 
         # To map ReleaseId -> Format
         #self.formatMap = dict()
         # It would enhance performance but is redundant. Not implemented because
         # performance is tolerable.
-        XmlParser = wsxml.MbXmlParser()
-        if not releaseIds:
-            releaseIds = os.listdir(self.rootPath)
-        if type(releaseIds) != type([]):
-            releaseIds = [releaseIds]
-        for releaseId in releaseIds:
-            if releaseId.startswith('.') or len(releaseId) != 36:
-                continue
-            xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
+        #XmlParser = wsxml.MbXmlParser()
+        for releaseId in self.loadReleaseIds():
+            print releaseId
+            xmlPath = self._get_xml_path(releaseId)
             if (not os.path.isfile(xmlPath)):
                 print "No metadata for", releaseId
                 continue
-            with open(xmlPath, 'r') as xmlf:
-                metadata = XmlParser.parse(xmlf)
-            self.metaIndex[releaseId] = metadata
+
+            metadata = self.getMetaData(releaseId)
+
+            self.digestMetaDict(releaseId, metadata)
 
             # load extra data
             self.extraIndex[releaseId] = ExtraData(releaseId)
@@ -128,18 +150,6 @@ class Catalog(object):
                 # write an empty XML for next time
                 self.extraIndex[releaseId].save()
 
-            # populate DiscId map
-            for disc in metadata.getRelease().discs:
-                self.discIdMap[disc.id].append(releaseId)
-
-            # populate barcode map
-            for releaseEvent in metadata.getRelease().releaseEvents:
-                if releaseEvent.barcode:
-                    self.barCodeMap[releaseEvent.barcode].append(releaseId)
-                    
-            # for searching later
-            words = self.getReleaseWords(metadata.getRelease())
-            self.mapWordsToRelease(words, releaseId)
 
     def saveZip(self, zipName='catalog.zip'):
         """Exports the database as a ZIP archive"""
@@ -152,7 +162,7 @@ class Catalog(object):
                 # then, change references to releaseIndex to calls to getRelease(),
                 # a new function that will take the release ID, and call getRelease()
                 # on the appropriate metadata
-                xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
+                xmlPath = self._get_xml_path(releaseId)
                 XmlParser = wsxml.MbXmlParser()
                 with open(xmlPath, 'r') as xmlf:
                     metadata = XmlParser.parse(xmlf)
@@ -160,11 +170,11 @@ class Catalog(object):
                 memXmlF = StringIO.StringIO()
                 xml_writer.write(memXmlF, metadata)
                 memXmlF.seek(0)
-                zf.writestr('release-id/'+releaseId+'/metadata.xml', \
-                        memXmlF.read())
+                zf.writestr(xmlPath, memXmlF.read())
 
                 # TODO write a function to produce these paths
-                zf.writestr('release-id/'+releaseId+'/extra.xml', self.extraIndex[releaseId].toString())
+                zf.writestr(self._get_xml_path('extra.xml'), \
+                    self.extraIndex[releaseId].toString())
 
     def loadZip(self, zipName='catalog.zip'):
         import zipfile, StringIO
@@ -399,34 +409,16 @@ white-space: nowrap;
 </html>"""
         htf.close()
 
-    def getReleaseMeta(self, releaseId):
-        global lastQueryTime
-
-        if lastQueryTime > (time.time() - 1):
-            print "Waiting...",
-            time.sleep(1.0)
-        lastQueryTime = time.time()
-
-        q = ws.Query()
-        results_meta = q._getFromWebService('release', releaseId,
-                include=ws.ReleaseIncludes(
-                        artist=True,
-                        counts=True,
-                        releaseEvents=True,
-                        discs=True,
-                        labels=True,
-                        tracks=True,
-                        tags=True,
-                        #ratings=True,
-                        #isrcs=True
-                        ))
-
-        return results_meta
+    def getReleaseMetaXml(self, releaseId):
+        """Fetch release metadata XML from musicbrainz"""
+        # get_release_by_id() handles throttling on its own
+        return mb.get_release_by_id(releaseId, includes=['discids', 'media', 'labels', 'recordings'], raw=True)
 
     def writeXml(self, releaseId, metaData):
         global overWriteAll
 
-        xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
+        xmlPath = self._get_xml_path(releaseId)
+
         if not os.path.isdir(os.path.dirname(xmlPath)):
             os.mkdir(os.path.dirname(xmlPath))
 
@@ -447,41 +439,80 @@ white-space: nowrap;
         return 0
 
     def fixMeta(self, discId, releaseId):
-        results_meta =self.getReleaseMeta(releaseId)
+        results_meta = self.getReleaseMetaXml(releaseId)
 
         self.writeXml(discId, results_meta)
 
     def getMetaData(self, releaseId):
-        xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
+        """Load metadata from disk"""
+        xmlPath = self._get_xml_path(releaseId)
         if (not os.path.isfile(xmlPath)):
             print "No metadata for", releaseId
             return None
-        xmlf = open(xmlPath, 'r')
-        XmlParser = wsxml.MbXmlParser()
-        metadata = XmlParser.parse(xmlf)
-        if (len(metadata.getReleaseResults())):
-            print "Old format"
-            release = metadata.getReleaseResults()[0].release
-        else:
-            release = metadata.getRelease()
-        return release
+        with open(xmlPath, 'r') as xmlf:
+            metaxml = xmlf.read()
 
+        try:
+            metadata = mbxml.parse_message(metaxml)
+        except UnicodeError as exc:
+            raise ResponseError(cause=exc)
+        except Exception as exc:
+            if isinstance(exc, ETREE_EXCEPTIONS):
+                print "Got some bad XML!"
+                return 
+            else:
+                raise
 
+        return metadata['release']
+
+    def digestMetaDict(self, releaseId, metadata):
+        # some dictionaries to improve performance
+        # these should all be tables in an SQL DB
+        try:
+            rel = metadata['release']
+            self.metaIndex[releaseId] = rel
+
+            # populate DiscId map
+            for medium in rel['medium-list']:
+                for disc in medium['disc-list']:
+                    self.discIdMap[disc['id']].append(releaseId)
+                    
+            # populate barcode map
+            if 'barcode' in rel and rel['barcode']:
+                self.barCodeMap[rel['barcode']].append(releaseId)
+                    
+            # for searching later
+            #words = self.getReleaseWords(rel.getRelease())
+            #self.mapWordsToRelease(words, releaseId)
+        except KeyError as e:
+            print "Bad XML for " + releaseId + ": " + str(e)
+            return
+        except TypeError as e:
+            print e
+            return
+        
+        # discIdMap
+        # barcodeMap
+        # wordMap
+
+    def digestXml(self, releaseId, meta_xml):
+        self.digestMetaDict(releaseId, mbxml.parse_message(meta_xml))
 
     def refreshMetaData(self, releaseId, olderThan=0):
-        """Should be renamed to "add release" or something"""
+        """Should be renamed to "add release" or something
+        get metadata XML from MusicBrainz and save to disk"""
 
         releaseId = getReleaseId(releaseId)
-        xmlPath = os.path.join(self.rootPath, releaseId, 'metadata.xml')
+        xmlPath = self._get_xml_path(releaseId)
         if (os.path.isfile(xmlPath) and (os.path.getmtime(xmlPath) > (time.time() - olderThan))):
-            print "Skipping fetch of metadata for ", releaseId, "because it is new"
+            print "Skipping fetch of metadata for ", releaseId, "because it is recent"
             return 0
 
-        results_meta = self.getReleaseMeta(releaseId)
-        self.writeXml(releaseId, results_meta)
-        # TODO this is done each time when refreshing all ?
-        self.load(releaseId)
-        self.getSortedList()
+        meta_xml = self.getReleaseMetaXml(releaseId)
+        with open(xmlPath, 'w') as xmlf:
+            xmlf.write(meta_xml)
+        #self.writeXml(releaseId, meta_xml)
+        self.digestXml(releaseId, meta_xml)
 
     def deleteRelease(self, releaseId):
         releaseId = getReleaseId(releaseId)
@@ -491,7 +522,7 @@ white-space: nowrap;
         self.load()
 
     def refreshAllMetaData(self, olderThan=0):
-        for releaseId in self.getReleaseIds():
+        for releaseId in self.loadReleaseIds():
             print "Refreshing", releaseId,
             self.refreshMetaData(releaseId, olderThan)
 
