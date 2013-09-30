@@ -9,6 +9,7 @@ import shutil
 from datetime import datetime
 from collections import defaultdict
 from extradata import *
+import progressbar
 
 overWriteAll = False
 lastQueryTime = 0 # still using this for Amazon cover art
@@ -36,6 +37,7 @@ import HTMLParser
 h = HTMLParser.HTMLParser()
 
 def getFormatFromUri(uriStr, escape=True):
+    # TODO deprecate
     #return uriStr.split("#")[1].decode('ascii')
     formatStr = uriStr.split("#", 1)[1]
     if escape:
@@ -104,8 +106,9 @@ class Catalog(object):
     def getReleaseIds(self):
         return self.metaIndex.keys()
 
+    # TODO rename metaIndex back to releaseIndex or relIndex
     def getRelease(self, releaseId):
-        return self.metaIndex[releaseId].getRelease()
+        return self.metaIndex[releaseId]
 
     def getReleases(self):
         for releaseId, metadata in self.metaIndex.items():
@@ -119,9 +122,15 @@ class Catalog(object):
 
     def loadReleaseIds(self):
         fileList = os.listdir(self.rootPath)
+
+        widgets = ["Loading: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Fraction(), " ", progressbar.Percentage() ]
+        pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(fileList)).start()
+
         for releaseId in fileList:
             if len(releaseId) == 36:
+                pbar.increment()
                 yield releaseId
+        pbar.finish()
 
     def loadExtraData(self, releaseId):
         # load extra data
@@ -150,7 +159,7 @@ class Catalog(object):
         # performance is tolerable.
         #XmlParser = wsxml.MbXmlParser()
         for releaseId in self.loadReleaseIds():
-            print releaseId
+            #print releaseId
             xmlPath = self._get_xml_path(releaseId)
             if (not os.path.isfile(xmlPath)):
                 print "No metadata for", releaseId
@@ -204,13 +213,11 @@ class Catalog(object):
             self.metaIndex[releaseId] = metadata
         zf.close()
 
-    def getReleaseWords(self, release):
+    def getReleaseWords(self, rel):
         words = []
-        for field in [
-                release.title, \
-                release.artist.getName() ] + \
-                [track.title for track in release.tracks] \
-                :
+        # TODO make combining the credits a function
+        for field in [ rel['title'] ] + \
+                [credit if type(credit)==type('') else credit['artist']['name'] for credit in rel['artist-credit'] ]:
             words.extend(re.findall(r"\w+", field.lower(), re.UNICODE))
         return words
 
@@ -255,10 +262,11 @@ class Catalog(object):
         release = self.getRelease(releaseId)
 
         try:
-            return ' - '.join ( [
-                    release.artist.getSortName(), \
-                    release.releaseEvents[0].date, \
-                    release.title, \
+            return ' - '.join ( \
+                    [credit if type(credit)==type('') else credit['artist']['sort-name'] for credit in release['artist-credit'] ] + \
+                    #release['artist-credit-phrase'], \
+                    [ release['date'] if 'date' in release else '', \
+                    release['title'], \
                     ] ) 
         except IndexError as e:
             print "No releases or date for: ", releaseId, "-", release.artist.getSortName(), "-", release.title
@@ -277,23 +285,22 @@ class Catalog(object):
         if matchFmt != ReleaseFormat():
             filteredSortKeys = []
             for sortId, sortStr in sortKeys:
-                if len(self.getRelease(sortId).releaseEvents):
-                    releaseFmt = getFormatFromUri(self.getRelease(sortId).releaseEvents[0].format)
-                    if 'unknown' in releaseFmt:
-                        print releaseFmt + " format for release " + sortId + ", " + sortStr
-                    if matchFmt == ReleaseFormat(releaseFmt):
-                        filteredSortKeys.append((sortId, sortStr))
-                else:
-                    #print "No release events for " + sortId + ", " + sortStr
-                    # Assume that if the release does not have a release event (and therefore no
-                    # format), that it is a CD
-                    if matchFmt == ReleaseFormat('CD'):
-                        filteredSortKeys.append((sortId, sortStr))
+                # TODO need to resolve releases with more than one format 
+                # TODO make this next line a function
+                releaseFmt = self.getRelease(sortId)['medium-list'][0]['format']
+                if 'unknown' in releaseFmt:
+                    print releaseFmt + " format for release " + sortId + ", " + sortStr
+                # Assume that if the release does not have a release event (and therefore no
+                # format), that it is a CD
+                elif matchFmt == ReleaseFormat('CD'):
+                    filteredSortKeys.append((sortId, sortStr))
+                elif matchFmt == ReleaseFormat(releaseFmt):
+                    filteredSortKeys.append((sortId, sortStr))
         else:
             # Skip all the fun
             filteredSortKeys = sortKeys
 
-        self.sortedList = sorted(filteredSortKeys, key=lambda sortKey: unicode.lower(sortKey[1]))
+        self.sortedList = sorted(filteredSortKeys, key=lambda sortKey: unicode.lower(unicode(sortKey[1])))
         return self.sortedList
 
     def getSortNeighbors(self, releaseId, neighborHood=5, matchFormat=False):
@@ -301,9 +308,8 @@ class Catalog(object):
         if matchFormat:
             try:
                 self.getSortedList(
-                        ReleaseFormat(
-                                getFormatFromUri(
-                                        self.getRelease(releaseId).releaseEvents[0].format)))
+                    ReleaseFormat(
+                        self.getRelease(releaseId)['medium-list'][0]['format']))
             except IndexError as e:
                 print "No format for release"
                 self.getSortedList()
@@ -316,7 +322,7 @@ class Catalog(object):
             print ('\033[92m' if i == index else "") + "%4d" % i, \
                     sortId, \
                     sortStr, \
-                    ("[" + getFormatFromUri(self.getRelease(sortId).releaseEvents[0].format) + "]" if len(self.getRelease(sortId).releaseEvents) else ""), \
+                    ("[" + self.getRelease(sortId)['medium-list'][0]['format'] + "]" if len(self.getRelease(sortId)['medium-list']) else ""), \
                     (" <<<" if i == index else "") + \
                     ('\033[0m' if i == index else "")
 
@@ -423,7 +429,7 @@ white-space: nowrap;
     def getReleaseMetaXml(self, releaseId):
         """Fetch release metadata XML from musicbrainz"""
         # get_release_by_id() handles throttling on its own
-        return mb.get_release_by_id(releaseId, includes=['discids', 'media', 'labels', 'recordings'], raw=True)
+        return mb.get_release_by_id(releaseId, includes=['artists', 'discids', 'media', 'labels', 'recordings'], raw=True)
 
     def writeXml(self, releaseId, metaData):
         global overWriteAll
@@ -493,14 +499,17 @@ white-space: nowrap;
                 self.barCodeMap[rel['barcode']].append(releaseId)
                     
             # for searching later
-            #words = self.getReleaseWords(rel.getRelease())
-            #self.mapWordsToRelease(words, releaseId)
+            try:
+                words = self.getReleaseWords(rel)
+                self.mapWordsToRelease(words, releaseId)
+            except KeyError as e:
+                print "No artists included in XML"
 
         except KeyError as e:
             print "Bad XML for " + releaseId + ": " + str(e)
             return
         except TypeError as e:
-            print e
+            print releaseId + ' ' + str(type(e)) + ": " + str(e) + ": " + str(dir(e))
             return
         
         # discIdMap

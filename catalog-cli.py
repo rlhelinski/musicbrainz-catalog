@@ -94,10 +94,13 @@ class Shell:
             print "No input"
             return
         if releaseId in self.c:
-            print "Release already exists"
+            print "Release '%s' already exists" % self.c.getRelease(releaseId)['title']
             return
-        #try:
-        self.c.refreshMetaData(releaseId)
+        try:
+            self.c.refreshMetaData(releaseId)
+        except mb.ResponseError as e:
+            print e
+            return
         #except ws.ResourceNotFoundError as e:
             #print "Release not found"
             #return
@@ -106,6 +109,8 @@ class Shell:
             #return
 
         self.c.addExtraData(releaseId)
+
+        print "Added '%s'" % self.c.getRelease(releaseId)['title']
 
     def BarcodeSearch(self):
         print "Enter barcode: ",
