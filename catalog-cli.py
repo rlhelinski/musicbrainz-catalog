@@ -96,18 +96,16 @@ class Shell:
         if releaseId in self.c:
             print "Release already exists"
             return
-        try:
-            self.c.refreshMetaData(releaseId)
-        except ws.ResourceNotFoundError as e:
-            print "Release not found"
-            return
-        except ws.RequestError as e:
-            print e
-            return
+        #try:
+        self.c.refreshMetaData(releaseId)
+        #except ws.ResourceNotFoundError as e:
+            #print "Release not found"
+            #return
+        #except ws.RequestError as e:
+            #print e
+            #return
 
-        ed = self.c.extraIndex[releaseId]
-        ed.addDate()
-        ed.save()
+        self.c.addExtraData(releaseId)
 
     def BarcodeSearch(self):
         print "Enter barcode: ",

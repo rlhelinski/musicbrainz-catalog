@@ -123,6 +123,24 @@ class Catalog(object):
             if len(releaseId) == 36:
                 yield releaseId
 
+    def loadExtraData(self, releaseId):
+        # load extra data
+        self.extraIndex[releaseId] = ExtraData(releaseId)
+        try:
+            self.extraIndex[releaseId].load()
+        except IOError as e:
+            # write an empty XML for next time
+            self.extraIndex[releaseId].save()
+
+    def addExtraData(self, releaseId):
+        self.extraIndex[releaseId] = ExtraData(releaseId)
+        try:
+            self.extraIndex[releaseId].load()
+        except IOError as e:
+            # write an empty XML for next time
+            self.extraIndex[releaseId].addDate()
+            self.extraIndex[releaseId].save()
+
     def load(self, releaseIds=None):
         """Load the various tables from the XML metadata on disk"""
 
@@ -142,14 +160,7 @@ class Catalog(object):
 
             self.digestMetaDict(releaseId, metadata)
 
-            # load extra data
-            self.extraIndex[releaseId] = ExtraData(releaseId)
-            try:
-                self.extraIndex[releaseId].load()
-            except IOError as e:
-                # write an empty XML for next time
-                self.extraIndex[releaseId].save()
-
+            self.loadExtraData(releaseId)
 
     def saveZip(self, zipName='catalog.zip'):
         """Exports the database as a ZIP archive"""
@@ -463,7 +474,7 @@ white-space: nowrap;
             else:
                 raise
 
-        return metadata['release']
+        return metadata
 
     def digestMetaDict(self, releaseId, metadata):
         # some dictionaries to improve performance
@@ -484,6 +495,7 @@ white-space: nowrap;
             # for searching later
             #words = self.getReleaseWords(rel.getRelease())
             #self.mapWordsToRelease(words, releaseId)
+
         except KeyError as e:
             print "Bad XML for " + releaseId + ": " + str(e)
             return
@@ -509,6 +521,8 @@ white-space: nowrap;
             return 0
 
         meta_xml = self.getReleaseMetaXml(releaseId)
+        if not os.path.isdir(os.path.dirname(xmlPath)):
+            os.mkdir(os.path.dirname(xmlPath))
         with open(xmlPath, 'w') as xmlf:
             xmlf.write(meta_xml)
         #self.writeXml(releaseId, meta_xml)
