@@ -405,7 +405,8 @@ white-space: nowrap;
 
                 print >> htf, "<tr>"
                 print >> htf, "<!-- <td>"+("%04d" % sortIndex)+"</td> -->"
-                print >> htf, "<td><a href=\""+self.artistUrl+release['artist-credit'][0]['artist']['id']+"\">"+release['artist-credit'][0]['artist']['name'].encode('ascii', 'xmlcharrefreplace')+"</a></td>"
+                print >> htf, "<td>" + ''.join( [\
+                    credit if type(credit)==type('') else "<a href=\""+self.artistUrl+credit['artist']['id']+"\">"+credit['artist']['name'].encode('ascii', 'xmlcharrefreplace')+"</a>" for credit in release['artist-credit'] ] ) + "</td>"
                 print >> htf, "<td><a href=\""+self.releaseUrl+release['id']+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
                     ">"+release['title'].encode('ascii', 'xmlcharrefreplace')\
                     +(' (%s)' % release['disambiguation'].encode('ascii', 'xmlcharrefreplace') if 'disambiguation' in release and release['disambiguation'] else '')\
@@ -414,11 +415,12 @@ white-space: nowrap;
                     if self.extraIndex[releaseId].digitalPaths else "") + "</td>"
                 print >> htf, "<td>"+(release['date'] if 'date' in release else '')+"</td>"
                 print >> htf, "<td>"+(release['country'].encode('ascii', 'xmlcharrefreplace') if 'country' in release else '')+"</td>"
-                print >> htf, "<td>"+("<a href=\""+self.labelUrl+release['label-info-list'][0]['label']['id']+"\">"+release['label-info-list'][0]['label']['name'].encode('ascii', 'xmlcharrefreplace')+"</a>" if 'label-info-list' in release and len(release['label-info-list']) and 'label' in release['label-info-list'][0] else '')+"</td>"
-                print >> htf, "<td>"+(release['label-info-list'][0]['catalog-number'].encode('ascii', 'xmlcharrefreplace') if len(release['label-info-list']) and 'catalog-number' in release['label-info-list'][0] else '')+"</td>"
+                print >> htf, "<td>"+', '.join(["<a href=\""+self.labelUrl+info['label']['id']+"\">"+info['label']['name'].encode('ascii', 'xmlcharrefreplace')+"</a>" if 'label' in info else '' for info in release['label-info-list']])+"</td>"
+                # TODO handle empty strings here (remove from this list before joining)
+                print >> htf, "<td>"+', '.join([info['catalog-number'].encode('ascii', 'xmlcharrefreplace') if 'catalog-number' in info else '' for info in release['label-info-list']])+"</td>"
                 print >> htf, "<td>"+(release['barcode'] if 'barcode' in release else '')+"</td>"
                 print >> htf, "<td>"+("<a href=\"" + amazonservices.getAsinProductUrl(release['asin']) + "\">" + release['asin'] + "</a>" if 'asin' in release else '')+"</td>"
-                print >> htf, "<td>"+(release['medium-list'][0]['format'] if True else '')+"</td>"
+                print >> htf, "<td>"+' + '.join([medium['format'] for medium in release['medium-list']])+"</td>"
                 print >> htf, \
                     "<td>"+(datetime.fromtimestamp(self.extraIndex[releaseId].addDates[0]).strftime('%Y-%m-%d') if \
                     len(self.extraIndex[releaseId].addDates) else '')+"</td>"
