@@ -99,7 +99,7 @@ class Shell:
         try:
             self.c.refreshMetaData(releaseId)
         except mb.ResponseError as e:
-            print e
+            print e, "bad release ID?"
             return
         #except ws.ResourceNotFoundError as e:
             #print "Release not found"
@@ -191,7 +191,7 @@ class Shell:
                 try:
                     (self.shellCommands[input][0])(self)
                 except ValueError as e:
-                    print e
+                    print e, "command failed"
 
             else:
                 print "Invalid command"

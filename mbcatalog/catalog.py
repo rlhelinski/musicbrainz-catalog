@@ -75,13 +75,17 @@ class ReleaseFormat(object):
     def __eq__(self, other):
         return (self.isVinyl() and other.isVinyl()) or \
                 (self.isCD() and other.isCD()) or \
-                (self.isAny() and other.isAny())
+                (self.isAny() or other.isAny())
 
     def __str__(self):
         return self.fmtStr
 
 class Catalog(object):
     rootPath='release-id'
+    mbUrl = 'http://musicbrainz.org/'
+    artistUrl = mbUrl+'artist/'
+    labelUrl = mbUrl+'label/'
+    releaseUrl = mbUrl+'release/'
 
     def __init__(self):
         if not os.path.isdir(self.rootPath):
@@ -123,7 +127,7 @@ class Catalog(object):
     def loadReleaseIds(self):
         fileList = os.listdir(self.rootPath)
 
-        widgets = ["Loading: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Fraction(), " ", progressbar.Percentage() ]
+        widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Fraction(), " ", progressbar.Percentage() ]
         pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(fileList)).start()
 
         for releaseId in fileList:
@@ -250,12 +254,13 @@ class Catalog(object):
 
     def formatDiscInfo(self, releaseId):
         release = self.getRelease(releaseId)
+        # TODO this is similar to other code
         return ' '.join( [
                 releaseId, ':', \
-                (release.releaseEvents[0].getDate() if len(release.releaseEvents) else ''), '-', \
-                release.artist.getName(), '-', \
-                release.title, \
-                ('['+getFormatFromUri(release.releaseEvents[0].format)+']' if len(release.releaseEvents) else ''), \
+                ''.join([credit if type(credit)==type('') else credit['artist']['sort-name'] for credit in release['artist-credit'] ]), '-', \
+                (release['date'] if 'date' in release else ''), '-', \
+                release['title'], \
+                ('['+release['medium-list'][0]['format']+']' if len(release['medium-list']) else ''), \
                 ] )
 
     def formatDiscSortKey(self, releaseId):
@@ -290,10 +295,6 @@ class Catalog(object):
                 releaseFmt = self.getRelease(sortId)['medium-list'][0]['format']
                 if 'unknown' in releaseFmt:
                     print releaseFmt + " format for release " + sortId + ", " + sortStr
-                # Assume that if the release does not have a release event (and therefore no
-                # format), that it is a CD
-                elif matchFmt == ReleaseFormat('CD'):
-                    filteredSortKeys.append((sortId, sortStr))
                 elif matchFmt == ReleaseFormat(releaseFmt):
                     filteredSortKeys.append((sortId, sortStr))
         else:
@@ -371,6 +372,7 @@ white-space: nowrap;
 </head>
 <body>"""
 
+        # TODO I am calling loadReleaseIds somewhere in here (implicitly?)
         for releaseType in [ReleaseFormat('CD'), ReleaseFormat('Vinyl')]:
             sortedList = self.getSortedList(releaseType)
             print >> htf, "<h2>" + str(releaseType) + (" (%d Releases)" % len(sortedList)) + "</h2>"
@@ -392,7 +394,7 @@ white-space: nowrap;
             for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
                 release = self.getRelease(releaseId)
 
-                if release.asin:
+                if 'asin' in release:
                     #coverartUrl = amazonservices.getAsinImageUrl(release.asin, amazonservices.AMAZON_SERVER["amazon.com"], 'S')
                     # Refer to local copy instead
                     self.getCoverArt(releaseId, quiet=True)
@@ -402,18 +404,20 @@ white-space: nowrap;
 
                 print >> htf, "<tr>"
                 print >> htf, "<!-- <td>"+("%04d" % sortIndex)+"</td> -->"
-                print >> htf, "<td><a href=\""+release.artist.id+"\">"+release.artist.name.encode('ascii', 'xmlcharrefreplace')+"</a></td>"
-                print >> htf, "<td><a href=\""+release.id+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
-                    ">"+release.title.encode('ascii', 'xmlcharrefreplace')+("<img width=24 height=24 src='tango/Image-x-generic.svg'><span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" \
+                print >> htf, "<td><a href=\""+self.artistUrl+release['artist-credit'][0]['artist']['id']+"\">"+release['artist-credit'][0]['artist']['name'].encode('ascii', 'xmlcharrefreplace')+"</a></td>"
+                print >> htf, "<td><a href=\""+self.releaseUrl+release['id']+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
+                    ">"+release['title'].encode('ascii', 'xmlcharrefreplace')\
+                    +(' (%s)' % release['disambiguation'] if 'disambiguation' in release and release['disambiguation'] else '')\
+                    +("<img width=24 height=24 src='tango/Image-x-generic.svg'><span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" \
                     if coverartUrl else "") + "</a>" + (''.join("<a href='"+path+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
                     if self.extraIndex[releaseId].digitalPaths else "") + "</td>"
-                print >> htf, "<td>"+(release.releaseEvents[0].date if len(release.releaseEvents) else '')+"</td>"
-                print >> htf, "<td>"+(release.releaseEvents[0].country.encode('ascii', 'xmlcharrefreplace') if len(release.releaseEvents) and release.releaseEvents[0].country else '')+"</td>"
-                print >> htf, "<td>"+("<a href=\""+release.releaseEvents[0].label.id+"\">"+release.releaseEvents[0].label.name.encode('ascii', 'xmlcharrefreplace')+"</a>" if len(release.releaseEvents) and release.releaseEvents[0].label else '')+"</td>"
-                print >> htf, "<td>"+(release.releaseEvents[0].catalogNumber if len(release.releaseEvents) and release.releaseEvents[0].catalogNumber else '')+"</td>"
-                print >> htf, "<td>"+(release.releaseEvents[0].barcode if len(release.releaseEvents) and release.releaseEvents[0].barcode else '')+"</td>"
-                print >> htf, "<td>"+("<a href=\"" + amazonservices.getAsinProductUrl(release.asin) + "\">" + release.asin + "</a>" if release.asin else '')+"</td>"
-                print >> htf, "<td>"+("<a href='"+release.releaseEvents[0].format+"'>"+getFormatFromUri(release.releaseEvents[0].format, escape=False)+"</a>" if len(release.releaseEvents) else '')+"</td>"
+                print >> htf, "<td>"+(release['date'] if 'date' in release else '')+"</td>"
+                print >> htf, "<td>"+(release['country'].encode('ascii', 'xmlcharrefreplace') if 'country' in release else '')+"</td>"
+                print >> htf, "<td>"+("<a href=\""+self.artistUrl+release['label-info-list'][0]['label']['id']+"\">"+release['label-info-list'][0]['label']['name'].encode('ascii', 'xmlcharrefreplace')+"</a>" if 'label-info-list' in release and len(release['label-info-list']) else '')+"</td>"
+                print >> htf, "<td>"+(release['label-info-list'][0]['catalog-number'] if len(release['label-info-list']) and 'catalog-number' in release['label-info-list'][0] else '')+"</td>"
+                print >> htf, "<td>"+(release['barcode'] if 'barcode' in release else '')+"</td>"
+                print >> htf, "<td>"+("<a href=\"" + amazonservices.getAsinProductUrl(release['asin']) + "\">" + release['asin'] + "</a>" if 'asin' in release else '')+"</td>"
+                print >> htf, "<td>"+(release['medium-list'][0]['format'] if True else '')+"</td>"
                 print >> htf, \
                     "<td>"+(datetime.fromtimestamp(self.extraIndex[releaseId].addDates[0]).strftime('%Y-%m-%d') if \
                     len(self.extraIndex[releaseId].addDates) else '')+"</td>"
@@ -564,7 +568,7 @@ white-space: nowrap;
     def getCoverArt(self, releaseId, quiet=False):
         global lastQueryTime
         release = self.getRelease(releaseId)
-        if release.asin:
+        if 'asin' in release:
             imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
             if os.path.isfile(imgPath):
                 if not quiet:
@@ -576,7 +580,7 @@ white-space: nowrap;
                     print "Waiting...",
                     time.sleep(0.1)
                 lastQueryTime = time.time()
-                imgUrl = amazonservices.getAsinImageUrl(release.asin, amazonservices.AMAZON_SERVER["amazon.com"])
+                imgUrl = amazonservices.getAsinImageUrl(release['asin'], amazonservices.AMAZON_SERVER["amazon.com"])
                 print imgUrl
                 response = urllib2.urlopen( imgUrl )
                 imgf = open(imgPath, 'w')
