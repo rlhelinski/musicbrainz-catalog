@@ -83,8 +83,8 @@ class Shell:
         self.c.renameRelease(releaseId, newReleaseId)
 
     def Html(self):
-        self.c = Catalog()
-        self.c.load()
+        #self.c = Catalog()
+        #self.c.load()
         self.c.makeHtml()
 
     def Add(self):

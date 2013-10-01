@@ -372,7 +372,6 @@ white-space: nowrap;
 </head>
 <body>"""
 
-        # TODO I am calling loadReleaseIds somewhere in here (implicitly?)
         for releaseType in [ReleaseFormat('CD'), ReleaseFormat('Vinyl')]:
             sortedList = self.getSortedList(releaseType)
             print >> htf, "<h2>" + str(releaseType) + (" (%d Releases)" % len(sortedList)) + "</h2>"
@@ -391,6 +390,8 @@ white-space: nowrap;
 <th>Date Added</th>
 </tr>
 """
+            # TODO rename 'release' variable to 'rel'
+            # TODO there are a lot of calls to ''.encode()
             for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
                 release = self.getRelease(releaseId)
 
@@ -407,14 +408,14 @@ white-space: nowrap;
                 print >> htf, "<td><a href=\""+self.artistUrl+release['artist-credit'][0]['artist']['id']+"\">"+release['artist-credit'][0]['artist']['name'].encode('ascii', 'xmlcharrefreplace')+"</a></td>"
                 print >> htf, "<td><a href=\""+self.releaseUrl+release['id']+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
                     ">"+release['title'].encode('ascii', 'xmlcharrefreplace')\
-                    +(' (%s)' % release['disambiguation'] if 'disambiguation' in release and release['disambiguation'] else '')\
+                    +(' (%s)' % release['disambiguation'].encode('ascii', 'xmlcharrefreplace') if 'disambiguation' in release and release['disambiguation'] else '')\
                     +("<img width=24 height=24 src='tango/Image-x-generic.svg'><span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" \
                     if coverartUrl else "") + "</a>" + (''.join("<a href='"+path+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
                     if self.extraIndex[releaseId].digitalPaths else "") + "</td>"
                 print >> htf, "<td>"+(release['date'] if 'date' in release else '')+"</td>"
                 print >> htf, "<td>"+(release['country'].encode('ascii', 'xmlcharrefreplace') if 'country' in release else '')+"</td>"
-                print >> htf, "<td>"+("<a href=\""+self.artistUrl+release['label-info-list'][0]['label']['id']+"\">"+release['label-info-list'][0]['label']['name'].encode('ascii', 'xmlcharrefreplace')+"</a>" if 'label-info-list' in release and len(release['label-info-list']) else '')+"</td>"
-                print >> htf, "<td>"+(release['label-info-list'][0]['catalog-number'] if len(release['label-info-list']) and 'catalog-number' in release['label-info-list'][0] else '')+"</td>"
+                print >> htf, "<td>"+("<a href=\""+self.labelUrl+release['label-info-list'][0]['label']['id']+"\">"+release['label-info-list'][0]['label']['name'].encode('ascii', 'xmlcharrefreplace')+"</a>" if 'label-info-list' in release and len(release['label-info-list']) and 'label' in release['label-info-list'][0] else '')+"</td>"
+                print >> htf, "<td>"+(release['label-info-list'][0]['catalog-number'].encode('ascii', 'xmlcharrefreplace') if len(release['label-info-list']) and 'catalog-number' in release['label-info-list'][0] else '')+"</td>"
                 print >> htf, "<td>"+(release['barcode'] if 'barcode' in release else '')+"</td>"
                 print >> htf, "<td>"+("<a href=\"" + amazonservices.getAsinProductUrl(release['asin']) + "\">" + release['asin'] + "</a>" if 'asin' in release else '')+"</td>"
                 print >> htf, "<td>"+(release['medium-list'][0]['format'] if True else '')+"</td>"
