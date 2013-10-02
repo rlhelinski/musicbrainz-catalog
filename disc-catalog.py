@@ -118,7 +118,7 @@ if not releaseId:
     sys.exit(1)
 
 c = Catalog()
-c.writeXml(releaseId, c.getReleaseMeta(releaseId))
+c.refreshMetaData(releaseId)
 
 ed = ExtraData(releaseId)
 try:
