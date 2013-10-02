@@ -58,9 +58,9 @@ class ReleaseFormat(object):
 
     def isVinyl(self):
         return self.fmtStr.endswith('Vinyl') or \
-            self.fmtStr.endswith('7"') or \
-            self.fmtStr.endswith('10"') or \
-            self.fmtStr.endswith('12"')
+            self.fmtStr.startswith('7"') or \
+            self.fmtStr.startswith('10"') or \
+            self.fmtStr.startswith('12"')
 
     def isCD(self):
         # There are many CDs labeled as '(unknown)' type
