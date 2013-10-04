@@ -80,6 +80,7 @@ class ReleaseFormat(object):
     def __str__(self):
         return self.fmtStr
 
+
 class Catalog(object):
     rootPath='release-id'
     mbUrl = 'http://musicbrainz.org/'
@@ -91,12 +92,6 @@ class Catalog(object):
         if not os.path.isdir(self.rootPath):
             os.mkdir(self.rootPath)
             
-        self.metaIndex = dict()
-        self.extraIndex = dict()
-        self.wordMap = dict()
-        self.discIdMap = defaultdict(list)
-        self.barCodeMap = defaultdict(list)
-
     def _get_xml_path(self, releaseId, fileName='metadata.xml'):
         return os.path.join(self.rootPath, releaseId, fileName)
 
@@ -157,11 +152,14 @@ class Catalog(object):
     def load(self, releaseIds=None):
         """Load the various tables from the XML metadata on disk"""
 
+        self.metaIndex = dict()
+        self.extraIndex = dict()
+        self.wordMap = dict()
+        self.discIdMap = defaultdict(list)
+        self.barCodeMap = defaultdict(list)
         # To map ReleaseId -> Format
         #self.formatMap = dict()
-        # It would enhance performance but is redundant. Not implemented because
-        # performance is tolerable.
-        #XmlParser = wsxml.MbXmlParser()
+
         for releaseId in self.loadReleaseIds():
             #print releaseId
             xmlPath = self._get_xml_path(releaseId)
