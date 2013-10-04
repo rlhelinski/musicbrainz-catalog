@@ -4,20 +4,42 @@ from mbcatalog.catalog import *
 from mbcatalog.extradata import *
 import os, shutil
 
+class InputSplitter(object):
+    def __init__(self):
+        self.s = sys.stdin
+        self.buffer = []
+
+    def _readline(self):
+        return self.s.readline().strip()
+
+    def nextLine(self):
+        if self.buffer:
+            l = ' '.join(self.buffer)
+            self.buffer = []
+            return l
+        else:
+            return self._readline()
+
+    def nextWord(self):
+        if not self.buffer:
+            self.buffer = self._readline().split()
+
+        if self.buffer:
+            return self.buffer.pop(0)
+        else:
+            return ''
+
 class Shell:
     def __init__(self):
         self.c = Catalog()
         self.c.load()
         self.c.report()
-
-    @staticmethod
-    def getInput():
-        return sys.stdin.readline().strip()
+        self.s = InputSplitter()
 
     def Search(self):
         while(True):
             print "Enter search terms (or release ID): ",
-            input = getInput()
+            input = self.s.nextLine()
             if input:
                 if len(getReleaseId(input)) == 36:
                     releaseId = getReleaseId(input)
@@ -31,7 +53,7 @@ class Shell:
                     while (True):
                         try:
                             print "Select a match: ",
-                            index = int(getInput())
+                            index = int(self.s.nextWord())
                             self.c.getSortNeighbors(matches[index], matchFormat=True)
                             return matches[index]
                         except ValueError as e:
@@ -56,18 +78,19 @@ class Shell:
         print "DONE"
 
     def EditExtra(self):
+        # TODO remove, extra should be transparaent to the user
         releaseId = self.Search()
         ed = self.c.extraIndex[releaseId] 
         print str(ed)
         print "Modify? [y/N]",
-        modify = getInput()
+        modify = self.s.nextWord()
         if modify.lower().startswith('y'):
             ed.interactiveEntry()
             ed.save()
 
     def Refresh(self):
         print "Enter release ID [a for all]: ",
-        releaseId = getReleaseId(getInput())
+        releaseId = getReleaseId(self.s.nextLine())
         if releaseId == "a":
             self.c.refreshAllMetaData(60*60)
         elif releaseId not in self.c:
@@ -76,10 +99,10 @@ class Shell:
         else:
             self.c.refreshMetaData(releaseId, olderThan=60)
 
-    def Change(self):
+    def Switch(self):
         releaseId = self.Search()
-        print "Enter new release ID: ",
-        newReleaseId = getInput()
+        print "Enter new release ID: "
+        newReleaseId = self.s.nextWord()
         self.c.renameRelease(releaseId, newReleaseId)
 
     def Html(self):
@@ -89,7 +112,7 @@ class Shell:
 
     def Add(self):
         print "Enter release ID: ",
-        releaseId = getReleaseId(getInput())
+        releaseId = getReleaseId(self.s.nextWord())
         if not releaseId:
             print "No input"
             return
@@ -114,7 +137,7 @@ class Shell:
 
     def BarcodeSearch(self):
         print "Enter barcode: ",
-        barCode = getInput()
+        barCode = self.s.nextWord()
         for releaseId in self.c.barCodeMap[barCode]:
             print self.c.formatDiscInfo(releaseId)
 
@@ -134,11 +157,11 @@ class Shell:
         print str(ed)
 
         print "Borrower (leave empty to return): ",
-        borrower = getInput()
+        borrower = self.s.nextLine()
         if not borrower:
             borrower = '[returned]'
         print "Lend date (leave empty for today): ",
-        date = getInput()
+        date = self.s.nextLine()
         ed.addLend(borrower, date)
         ed.save()
         
@@ -148,7 +171,7 @@ class Shell:
         print str(ed)
 
         print "Enter path: ",
-        path = getInput()
+        path = self.s.nextLine()
         if path.startswith("'") and path.endswith("'"):
             path = path[1:-1]
         ed.addPath(path)
@@ -162,20 +185,20 @@ class Shell:
         'search' : (Search, 'search for releases'),
         'refresh' : (Refresh, 'refresh XML metadata from musicbrainz'),
         'html' : (Html, 'write HTML'),
-        'change' : (Change, 'change release ID'),
+        'switch' : (Switch, 'substitute one release ID for another'),
         'add' : (Add, 'add release'),
         'reload' : (Reload, 'reload database from disk'),
         'barcode' : (BarcodeSearch, 'barcode search'),
         'delete' : (Delete, 'delete release'),
         'check' : (Check, 'check releases'),
         'lend' : (Lend, 'lend (checkout) release'),
-        'path' : (Path, 'add Path to release'),
+        'path' : (Path, 'add path to digital copy of release'),
         }
 
     def main(self):
         while (True):
             print "Enter command ('h' for help): ",
-            input = getInput().lower()
+            input = self.s.nextWord().lower()
 
             if not input or input.startswith('q'):
                 break
