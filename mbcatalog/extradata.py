@@ -181,4 +181,6 @@ class ExtraData:
         self.rating = int(getInput())
 
     def addPath(self, path):
-        self.digitalPaths.append(path)
+        if path not in self.digitalPaths:
+            self.digitalPaths.append(path)
+

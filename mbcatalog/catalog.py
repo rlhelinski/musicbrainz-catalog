@@ -408,7 +408,7 @@ white-space: nowrap;
                     ">"+rel['title'].encode('ascii', 'xmlcharrefreplace')\
                     +(' (%s)' % rel['disambiguation'].encode('ascii', 'xmlcharrefreplace') if 'disambiguation' in rel and rel['disambiguation'] else '')\
                     +("<img width=24 height=24 src='tango/Image-x-generic.svg'><span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" \
-                    if coverartUrl else "") + "</a>" + (''.join("<a href='"+path+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
+                    if coverartUrl else "") + "</a>" + (''.join("<a href='"+path.encode('ascii', 'xmlcharrefreplace')+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
                     if self.extraIndex[releaseId].digitalPaths else "") + "</td>"
                 print >> htf, "<td>"+(rel['date'] if 'date' in rel else '')+"</td>"
                 print >> htf, "<td>"+(rel['country'].encode('ascii', 'xmlcharrefreplace') if 'country' in rel else '')+"</td>"
@@ -522,6 +522,27 @@ white-space: nowrap;
 
     def digestXml(self, releaseId, meta_xml):
         self.digestMetaDict(releaseId, mbxml.parse_message(meta_xml))
+
+    def searchDigitalPaths(self, releaseId=''):
+        pathList = ['/home/ryan/Music/', '/home/ryan/Amazon MP3/']
+
+        releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
+
+        for relId in releaseIdList:
+            print relId
+            for path in pathList:
+                #print path
+                rel = self.getRelease(relId)
+                for artistName in [ rel['artist-credit-phrase'], rel['artist-credit'][0]['artist']['sort-name'] ]:
+                    artistPath = os.path.join(path, artistName)
+                    if os.path.isdir(artistPath):
+                        #print 'Found ' + artistPath
+                        for titleName in [rel['title']]:
+                            titlePath = os.path.join(artistPath, titleName)
+                            if os.path.isdir(titlePath):
+                                print 'Found ' + titlePath
+                                self.extraIndex[relId].addPath(titlePath)
+            self.extraIndex[relId].save()
 
     def refreshMetaData(self, releaseId, olderThan=0):
         """Should be renamed to "add release" or something
