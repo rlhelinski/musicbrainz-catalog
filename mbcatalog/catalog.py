@@ -3,6 +3,7 @@ import musicbrainzngs.mbxml as mbxml
 import musicbrainzngs.util as mbutil
 import musicbrainzngs.musicbrainz as mb
 import amazonservices
+import userprefs
 import urllib2
 import extradata
 import shutil
@@ -91,6 +92,7 @@ class Catalog(object):
     def __init__(self):
         if not os.path.isdir(self.rootPath):
             os.mkdir(self.rootPath)
+        self.prefs = userprefs.PrefManager()
             
     def _get_xml_path(self, releaseId, fileName='metadata.xml'):
         return os.path.join(self.rootPath, releaseId, fileName)
@@ -524,13 +526,11 @@ white-space: nowrap;
         self.digestMetaDict(releaseId, mbxml.parse_message(meta_xml))
 
     def searchDigitalPaths(self, releaseId=''):
-        pathList = ['/home/ryan/Music/', '/home/ryan/Amazon MP3/']
-
         releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
 
         for relId in releaseIdList:
             print relId
-            for path in pathList:
+            for path in self.prefs.musicPaths:
                 #print path
                 rel = self.getRelease(relId)
                 for artistName in [ rel['artist-credit-phrase'], rel['artist-credit'][0]['artist']['sort-name'] ]:

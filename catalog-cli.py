@@ -124,12 +124,6 @@ class Shell:
         except mb.ResponseError as e:
             print e, "bad release ID?"
             return
-        #except ws.ResourceNotFoundError as e:
-            #print "Release not found"
-            #return
-        #except ws.RequestError as e:
-            #print e
-            #return
 
         self.c.addExtraData(releaseId)
 
@@ -177,6 +171,28 @@ class Shell:
         ed.addPath(path)
         ed.save()
 
+    def DigitalSearch(self):
+        print "Enter release ID [enter for all]: ",
+        releaseId = getReleaseId(self.s.nextLine())
+        if not releaseId:
+            self.c.searchDigitalPaths()
+        elif releaseId not in self.c:
+            print "Release not found"
+            return
+        else:
+            self.c.searchDigitalPaths(releaseId=releaseId)
+
+    digitalCommands = {
+            'search' : (DigitalSearch, 'search for digital paths'),
+            }
+
+    def Digital(self):
+        print "Enter sub-command:"
+        for cmd, (fun, desc) in self.digitalCommands.items():
+            print cmd + ' : ' + desc
+        input = self.s.nextWord()
+        (self.digitalCommands[input][0])(self)
+
 
     shellCommands = {
         'h' : (None, 'this help'),
@@ -193,6 +209,7 @@ class Shell:
         'check' : (Check, 'check releases'),
         'lend' : (Lend, 'lend (checkout) release'),
         'path' : (Path, 'add path to digital copy of release'),
+        'digital' : (Digital, 'manage links to digital copies'),
         }
 
     def main(self):
@@ -211,10 +228,10 @@ class Shell:
             elif input in self.shellCommands.keys():
                 print self.shellCommands[input][1]
                 # Call the function
-                try:
-                    (self.shellCommands[input][0])(self)
-                except ValueError as e:
-                    print e, "command failed"
+                #try:
+                (self.shellCommands[input][0])(self)
+                #except ValueError as e:
+                    #print e, "command failed"
 
             else:
                 print "Invalid command"
