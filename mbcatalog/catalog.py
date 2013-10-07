@@ -3,6 +3,7 @@ import musicbrainzngs.mbxml as mbxml
 import musicbrainzngs.util as mbutil
 import musicbrainzngs.musicbrainz as mb
 import amazonservices
+import userprefs
 import urllib2
 import extradata
 import shutil
@@ -80,6 +81,7 @@ class ReleaseFormat(object):
     def __str__(self):
         return self.fmtStr
 
+
 class Catalog(object):
     rootPath='release-id'
     mbUrl = 'http://musicbrainz.org/'
@@ -90,20 +92,15 @@ class Catalog(object):
     def __init__(self):
         if not os.path.isdir(self.rootPath):
             os.mkdir(self.rootPath)
+        self.prefs = userprefs.PrefManager()
             
-        self.metaIndex = dict()
-        self.extraIndex = dict()
-        self.wordMap = dict()
-        self.discIdMap = defaultdict(list)
-        self.barCodeMap = defaultdict(list)
-
     def _get_xml_path(self, releaseId, fileName='metadata.xml'):
         return os.path.join(self.rootPath, releaseId, fileName)
 
     def renameRelease(self, releaseId, newReleaseId):
         os.rename(os.path.join('release-id', releaseId),
                 os.path.join('release-id', newReleaseId) )
-        # TODO this is lazy!
+        # TODO this is lazy, but it is the only way to correct all the tables created during load()
         self.load()
         self.refreshMetaData(newReleaseId, olderThan=60)
 
@@ -157,11 +154,14 @@ class Catalog(object):
     def load(self, releaseIds=None):
         """Load the various tables from the XML metadata on disk"""
 
+        self.metaIndex = dict()
+        self.extraIndex = dict()
+        self.wordMap = dict()
+        self.discIdMap = defaultdict(list)
+        self.barCodeMap = defaultdict(list)
         # To map ReleaseId -> Format
         #self.formatMap = dict()
-        # It would enhance performance but is redundant. Not implemented because
-        # performance is tolerable.
-        #XmlParser = wsxml.MbXmlParser()
+
         for releaseId in self.loadReleaseIds():
             #print releaseId
             xmlPath = self._get_xml_path(releaseId)
@@ -390,13 +390,12 @@ white-space: nowrap;
 <th>Date Added</th>
 </tr>
 """
-            # TODO rename 'release' variable to 'rel'
             # TODO there are a lot of calls to ''.encode()
             for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
-                release = self.getRelease(releaseId)
+                rel = self.getRelease(releaseId)
 
-                if 'asin' in release:
-                    #coverartUrl = amazonservices.getAsinImageUrl(release.asin, amazonservices.AMAZON_SERVER["amazon.com"], 'S')
+                if 'asin' in rel:
+                    #coverartUrl = amazonservices.getAsinImageUrl(rel.asin, amazonservices.AMAZON_SERVER["amazon.com"], 'S')
                     # Refer to local copy instead
                     self.getCoverArt(releaseId, quiet=True)
                     coverartUrl = os.path.join(self.rootPath, releaseId, 'cover.jpg')
@@ -406,21 +405,21 @@ white-space: nowrap;
                 print >> htf, "<tr>"
                 print >> htf, "<!-- <td>"+("%04d" % sortIndex)+"</td> -->"
                 print >> htf, "<td>" + ''.join( [\
-                    credit if type(credit)==type('') else "<a href=\""+self.artistUrl+credit['artist']['id']+"\">"+credit['artist']['name'].encode('ascii', 'xmlcharrefreplace')+"</a>" for credit in release['artist-credit'] ] ) + "</td>"
-                print >> htf, "<td><a href=\""+self.releaseUrl+release['id']+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
-                    ">"+release['title'].encode('ascii', 'xmlcharrefreplace')\
-                    +(' (%s)' % release['disambiguation'].encode('ascii', 'xmlcharrefreplace') if 'disambiguation' in release and release['disambiguation'] else '')\
+                    credit if type(credit)==type('') else "<a href=\""+self.artistUrl+credit['artist']['id']+"\">"+credit['artist']['name'].encode('ascii', 'xmlcharrefreplace')+"</a>" for credit in rel['artist-credit'] ] ) + "</td>"
+                print >> htf, "<td><a href=\""+self.releaseUrl+rel['id']+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
+                    ">"+rel['title'].encode('ascii', 'xmlcharrefreplace')\
+                    +(' (%s)' % rel['disambiguation'].encode('ascii', 'xmlcharrefreplace') if 'disambiguation' in rel and rel['disambiguation'] else '')\
                     +("<img width=24 height=24 src='tango/Image-x-generic.svg'><span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" \
-                    if coverartUrl else "") + "</a>" + (''.join("<a href='"+path+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
+                    if coverartUrl else "") + "</a>" + (''.join("<a href='"+path.encode('ascii', 'xmlcharrefreplace')+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
                     if self.extraIndex[releaseId].digitalPaths else "") + "</td>"
-                print >> htf, "<td>"+(release['date'] if 'date' in release else '')+"</td>"
-                print >> htf, "<td>"+(release['country'].encode('ascii', 'xmlcharrefreplace') if 'country' in release else '')+"</td>"
-                print >> htf, "<td>"+', '.join(["<a href=\""+self.labelUrl+info['label']['id']+"\">"+info['label']['name'].encode('ascii', 'xmlcharrefreplace')+"</a>" if 'label' in info else '' for info in release['label-info-list']])+"</td>"
+                print >> htf, "<td>"+(rel['date'] if 'date' in rel else '')+"</td>"
+                print >> htf, "<td>"+(rel['country'].encode('ascii', 'xmlcharrefreplace') if 'country' in rel else '')+"</td>"
+                print >> htf, "<td>"+', '.join(["<a href=\""+self.labelUrl+info['label']['id']+"\">"+info['label']['name'].encode('ascii', 'xmlcharrefreplace')+"</a>" if 'label' in info else '' for info in rel['label-info-list']])+"</td>"
                 # TODO handle empty strings here (remove from this list before joining)
-                print >> htf, "<td>"+', '.join([info['catalog-number'].encode('ascii', 'xmlcharrefreplace') if 'catalog-number' in info else '' for info in release['label-info-list']])+"</td>"
-                print >> htf, "<td>"+(release['barcode'] if 'barcode' in release else '')+"</td>"
-                print >> htf, "<td>"+("<a href=\"" + amazonservices.getAsinProductUrl(release['asin']) + "\">" + release['asin'] + "</a>" if 'asin' in release else '')+"</td>"
-                print >> htf, "<td>"+' + '.join([medium['format'] for medium in release['medium-list']])+"</td>"
+                print >> htf, "<td>"+', '.join([info['catalog-number'].encode('ascii', 'xmlcharrefreplace') if 'catalog-number' in info else '' for info in rel['label-info-list']])+"</td>"
+                print >> htf, "<td>"+('' if 'barcode' not in rel else rel['barcode'] if rel['barcode'] else '[none]')+"</td>"
+                print >> htf, "<td>"+("<a href=\"" + amazonservices.getAsinProductUrl(rel['asin']) + "\">" + rel['asin'] + "</a>" if 'asin' in rel else '')+"</td>"
+                print >> htf, "<td>"+' + '.join([medium['format'] for medium in rel['medium-list']])+"</td>"
                 print >> htf, \
                     "<td>"+(datetime.fromtimestamp(self.extraIndex[releaseId].addDates[0]).strftime('%Y-%m-%d') if \
                     len(self.extraIndex[releaseId].addDates) else '')+"</td>"
@@ -526,6 +525,25 @@ white-space: nowrap;
     def digestXml(self, releaseId, meta_xml):
         self.digestMetaDict(releaseId, mbxml.parse_message(meta_xml))
 
+    def searchDigitalPaths(self, releaseId=''):
+        releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
+
+        for relId in releaseIdList:
+            print relId
+            for path in self.prefs.musicPaths:
+                #print path
+                rel = self.getRelease(relId)
+                for artistName in [ rel['artist-credit-phrase'], rel['artist-credit'][0]['artist']['sort-name'] ]:
+                    artistPath = os.path.join(path, artistName)
+                    if os.path.isdir(artistPath):
+                        #print 'Found ' + artistPath
+                        for titleName in [rel['title']]:
+                            titlePath = os.path.join(artistPath, titleName)
+                            if os.path.isdir(titlePath):
+                                print 'Found ' + titlePath
+                                self.extraIndex[relId].addPath(titlePath)
+            self.extraIndex[relId].save()
+
     def refreshMetaData(self, releaseId, olderThan=0):
         """Should be renamed to "add release" or something
         get metadata XML from MusicBrainz and save to disk"""
@@ -594,7 +612,7 @@ white-space: nowrap;
         else:
             print "No ASIN for", releaseId
 
-    def refreshCoverArt(self):
+    def refreshAllCoverArt(self):
         for releaseId in self.getReleaseIds():
             self.getCoverArt(releaseId)
 
