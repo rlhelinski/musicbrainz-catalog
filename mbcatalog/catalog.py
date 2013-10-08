@@ -636,3 +636,35 @@ white-space: nowrap;
         lds = self.checkLevenshteinDistances()
         for i in range (number):
             print str(lds[i][0]) + "\t" + self.formatDiscInfo(lds[i][1]) + " <-> " + self.formatDiscInfo(lds[i][2])
+
+    def syncCollection(self):
+        username = raw_input('Enter username: ')
+
+        # Input the password.
+        import getpass
+        password = getpass.getpass('Password for %s: ' % username)
+
+        # Call musicbrainzngs.auth() before making any API calls that
+        # require authentication.
+        mb.auth(username, password)
+
+        result = mb.get_collections()
+        for i, collection in enumerate(result['collection-list']):
+            print('%d: "%s" by %s (%s)' % (i, collection['name'], 
+                collection['editor'], collection['id']))
+
+        col_i = int(raw_input('Enter collection index: '))
+        colId = result['collection-list'][col_i]['id']
+
+        print 'Fetching list of releases in collection...',
+        colRelList = mb.get_releases_in_collection(colId)
+        print 'OK'
+
+        colRelIds = [rel['id'] for rel in colRelList['collection']['release-list']]
+        relIdsToAdd = set(self.getReleaseIds()) - set(colRelIds)
+
+        print 'Going to add %d releases to collection...' % len(relIdsToAdd)
+        for relId in relIdsToAdd:
+            mb.add_releases_to_collection(colId, [relId])
+        print 'DONE'
+
