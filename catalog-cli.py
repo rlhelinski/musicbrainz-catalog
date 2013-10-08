@@ -89,15 +89,20 @@ class Shell:
             ed.save()
 
     def Refresh(self):
-        print "Enter release ID [a for all]: ",
+        print "Enter release ID [empty for all]: ",
         releaseId = getReleaseId(self.s.nextLine())
-        if releaseId == "a":
-            self.c.refreshAllMetaData(60*60)
+
+        print "Enter maximum cache age in minutes [leave empty for one minute]: ",
+        maxAge = self.s.nextLine()
+        maxAge = int(maxAge)*60 if maxAge else 60
+
+        if not releaseId:
+            self.c.refreshAllMetaData(maxAge)
         elif releaseId not in self.c:
             print "Release not found"
             return
         else:
-            self.c.refreshMetaData(releaseId, olderThan=60)
+            self.c.refreshMetaData(releaseId, olderThan=maxAge)
 
     def Switch(self):
         releaseId = self.Search()
@@ -228,10 +233,10 @@ class Shell:
             elif input in self.shellCommands.keys():
                 print self.shellCommands[input][1]
                 # Call the function
-                #try:
-                (self.shellCommands[input][0])(self)
-                #except ValueError as e:
-                    #print e, "command failed"
+                try:
+                    (self.shellCommands[input][0])(self)
+                except ValueError as e:
+                    print e, "command failed"
 
             else:
                 print "Invalid command"
