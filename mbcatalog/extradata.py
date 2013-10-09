@@ -1,6 +1,6 @@
 import os, time, sys
 import xml.etree.ElementTree as ET
-import musicbrainz2.utils as mbutils
+import utils
 from StringIO import StringIO
 
 def getInput():
@@ -62,7 +62,7 @@ class DigitalPath:
 class ExtraData:
     def __init__(self, releaseId, path='release-id'):
         if releaseId.startswith('http'):
-            releaseId = mbutils.extractUuid(releaseId, 'release')
+            releaseId = utils.extractUuid(releaseId, 'release')
         self.path = os.path.join(path, releaseId, 'extra.xml')
         self.purchases = []
         self.addDates = []
