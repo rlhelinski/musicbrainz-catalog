@@ -8,6 +8,8 @@ http://ec1.images-amazon.com/images/P/B000002M3I.01.LZZZZZZZ.jpg
 
 """
 import re
+from musicbrainzngs.musicbrainz import _rate_limit
+import urllib2
 
 # data transliterated from the perl stuff used to find cover art for the
 # musicbrainz server.
@@ -85,3 +87,20 @@ def getAsinImageUrl(asin, serverInfo, size='L'):
 
 def getAsinProductUrl(asin):
     return AMAZON_PRODUCT_URL % (asin)
+
+@_rate_limit
+def saveImage(releaseAsin, server, imgPath):
+    imgUrl = getAsinImageUrl(releaseAsin, server)
+    print imgUrl
+    try:
+        response = urllib2.urlopen( imgUrl )
+    except urllib2.HTTPError as e:
+        print e
+        return
+
+    with open(imgPath, 'w') as imgf:
+        imgf.write(response.read())
+        print "Wrote %d bytes to %s" %(imgf.tell(), imgPath)
+
+    response.close()
+

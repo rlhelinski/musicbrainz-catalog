@@ -8,13 +8,11 @@ import userprefs
 import utils
 import extradata
 import shutil
-import urllib2
 from datetime import datetime
 from collections import defaultdict
 import progressbar
 
 overWriteAll = False
-lastQueryTime = 0 # still using this for Amazon cover art
 
 # Have to give an identity for musicbrainzngs
 mb.set_useragent(
@@ -395,11 +393,11 @@ white-space: nowrap;
             for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
                 rel = self.getRelease(releaseId)
 
-                if 'asin' in rel:
-                    #coverartUrl = amazonservices.getAsinImageUrl(rel.asin, amazonservices.AMAZON_SERVER["amazon.com"], 'S')
-                    # Refer to local copy instead
-                    self.getCoverArt(releaseId, quiet=True)
-                    coverartUrl = os.path.join(self.rootPath, releaseId, 'cover.jpg')
+                #coverartUrl = amazonservices.getAsinImageUrl(rel.asin, amazonservices.AMAZON_SERVER["amazon.com"], 'S')
+                # Refer to local copy instead
+                imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
+                if os.path.isfile(imgPath):
+                    coverartUrl = imgPath
                 else:
                     coverartUrl = None
 
@@ -587,11 +585,10 @@ white-space: nowrap;
             else:
                 print "No release events for", releaseId + " " + self.formatDiscSortKey(releaseId)
 
-    def getCoverArt(self, releaseId, quiet=False):
-        global lastQueryTime
+    def getCoverArt(self, releaseId, quiet=False, maxage=60*60):
         release = self.getRelease(releaseId)
         imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
-        if os.path.isfile(imgPath):
+        if os.path.isfile(imgPath) and os.path.getmtime(imgPath) > time.time() - maxage:
             if not quiet:
                 print "Already have cover art for " + releaseId + ", skipping"
             return
@@ -604,25 +601,13 @@ white-space: nowrap;
             print 'No cover art available from Cover Art Archive'
                 
             if 'asin' in release:
-                # Don't hammer the server
-                if lastQueryTime > (time.time() - 0.1):
-                    print "Waiting...",
-                    time.sleep(0.1)
-                lastQueryTime = time.time()
-                imgUrl = amazonservices.getAsinImageUrl(release['asin'], amazonservices.AMAZON_SERVER["amazon.com"])
-                print imgUrl
-                response = urllib2.urlopen( imgUrl )
-                imgf = open(imgPath, 'w')
-                imgf.write(response.read())
-                imgf.close()
-                print "Wrote %d bytes to %s" %(os.path.getsize(imgPath), imgPath)
-                response.close()
+                amazonservices.saveImage(release['asin'], amazonservices.AMAZON_SERVER["amazon.com"], imgPath)
             else:
                 print "No ASIN for", releaseId
 
-    def refreshAllCoverArt(self):
+    def refreshAllCoverArt(self, maxage=60*60*24):
         for releaseId in self.getReleaseIds():
-            self.getCoverArt(releaseId)
+            self.getCoverArt(releaseId, maxage=maxage)
 
     def checkLevenshteinDistances(self):
         import Levenshtein
