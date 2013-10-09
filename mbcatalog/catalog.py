@@ -3,13 +3,14 @@ import musicbrainzngs.mbxml as mbxml
 import musicbrainzngs.util as mbutil
 import musicbrainzngs.musicbrainz as mb
 import amazonservices
+import coverart
 import userprefs
-import urllib2
+import utils
 import extradata
 import shutil
+import urllib2
 from datetime import datetime
 from collections import defaultdict
-from extradata import *
 import progressbar
 
 overWriteAll = False
@@ -49,7 +50,7 @@ def getFormatFromUri(uriStr, escape=True):
 def getReleaseId(releaseId):
     """Should be renamed to get releaseIdFromInput or something"""
     if releaseId.startswith('http'):
-        return mbutils.extractUuid(releaseId, 'release')
+        return utils.extractUuid(releaseId, 'release')
     else:
         return releaseId
 
@@ -135,7 +136,7 @@ class Catalog(object):
 
     def loadExtraData(self, releaseId):
         # load extra data
-        self.extraIndex[releaseId] = ExtraData(releaseId)
+        self.extraIndex[releaseId] = extradata.ExtraData(releaseId)
         try:
             self.extraIndex[releaseId].load()
         except IOError as e:
@@ -143,7 +144,7 @@ class Catalog(object):
             self.extraIndex[releaseId].save()
 
     def addExtraData(self, releaseId):
-        self.extraIndex[releaseId] = ExtraData(releaseId)
+        self.extraIndex[releaseId] = extradata.ExtraData(releaseId)
         try:
             self.extraIndex[releaseId].load()
         except IOError as e:
@@ -589,13 +590,20 @@ white-space: nowrap;
     def getCoverArt(self, releaseId, quiet=False):
         global lastQueryTime
         release = self.getRelease(releaseId)
-        if 'asin' in release:
-            imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
-            if os.path.isfile(imgPath):
-                if not quiet:
-                    print "Already have cover art for " + releaseId + ", skipping"
-                return
-            else:
+        imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
+        if os.path.isfile(imgPath):
+            if not quiet:
+                print "Already have cover art for " + releaseId + ", skipping"
+            return
+
+        try:
+            meta = coverart.getCoverArtMeta(releaseId)
+            coverart.saveCoverArt(meta, imgPath)
+
+        except mb.ResponseError as e:
+            print 'No cover art available from Cover Art Archive'
+                
+            if 'asin' in release:
                 # Don't hammer the server
                 if lastQueryTime > (time.time() - 0.1):
                     print "Waiting...",
@@ -609,8 +617,8 @@ white-space: nowrap;
                 imgf.close()
                 print "Wrote %d bytes to %s" %(os.path.getsize(imgPath), imgPath)
                 response.close()
-        else:
-            print "No ASIN for", releaseId
+            else:
+                print "No ASIN for", releaseId
 
     def refreshAllCoverArt(self):
         for releaseId in self.getReleaseIds():
