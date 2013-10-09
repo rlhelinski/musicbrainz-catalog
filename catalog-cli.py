@@ -152,7 +152,7 @@ class Shell:
 
     def Lend(self):
         releaseId = self.Search()
-        self.c.extraIndex[releaseId]
+        ed = self.c.extraIndex[releaseId]
         print str(ed)
 
         print "Borrower (leave empty to return): ",
@@ -198,6 +198,31 @@ class Shell:
         input = self.s.nextWord()
         (self.digitalCommands[input][0])(self)
 
+    def SyncCollection(self):
+        if not self.c.prefs.username:
+            username = raw_input('Enter username: ')
+            self.c.prefs.username = username
+            self.c.prefs.save()
+        else:
+            username = self.c.prefs.username
+
+        # Input the password.
+        import getpass
+        password = getpass.getpass("Password for '%s': " % username)
+
+        # Call musicbrainzngs.auth() before making any API calls that
+        # require authentication.
+        mb.auth(username, password)
+
+        result = mb.get_collections()
+        for i, collection in enumerate(result['collection-list']):
+            print('%d: "%s" by %s (%s)' % (i, collection['name'], 
+                collection['editor'], collection['id']))
+
+        col_i = int(raw_input('Enter collection index: '))
+        colId = result['collection-list'][col_i]['id']
+
+        self.c.syncCollection(colId)
 
     shellCommands = {
         'h' : (None, 'this help'),
@@ -215,6 +240,7 @@ class Shell:
         'lend' : (Lend, 'lend (checkout) release'),
         'path' : (Path, 'add path to digital copy of release'),
         'digital' : (Digital, 'manage links to digital copies'),
+        'sync' : (SyncCollection, 'sync with a musicbrainz collection'),
         }
 
     def main(self):
