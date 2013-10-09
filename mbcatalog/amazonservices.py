@@ -81,7 +81,7 @@ def getAsinFromUrl(text):
         serverInfo = AMAZON_SERVER['amazon.com']
 
 def getAsinImageUrl(asin, serverInfo, size='L'):
-    return "http://" + serverInfo['server'] + "/" + AMAZON_IMAGE_PATH % (asin, serverInfo['id'], size)
+    return "http://" + serverInfo['server'] + AMAZON_IMAGE_PATH % (asin, serverInfo['id'], size)
 
 def getAsinProductUrl(asin):
     return AMAZON_PRODUCT_URL % (asin)
