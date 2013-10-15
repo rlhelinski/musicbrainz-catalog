@@ -36,6 +36,11 @@ def releaseSortCmp(a, b):
 import HTMLParser
 h = HTMLParser.HTMLParser()
 
+def chunks(l, n):
+    """ Yield successive n-sized chunks from l. """
+    for i in xrange(0, len(l), n):
+        yield l[i:i+n]
+
 def getFormatFromUri(uriStr, escape=True):
     # TODO deprecate
     #return uriStr.split("#")[1].decode('ascii')
@@ -82,13 +87,13 @@ class ReleaseFormat(object):
 
 
 class Catalog(object):
-    rootPath='release-id'
     mbUrl = 'http://musicbrainz.org/'
     artistUrl = mbUrl+'artist/'
     labelUrl = mbUrl+'label/'
     releaseUrl = mbUrl+'release/'
 
-    def __init__(self):
+    def __init__(self, rootPath='release-id'):
+        self.rootPath = rootPath
         if not os.path.isdir(self.rootPath):
             os.mkdir(self.rootPath)
         self.prefs = userprefs.PrefManager()
@@ -637,10 +642,10 @@ white-space: nowrap;
         print 'OK'
 
         colRelIds = [rel['id'] for rel in colRelList['collection']['release-list']]
-        relIdsToAdd = set(self.getReleaseIds()) - set(colRelIds)
+        relIdsToAdd = list(set(self.getReleaseIds()) - set(colRelIds))
 
         print 'Going to add %d releases to collection...' % len(relIdsToAdd)
-        for relId in relIdsToAdd:
-            mb.add_releases_to_collection(colId, [relId])
+        for relIdChunk in chunks(relIdsToAdd, 100):
+            mb.add_releases_to_collection(colId, relIdChunk)
         print 'DONE'
 
