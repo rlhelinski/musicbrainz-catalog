@@ -3,7 +3,7 @@
 # Read a CD in the disc drive and calculate a MusicBrainz DiscID.
 #
 # Usage:
-#       python discid.py
+#       python discid.py [/path/to/cdrom]
 #
 # $Id$
 #
@@ -12,8 +12,8 @@ from musicbrainz2.disc import readDisc, getSubmissionUrl, DiscError
 import musicbrainz2.webservice as ws
 import musicbrainz2.wsxml as wsxml
 import musicbrainz2.utils as mbutils
-from mbcatalog.catalog import *
-from mbcatalog.extradata import *
+from mbcat.catalog import *
+from mbcat.extradata import *
 
 c = Catalog()
 c.load()

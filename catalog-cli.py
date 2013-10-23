@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-from mbcatalog.catalog import *
-from mbcatalog.extradata import *
+from mbcat.catalog import *
+from mbcat.extradata import *
 import os, shutil
 
 class InputSplitter(object):
