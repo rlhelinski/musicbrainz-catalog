@@ -6,6 +6,8 @@ Python code for cataloging your music collection cross-referenced with MusicBrai
 Getting Started
 ===============
 
-'catalog-cli.py' is the main interface for most functions. 
-'disc-catalog.py' is a script for getting CD TOC, searching for releases, and cataloging a release
+'catalog-cli.py' is a text-mode interface for functions such as searching, adding,
+deleting, refreshing metadata, producing output and so on. 
+'disc-catalog.py' is a script for getting CD TOC, searching for releases, and
+cataloging a release
 
