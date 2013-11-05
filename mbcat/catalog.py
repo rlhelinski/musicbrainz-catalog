@@ -439,7 +439,10 @@ white-space: nowrap;
     def getReleaseMetaXml(self, releaseId):
         """Fetch release metadata XML from musicbrainz"""
         # get_release_by_id() handles throttling on its own
-        return mb.get_release_by_id(releaseId, includes=['artists', 'discids', 'media', 'labels', 'recordings'], raw=True)
+        mb.set_parser(mb.mb_parser_null)
+        xml = mb.get_release_by_id(releaseId, includes=['artists', 'discids', 'media', 'labels', 'recordings'])
+        mb.set_parser()
+        return xml
 
     def writeXml(self, releaseId, metaData):
         global overWriteAll
