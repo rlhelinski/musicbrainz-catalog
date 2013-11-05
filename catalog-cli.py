@@ -65,9 +65,9 @@ class Shell:
                     self.c.getSortNeighbors(matches[0], matchFormat=True)
                     return matches[0]
                 else:
-                    raise ValueError ("No matches")
+                    raise ValueError ("No matches.")
             else:
-                raise ValueError ('No release specified')
+                raise ValueError ('No release specified.')
 
 
     def Reload(self):
@@ -262,7 +262,7 @@ class Shell:
                 try:
                     (self.shellCommands[input][0])(self)
                 except ValueError as e:
-                    print e, "command failed"
+                    print e, "Command failed."
 
             else:
                 print "Invalid command"
