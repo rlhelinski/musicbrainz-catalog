@@ -56,8 +56,8 @@ while not input.startswith('q'):
             i += 1
 
         # TODO fix this
-        print ('Submit via  :', getSubmissionUrl(disc), file=tocf)
-        print ('Submit via  :', getSubmissionUrl(disc))
+        print ('Submit via  :', disc.submission_url, file=tocf)
+        print ('Submit via  :', disc.submission_url)
 
     print ('DiscID:', disc.id)
     
@@ -117,7 +117,7 @@ while not input.startswith('q'):
             sys.exit(1)
 
 
-    print ("Adding that release to the catalog...")
+    print ("Adding %s to the catalog..." % result['disc']['release-list'][choice]['title'])
 
     releaseId = extractUuid(result['disc']['release-list'][choice]['id'])
 
@@ -135,6 +135,6 @@ while not input.startswith('q'):
     ed.addDate()
     ed.save()
 
-    input = raw_input('Press enter to read another disc or \'q\' to quit...')
+    input = raw_input('Press enter to read another disc or \'q\' to quit... ')
 
 # EOF

@@ -7,15 +7,12 @@ This module contains helper functions to make common tasks easier.
 __revision__ = '$Id: utils.py 13322 2011-11-03 13:38:06Z luks $'
 
 import re
-import urllib
 import urlparse
-import discid
-
 
 __all__ = [
 	'extractUuid', 'extractFragment', 'extractEntityType',
 	'getReleaseTypeName', 'getCountryName', 'getLanguageName',
-	'getScriptName', 'getSubmissionUrl'
+	'getScriptName',
 ]
 
 
@@ -201,48 +198,6 @@ def getScriptName(id_):
 	"""
 	from musicbrainz2.data.scriptnames import scriptNames
 	return scriptNames.get(id_)
-
-def getSubmissionUrl(disc, host='mm.musicbrainz.org', port=80):
-	"""Returns a URL for adding a disc to the MusicBrainz database.
-
-	A fully initialized L{musicbrainz2.model.Disc} object is needed, as
-	returned by L{readDisc}. A disc object returned by the web service
-	doesn't provide the necessary information.
-
-	Note that the created URL is intended for interactive use and points
-	to the MusicBrainz disc submission wizard by default. This method
-	just returns a URL, no network connection is needed. The disc drive
-	isn't used.
-
-	@param disc: a fully initialized L{musicbrainz2.model.Disc} object
-	@param host: a string containing a host name
-	@param port: an integer containing a port number
-
-	@return: a string containing the submission URL
-
-	@see: L{readDisc}
-	"""
-	assert isinstance(disc, discid.disc.Disc), 'discid.disc.Disc expected'
-	disc_id = disc.id
-	first = disc.first_track_num
-	last = disc.last_track_num
-	sectors = disc.sectors
-	assert None not in (disc_id, first, last, sectors)
-
-	tracks = last - first + 1
-	toc = "%d %d %d " % (first, last, sectors)
-	toc = toc + ' '.join( map(lambda x: str(x.length), disc.tracks) )
-
-	query = urllib.urlencode({ 'id': disc_id, 'toc': toc, 'tracks': tracks })
-
-	if port == 80:
-		netloc = host
-	else:
-		netloc = host + ':' + str(port)
-
-	url = ('http', netloc, '/bare/cdlookup.html', '', query, '')
-		
-	return urlparse.urlunparse(url)
 
 
 # EOF
