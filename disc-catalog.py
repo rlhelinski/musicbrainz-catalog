@@ -25,8 +25,8 @@ mb.set_useragent(
 c = Catalog()
 c.load()
 
-input = ''
-while not input.startswith('q'):
+while not raw_input('Press enter to read another disc or \'q\' to quit... ').startswith('q'):
+
     try:
         # Read the disc in the default disc drive. If necessary, you can pass
         # the 'deviceName' parameter to select a different drive.
@@ -67,6 +67,7 @@ while not input.startswith('q'):
                 includes=["artists"])
     except mb.ResponseError:
         print("disc not found or bad response")
+        continue
     else:
         if result.get("disc"):
             for i, rel in enumerate(result['disc']['release-list']):
@@ -78,7 +79,8 @@ while not input.startswith('q'):
                 print ("Title    :", rel['title'])
                 print ("Date    :", rel['date'])
                 print ("Country    :", rel['country'])
-                print ("Barcode    :", rel['barcode'])
+                if 'barcode' in rel:
+                    print ("Barcode    :", rel['barcode'])
                 if 'label-info-list' in rel:
                     for label_info in rel['label-info-list']:
                         for label, field in [ \
@@ -117,7 +119,7 @@ while not input.startswith('q'):
             sys.exit(1)
 
 
-    print ("Adding %s to the catalog..." % result['disc']['release-list'][choice]['title'])
+    print ("Adding '%s' to the catalog..." % result['disc']['release-list'][choice]['title'])
 
     releaseId = extractUuid(result['disc']['release-list'][choice]['id'])
 
@@ -134,7 +136,5 @@ while not input.startswith('q'):
         "Doesn't matter"
     ed.addDate()
     ed.save()
-
-    input = raw_input('Press enter to read another disc or \'q\' to quit... ')
 
 # EOF
