@@ -113,10 +113,13 @@ while not raw_input('Press enter to read another disc or \'q\' to quit... ').sta
     else:
         print ("There were %d matches." % len(result['disc']['release-list']))
         print ("Choose one making you better feeling: ")
-        choice = int(sys.stdin.readline().strip())
+        choice = sys.stdin.readline().strip()
+        if not choice.isdigit():
+            continue
+        choice = int(choice)
         if choice < 0 or choice >= len(result['disc']['release-list']):
-            print ("You failed")
-            sys.exit(1)
+            print ("You failed!")
+            continue
 
 
     print ("Adding '%s' to the catalog..." % result['disc']['release-list'][choice]['title'])
