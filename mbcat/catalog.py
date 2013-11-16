@@ -296,10 +296,11 @@ class Catalog(object):
             for sortId, sortStr in sortKeys:
                 # TODO need to resolve releases with more than one format 
                 # TODO make this next line a function
-                releaseFmt = self.getRelease(sortId)['medium-list'][0]['format']
-                if 'unknown' in releaseFmt:
-                    print releaseFmt + " format for release " + sortId + ", " + sortStr
-                elif matchFmt == ReleaseFormat(releaseFmt):
+                if 'format' not in self.getRelease(sortId)['medium-list'][0]:
+                    print 'No format for ' + sortId + ", " + sortStr
+                elif 'unknown' in self.getRelease(sortId)['medium-list'][0]['format']:
+                    print self.getRelease(sortId)['medium-list'][0]['format'] + " format for release " + sortId + ", " + sortStr
+                elif matchFmt == ReleaseFormat(self.getRelease(sortId)['medium-list'][0]['format']):
                     filteredSortKeys.append((sortId, sortStr))
         else:
             # Skip all the fun
