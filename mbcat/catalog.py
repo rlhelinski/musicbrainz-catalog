@@ -640,12 +640,28 @@ white-space: nowrap;
             print str(lds[i][0]) + "\t" + self.formatDiscInfo(lds[i][1]) + " <-> " + self.formatDiscInfo(lds[i][2])
 
     def syncCollection(self, colId):
-
-        print 'Fetching list of releases in collection...',
-        colRelList = mb.get_releases_in_collection(colId)
+        # this is a hack so that the progress will appear immediately
+        import sys
+        sys.stdout.write('Fetching list of releases in collection...')
+        sys.stdout.flush()
+        count = 0
+        colRelIds = []
+        while True:
+            result = mb.get_releases_in_collection(colId, limit=25, offset=count)
+            col = result['collection']
+            relList = col['release-list']
+            if len(relList) == 0:
+                break
+            count += len(relList)
+            sys.stdout.write('.')
+            sys.stdout.flush()
+            for rel in relList:
+                colRelIds.append(rel['id'])
+                
+        #colRelList = mb.get_releases_in_collection(colId)
         print 'OK'
+        print 'Found %d / %d releases.' % (len(colRelIds), len(self))
 
-        colRelIds = [rel['id'] for rel in colRelList['collection']['release-list']]
         relIdsToAdd = list(set(self.getReleaseIds()) - set(colRelIds))
 
         print 'Going to add %d releases to collection...' % len(relIdsToAdd)
