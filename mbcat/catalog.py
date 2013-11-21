@@ -131,13 +131,14 @@ class Catalog(object):
         fileList = os.listdir(self.rootPath)
 
         widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Fraction(), " ", progressbar.Percentage() ]
-        pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(fileList)).start()
+        if len(fileList) > 0:
+            pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(fileList)).start()
 
-        for releaseId in fileList:
-            if len(releaseId) == 36:
-                pbar.increment()
-                yield releaseId
-        pbar.finish()
+            for releaseId in fileList:
+                if len(releaseId) == 36:
+                    pbar.increment()
+                    yield releaseId
+            pbar.finish()
 
     def loadExtraData(self, releaseId):
         # load extra data
