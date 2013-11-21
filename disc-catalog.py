@@ -1,13 +1,14 @@
 #!/opt/local/bin/python2.7
-#
-# Read a CD in the disc drive, compute the MusicBrainz DiscID,
-# find a MusicBrainz release, and add that to your catalog. 
-#
-# Usage:
-#       python disc-catalog.py [/path/to/cdrom]
-#
-# $Id$
-#
+"""
+Read a CD in the disc drive, compute the MusicBrainz DiscID,
+find a MusicBrainz release, and add that to your catalog. 
+This is offered as a separate script in case libdiscid is
+not available.
+
+Usage:
+    python disc-catalog.py [/path/to/cdrom]
+"""
+
 from __future__ import print_function
 import sys, os
 import discid
@@ -25,7 +26,7 @@ mb.set_useragent(
 c = Catalog()
 c.load()
 
-while not raw_input('Press enter to read another disc or \'q\' to quit... ').startswith('q'):
+while not raw_input('Press enter to read the disc or \'q\' to quit... ').startswith('q'):
 
     try:
         # Read the disc in the default disc drive. If necessary, you can pass
