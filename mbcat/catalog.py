@@ -18,7 +18,7 @@ overWriteAll = False
 
 # Have to give an identity for musicbrainzngs
 mb.set_useragent(
-    "python-musicbrainz-ngs-catalog",
+    "musicbrainz-catalog",
     "0.1",
     "https://github.com/rlhelinski/musicbrainz-catalog/",
 )
