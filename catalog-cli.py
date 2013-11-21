@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from __future__ import print_function
 from mbcat.catalog import *
 from mbcat.extradata import *
 import os, shutil
@@ -12,7 +13,9 @@ class InputSplitter(object):
     def _readline(self):
         return self.s.readline().strip()
 
-    def nextLine(self):
+    def nextLine(self, prompt=""):
+        if prompt:
+            print(prompt, end="")
         if self.buffer:
             l = ' '.join(self.buffer)
             self.buffer = []
@@ -20,7 +23,9 @@ class InputSplitter(object):
         else:
             return self._readline()
 
-    def nextWord(self):
+    def nextWord(self, prompt=""):
+        if prompt:
+            print(prompt, end="")
         if not self.buffer:
             self.buffer = self._readline().split()
 
@@ -36,10 +41,9 @@ class Shell:
         self.c.report()
         self.s = InputSplitter()
 
-    def Search(self):
+    def Search(self, prompt="Enter search terms (or release ID): "):
         while(True):
-            print "Enter search terms (or release ID): ",
-            input = self.s.nextLine()
+            input = self.s.nextLine(prompt)
             if input:
                 if len(getReleaseId(input)) == 36:
                     releaseId = getReleaseId(input)
@@ -47,19 +51,18 @@ class Shell:
                     return releaseId
                 matches = list(self.c._search(input))
                 if len(matches) > 1:
-                    print len(matches), "matches found:"
+                    print(len(matches), "matches found:")
                     for i, match in enumerate(matches):
-                        print i, self.c.formatDiscInfo(match)
+                        print(i, self.c.formatDiscInfo(match))
                     while (True):
                         try:
-                            print "Select a match: ",
-                            index = int(self.s.nextWord())
+                            index = int(self.s.nextWord("Select a match: "))
                             self.c.getSortNeighbors(matches[index], matchFormat=True)
                             return matches[index]
                         except ValueError as e:
-                            print e, "try again"
+                            print(e, "try again")
                         except IndexError as e:
-                            print e, "try again"
+                            print(e, "try again")
 
                 elif len(matches) == 1:
                     self.c.getSortNeighbors(matches[0], matchFormat=True)
@@ -73,40 +76,37 @@ class Shell:
     def Reload(self):
         del self.c 
         self.c = Catalog()
-        print "Reloading database...",
+        print("Reloading database...")
         self.c.load()
-        print "DONE"
+        print("DONE")
 
     def EditExtra(self):
         # TODO remove, extra should be transparaent to the user
         releaseId = self.Search()
         ed = self.c.extraIndex[releaseId] 
-        print str(ed)
-        print "Modify? [y/N]",
-        modify = self.s.nextWord()
+        print(str(ed))
+        modify = self.s.nextWord("Modify? [y/N]")
         if modify.lower().startswith('y'):
             ed.interactiveEntry()
             ed.save()
 
     def Refresh(self):
-        print "Enter release ID [empty for all]: ",
-        releaseId = getReleaseId(self.s.nextLine())
+        releaseId = getReleaseId(self.s.nextLine("Enter release ID [empty for all]: "))
 
-        print "Enter maximum cache age in minutes [leave empty for one minute]: ",
-        maxAge = self.s.nextLine()
+        maxAge = self.s.nextLine("Enter maximum cache age in minutes [leave empty for one minute]: ")
         maxAge = int(maxAge)*60 if maxAge else 60
 
         if not releaseId:
             self.c.refreshAllMetaData(maxAge)
         elif releaseId not in self.c:
-            print "Release not found"
+            print("Release not found")
             return
         else:
             self.c.refreshMetaData(releaseId, olderThan=maxAge)
 
     def Switch(self):
         releaseId = self.Search()
-        print "Enter new release ID: "
+        print("Enter new release ID: ")
         newReleaseId = self.s.nextWord()
         self.c.renameRelease(releaseId, newReleaseId)
 
@@ -116,73 +116,67 @@ class Shell:
         self.c.makeHtml()
 
     def Add(self):
-        print "Enter release ID: ",
+        print("Enter release ID: ")
         releaseId = getReleaseId(self.s.nextWord())
         if not releaseId:
-            print "No input"
+            print("No input")
             return
         if releaseId in self.c:
-            print "Release '%s' already exists" % self.c.getRelease(releaseId)['title']
+            print("Release '%s' already exists" % self.c.getRelease(releaseId)['title'])
             return
         try:
             self.c.refreshMetaData(releaseId)
         except mb.ResponseError as e:
-            print e, "bad release ID?"
+            print(e, "bad release ID?")
             return
 
         self.c.addExtraData(releaseId)
 
-        print "Added '%s'" % self.c.getRelease(releaseId)['title']
+        print("Added", self.c.getRelease(releaseId)['title'])
 
     def BarcodeSearch(self):
-        print "Enter barcode: ",
-        barCode = self.s.nextWord()
+        barCode = self.s.nextWord("Enter barcode: ")
         for releaseId in self.c.barCodeMap[barCode]:
-            print self.c.formatDiscInfo(releaseId)
+            print(self.c.formatDiscInfo(releaseId))
 
     def Delete(self):
-        print "Enter release ID to delete: ",
-        releaseId = self.Search()
+        releaseId = self.Search("Enter search terms or release ID to delete: ")
         self.c.deleteRelease(releaseId)
 
     def Check(self):
-        print "Running checks..."
+        print("Running checks...")
         self.c.checkReleases()
-        print "DONE"
+        print("DONE")
 
     def Lend(self):
         releaseId = self.Search()
         ed = self.c.extraIndex[releaseId]
-        print str(ed)
+        print(str(ed))
 
-        print "Borrower (leave empty to return): ",
-        borrower = self.s.nextLine()
+        borrower = self.s.nextLine("Borrower (leave empty to return): ")
         if not borrower:
             borrower = '[returned]'
-        print "Lend date (leave empty for today): ",
-        date = self.s.nextLine()
+        date = self.s.nextLine("Lend date (leave empty for today): ")
         ed.addLend(borrower, date)
         ed.save()
         
     def Path(self):
         releaseId = self.Search()
         ed = self.c.extraIndex[releaseId]
-        print str(ed)
+        print(str(ed))
 
-        print "Enter path: ",
-        path = self.s.nextLine()
+        path = self.s.nextLine("Enter path to add: ")
         if path.startswith("'") and path.endswith("'"):
             path = path[1:-1]
         ed.addPath(path)
         ed.save()
 
     def DigitalSearch(self):
-        print "Enter release ID [enter for all]: ",
-        releaseId = getReleaseId(self.s.nextLine())
+        releaseId = getReleaseId(self.s.nextLine("Enter release ID [enter for all]: "))
         if not releaseId:
             self.c.searchDigitalPaths()
         elif releaseId not in self.c:
-            print "Release not found"
+            print("Release not found")
             return
         else:
             self.c.searchDigitalPaths(releaseId=releaseId)
@@ -192,9 +186,10 @@ class Shell:
             }
 
     def Digital(self):
-        print "Enter sub-command:"
+        # TODO this needs to be updated---the commands should all be captured in a tree structure
+        print("Enter sub-command:")
         for cmd, (fun, desc) in self.digitalCommands.items():
-            print cmd + ' : ' + desc
+            print(cmd + ' : ' + desc)
         input = self.s.nextWord()
         (self.digitalCommands[input][0])(self)
 
@@ -245,27 +240,26 @@ class Shell:
 
     def main(self):
         while (True):
-            print "Enter command ('h' for help): ",
-            input = self.s.nextWord().lower()
+            input = self.s.nextWord("Enter command ('h' for help): ").lower()
 
             if not input or input.startswith('q'):
                 break
 
             if (input == 'h' or input == 'help'):
-                print "\r",
+                print("\r", end="") # TODO this is a hack
                 for letter in sorted(self.shellCommands.keys()):
-                    print letter + " : " + self.shellCommands[letter][1]
+                    print(letter + " : " + self.shellCommands[letter][1])
 
             elif input in self.shellCommands.keys():
-                print self.shellCommands[input][1]
+                print(self.shellCommands[input][1])
                 # Call the function
                 try:
                     (self.shellCommands[input][0])(self)
                 except ValueError as e:
-                    print e, "Command failed."
+                    print(e, "Command failed.")
 
             else:
-                print "Invalid command"
+                print("Invalid command")
 
 
 if __name__ == "__main__":

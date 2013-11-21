@@ -1,17 +1,22 @@
-import os, sys, time, re
+from __future__ import print_function
+import os
+import sys
+import time
+import re
 import musicbrainzngs.mbxml as mbxml
 import musicbrainzngs.util as mbutil
 import musicbrainzngs.musicbrainz as mb
-import amazonservices
-import coverart
-import userprefs
-import utils
-import extradata
+import mbcat.amazonservices
+import mbcat.coverart
+import mbcat.userprefs
+import mbcat.utils
+import mbcat.extradata
 import shutil
 from datetime import datetime
 from collections import defaultdict
 import progressbar
 import logging
+
 logging.basicConfig(level=logging.INFO)
 
 overWriteAll = False
@@ -332,12 +337,12 @@ class Catalog(object):
         index = self.sortedList.index((releaseId, self.formatDiscSortKey(releaseId)))
         for i in range(max(0,index-neighborHood), min(len(self.sortedList), index+neighborHood)):
             sortId, sortStr = self.sortedList[i]
-            print ('\033[92m' if i == index else "") + "%4d" % i, \
+            print( ('\033[92m' if i == index else "") + "%4d" % i, \
                     sortId, \
                     sortStr, \
                     ("[" + self.getRelease(sortId)['medium-list'][0]['format'] + "]" if len(self.getRelease(sortId)['medium-list']) else ""), \
                     (" <<<" if i == index else "") + \
-                    ('\033[0m' if i == index else "")
+                    ('\033[0m' if i == index else "") )
 
 
     def search(self, query):
@@ -346,15 +351,14 @@ class Catalog(object):
         """
         matches = self._search(query)
         for releaseId in matches:
-            print self.formatDiscInfo(releaseId)
+            print(self.formatDiscInfo(releaseId))
 
     def report(self):
         """
         Print statistics about the catalog
         """
-        print
-        print "%d releases" % len(self)
-        print "%d words in search table" % len(self.wordMap)
+        print("\n%d releases" % len(self))
+        print("%d words in search table" % len(self.wordMap))
 
     def makeHtml(self, fileName="catalog.html"):
         """
@@ -484,7 +488,7 @@ white-space: nowrap;
             os.mkdir(os.path.dirname(xmlPath))
 
         if (os.path.isfile(xmlPath) and not overWriteAll):
-            print xmlPath, "already exists. Continue? [y/a/N] ",
+            print(xmlPath, "already exists. Continue? [y/a/N] ", end="")
             response = sys.stdin.readline().strip()
             if (not response or response[0] not in ['y', 'a']):
                 return 1
@@ -705,13 +709,13 @@ white-space: nowrap;
                 colRelIds.append(rel['id'])
                 
         #colRelList = mb.get_releases_in_collection(colId)
-        print 'OK'
-        print 'Found %d / %d releases.' % (len(colRelIds), len(self))
+        print('OK')
+        print('Found %d / %d releases.' % (len(colRelIds), len(self)))
 
         relIdsToAdd = list(set(self.getReleaseIds()) - set(colRelIds))
 
-        print 'Going to add %d releases to collection...' % len(relIdsToAdd)
+        print('Going to add %d releases to collection...' % len(relIdsToAdd))
         for relIdChunk in chunks(relIdsToAdd, 100):
             mb.add_releases_to_collection(colId, relIdChunk)
-        print 'DONE'
+        print('DONE')
 

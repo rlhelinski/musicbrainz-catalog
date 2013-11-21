@@ -7,7 +7,10 @@ This module contains helper functions to make common tasks easier.
 __revision__ = '$Id: utils.py 13322 2011-11-03 13:38:06Z luks $'
 
 import re
-import urlparse
+try:
+    import urlparse
+except ImportError as e:
+    import urllib.parse
 
 __all__ = [
 	'extractUuid', 'extractFragment', 'extractEntityType',
