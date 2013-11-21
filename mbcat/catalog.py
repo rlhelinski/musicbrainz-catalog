@@ -11,6 +11,8 @@ import shutil
 from datetime import datetime
 from collections import defaultdict
 import progressbar
+import logging
+logging.basicConfig(level=logging.INFO)
 
 overWriteAll = False
 
@@ -167,10 +169,9 @@ class Catalog(object):
         #self.formatMap = dict()
 
         for releaseId in self.loadReleaseIds():
-            #print releaseId
             xmlPath = self._get_xml_path(releaseId)
             if (not os.path.isfile(xmlPath)):
-                print "No metadata for", releaseId
+                logging.error("Found directory, but no metadata for " + releaseId)
                 continue
 
             metadata = self.getMetaData(releaseId)
@@ -278,7 +279,7 @@ class Catalog(object):
                     release['title'], \
                     ] ) 
         except IndexError as e:
-            print "No releases or date for: ", releaseId, "-", release.artist.getSortName(), "-", release.title
+            logging.warning("No releases or date for: " + releaseId + " - " + release.artist.getSortName() + "-" + release.title)
 
         return ' - '.join ( [
                 release.artist.getSortName(), \
@@ -297,9 +298,11 @@ class Catalog(object):
                 # TODO need to resolve releases with more than one format 
                 # TODO make this next line a function
                 if 'format' not in self.getRelease(sortId)['medium-list'][0]:
-                    print 'No format for ' + sortId + ", " + sortStr
+                    logging.warning('No format for ' + sortId + ", " + sortStr)
                 elif 'unknown' in self.getRelease(sortId)['medium-list'][0]['format']:
-                    print self.getRelease(sortId)['medium-list'][0]['format'] + " format for release " + sortId + ", " + sortStr
+                    # it's some type of unknown format message
+                    logging.warning(self.getRelease(sortId)['medium-list'][0]['format'] \
+                        + " format for release " + sortId + ", " + sortStr)
                 elif matchFmt == ReleaseFormat(self.getRelease(sortId)['medium-list'][0]['format']):
                     filteredSortKeys.append((sortId, sortStr))
         else:
@@ -310,6 +313,10 @@ class Catalog(object):
         return self.sortedList
 
     def getSortNeighbors(self, releaseId, neighborHood=5, matchFormat=False):
+        """
+        Print release with context (neighbors) to assist in sorting and storage of releases.
+        """
+        # This should be broken down since it writes to the console
 
         if matchFormat:
             try:
@@ -317,7 +324,7 @@ class Catalog(object):
                     ReleaseFormat(
                         self.getRelease(releaseId)['medium-list'][0]['format']))
             except IndexError as e:
-                print "No format for release"
+                logging.warning("Sorting release " + releaseId + " with no format into a list of all releases.")
                 self.getSortedList()
         else:
             self.getSortedList()
@@ -334,20 +341,29 @@ class Catalog(object):
 
 
     def search(self, query):
+        """
+        Print a list releases that match words in a query
+        """
         matches = self._search(query)
         for releaseId in matches:
             print self.formatDiscInfo(releaseId)
 
     def report(self):
+        """
+        Print statistics about the catalog
+        """
         print
         print "%d releases" % len(self)
         print "%d words in search table" % len(self.wordMap)
 
     def makeHtml(self, fileName="catalog.html"):
+        """
+        Write HTML representing the catalog to a file
+        """
         import amazonservices
         htf = open(fileName, 'w')
 
-        print >> htf, """<!DOCTYPE HTML>
+        htf.write("""<!DOCTYPE HTML>
 <html>
 <head>
 <title>Music Catalog</title>
@@ -375,13 +391,13 @@ white-space: nowrap;
 
 </style>
 </head>
-<body>"""
+<body>""")
 
         for releaseType in [ReleaseFormat('CD'), ReleaseFormat('Vinyl')]:
             sortedList = self.getSortedList(releaseType)
-            print >> htf, "<h2>" + str(releaseType) + (" (%d Releases)" % len(sortedList)) + "</h2>"
-            print >> htf, "<table>"
-            print >> htf, """<tr>
+            htf.write("<h2>" + str(releaseType) + (" (%d Releases)" % len(sortedList)) + "</h2>")
+            htf.write("<table>")
+            htf.write("""<tr>
 <!-- <th>Sort Index</th> -->
 <th>Artist</th>
 <th>Release Title</th>
@@ -394,7 +410,7 @@ white-space: nowrap;
 <th>Format</th>
 <th>Date Added</th>
 </tr>
-"""
+""")
             # TODO there are a lot of calls to ''.encode()
             for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
                 rel = self.getRelease(releaseId)
@@ -407,34 +423,48 @@ white-space: nowrap;
                 else:
                     coverartUrl = None
 
-                print >> htf, "<tr>"
-                print >> htf, "<!-- <td>"+("%04d" % sortIndex)+"</td> -->"
-                print >> htf, "<td>" + ''.join( [\
-                    credit if type(credit)==type('') else "<a href=\""+self.artistUrl+credit['artist']['id']+"\">"+credit['artist']['name'].encode('ascii', 'xmlcharrefreplace')+"</a>" for credit in rel['artist-credit'] ] ) + "</td>"
-                print >> htf, "<td><a href=\""+self.releaseUrl+rel['id']+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
+                htf.write("<tr>")
+                htf.write("<!-- <td>"+("%04d" % sortIndex)+"</td> -->")
+                htf.write("<td>" + ''.join( [\
+                    credit if type(credit)==type('') else \
+                    "<a href=\""+self.artistUrl+credit['artist']['id']+"\">"+\
+                    credit['artist']['name'].encode('ascii', 'xmlcharrefreplace')+\
+                    "</a>" for credit in rel['artist-credit'] ] ) + "</td>")
+                htf.write("<td><a href=\""+self.releaseUrl+rel['id']+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
                     ">"+rel['title'].encode('ascii', 'xmlcharrefreplace')\
                     +(' (%s)' % rel['disambiguation'].encode('ascii', 'xmlcharrefreplace') if 'disambiguation' in rel and rel['disambiguation'] else '')\
                     +("<img width=24 height=24 src='tango/Image-x-generic.svg'><span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" \
                     if coverartUrl else "") + "</a>" + (''.join("<a href='"+path.encode('ascii', 'xmlcharrefreplace')+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
-                    if self.extraIndex[releaseId].digitalPaths else "") + "</td>"
-                print >> htf, "<td>"+(rel['date'] if 'date' in rel else '')+"</td>"
-                print >> htf, "<td>"+(rel['country'].encode('ascii', 'xmlcharrefreplace') if 'country' in rel else '')+"</td>"
-                print >> htf, "<td>"+', '.join(["<a href=\""+self.labelUrl+info['label']['id']+"\">"+info['label']['name'].encode('ascii', 'xmlcharrefreplace')+"</a>" if 'label' in info else '' for info in rel['label-info-list']])+"</td>"
+                    if self.extraIndex[releaseId].digitalPaths else "") + "</td>")
+                htf.write("<td>"+(rel['date'] if 'date' in rel else '')+"</td>")
+                htf.write("<td>"+(rel['country'].encode('ascii', 'xmlcharrefreplace') \
+                    if 'country' in rel else '')+"</td>")
+                htf.write("<td>"+', '.join([\
+                    "<a href=\""+self.labelUrl+info['label']['id']+"\">"+\
+                    info['label']['name'].encode('ascii', 'xmlcharrefreplace')+\
+                    "</a>" if 'label' in info else '' for info in rel['label-info-list']])+"</td>")
                 # TODO handle empty strings here (remove from this list before joining)
-                print >> htf, "<td>"+', '.join([info['catalog-number'].encode('ascii', 'xmlcharrefreplace') if 'catalog-number' in info else '' for info in rel['label-info-list']])+"</td>"
-                print >> htf, "<td>"+('' if 'barcode' not in rel else rel['barcode'] if rel['barcode'] else '[none]')+"</td>"
-                print >> htf, "<td>"+("<a href=\"" + amazonservices.getAsinProductUrl(rel['asin']) + "\">" + rel['asin'] + "</a>" if 'asin' in rel else '')+"</td>"
-                print >> htf, "<td>"+' + '.join([medium['format'] for medium in rel['medium-list']])+"</td>"
-                print >> htf, \
+                htf.write("<td>"+', '.join([\
+                    info['catalog-number'].encode('ascii', 'xmlcharrefreplace') if \
+                    'catalog-number' in info else '' for info in rel['label-info-list']])+"</td>")
+                htf.write("<td>"+\
+                    ('' if 'barcode' not in rel else \
+                    rel['barcode'] if rel['barcode'] else
+                    '[none]')+"</td>")
+                htf.write("<td>"+("<a href=\"" + \
+                    amazonservices.getAsinProductUrl(rel['asin']) + \
+                    "\">" + rel['asin'] + "</a>" if 'asin' in rel else '')+"</td>")
+                htf.write("<td>"+' + '.join([medium['format'] for medium in rel['medium-list']])+"</td>")
+                htf.write(\
                     "<td>"+(datetime.fromtimestamp(self.extraIndex[releaseId].addDates[0]).strftime('%Y-%m-%d') if \
-                    len(self.extraIndex[releaseId].addDates) else '')+"</td>"
-                print >> htf, "</tr>"
-            print >> htf, "</table>"
+                    len(self.extraIndex[releaseId].addDates) else '')+"</td>")
+                htf.write("</tr>")
+            htf.write("</table>")
 
-        print >> htf, "<p>%d releases</p>" % len(self)
+        htf.write("<p>%d releases</p>" % len(self))
 
-        print >> htf, """</body>
-</html>"""
+        htf.write("""</body>
+</html>""")
         htf.close()
 
     def getReleaseMetaXml(self, releaseId):
@@ -461,7 +491,7 @@ white-space: nowrap;
             elif (response[0] == 'a'):
                 overWriteAll = True
 
-        print "Writing metadata to", xmlPath
+        logging.info("Writing metadata to '%s'", xmlPath)
         xmlf = open(xmlPath, 'w')
         xml_writer = wsxml.MbXmlWriter()
         xml_writer.write(xmlf, metaData)
@@ -478,7 +508,7 @@ white-space: nowrap;
         """Load metadata from disk"""
         xmlPath = self._get_xml_path(releaseId)
         if (not os.path.isfile(xmlPath)):
-            print "No metadata for", releaseId
+            logging.error("No XML metadata for %s", releaseId)
             return None
         with open(xmlPath, 'r') as xmlf:
             metaxml = xmlf.read()
@@ -489,7 +519,7 @@ white-space: nowrap;
             raise ResponseError(cause=exc)
         except Exception as exc:
             if isinstance(exc, ETREE_EXCEPTIONS):
-                print "Got some bad XML!"
+                logging.error("Got some bad XML for %s!", releaseId)
                 return 
             else:
                 raise
@@ -517,27 +547,24 @@ white-space: nowrap;
                 words = self.getReleaseWords(rel)
                 self.mapWordsToRelease(words, releaseId)
             except KeyError as e:
-                print "No artists included in XML"
+                logging.error("No artists included in XML for %s", releaseId)
 
         except KeyError as e:
-            print "Bad XML for " + releaseId + ": " + str(e)
+            logging.error("Bad XML for " + releaseId + ": " + str(e))
             return
         except TypeError as e:
-            print releaseId + ' ' + str(type(e)) + ": " + str(e) + ": " + str(dir(e))
+            logging.error(releaseId + ' ' + str(type(e)) + ": " + str(e) + ": " + str(dir(e)))
             return
         
-        # discIdMap
-        # barcodeMap
-        # wordMap
-
     def digestXml(self, releaseId, meta_xml):
         self.digestMetaDict(releaseId, mbxml.parse_message(meta_xml))
 
     def searchDigitalPaths(self, releaseId=''):
         releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
 
+        # TODO could use progressbar here
         for relId in releaseIdList:
-            print relId
+            #print relId
             for path in self.prefs.musicPaths:
                 #print path
                 rel = self.getRelease(relId)
@@ -548,7 +575,7 @@ white-space: nowrap;
                         for titleName in [rel['title']]:
                             titlePath = os.path.join(artistPath, titleName)
                             if os.path.isdir(titlePath):
-                                print 'Found ' + titlePath
+                                logging.info('Found ' + relId + ' at ' + titlePath)
                                 self.extraIndex[relId].addPath(titlePath)
             self.extraIndex[relId].save()
 
@@ -559,7 +586,7 @@ white-space: nowrap;
         releaseId = getReleaseId(releaseId)
         xmlPath = self._get_xml_path(releaseId)
         if (os.path.isfile(xmlPath) and (os.path.getmtime(xmlPath) > (time.time() - olderThan))):
-            print "Skipping fetch of metadata for ", releaseId, "because it is recent"
+            logging.info("Skipping fetch of metadata for %s because it is recent", releaseId)
             return 0
 
         meta_xml = self.getReleaseMetaXml(releaseId)
@@ -579,27 +606,32 @@ white-space: nowrap;
 
     def refreshAllMetaData(self, olderThan=0):
         for releaseId in self.loadReleaseIds():
-            print "Refreshing", releaseId,
+            logging.info("Refreshing %s", releaseId)
             self.refreshMetaData(releaseId, olderThan)
 
     def checkReleases(self):
-
+        """
+        Check releases for ugliness such as no barcode, no release format, etc. 
+        For now, this creates warnings in the log. 
+        """
         for releaseId, release in self.getReleases():
             if release.releaseEvents:
                 if not release.releaseEvents[0].barcode:
-                    print "No barcode for " + releaseId + " " + self.formatDiscSortKey(releaseId) + " (" + getFormatFromUri(release.releaseEvents[0].format) + ")"
+                    logging.warning("No barcode for " + releaseId + " " + \
+                        self.formatDiscSortKey(releaseId) + " (" + \
+                        getFormatFromUri(release.releaseEvents[0].format) + ")")
                 if not release.releaseEvents[0].format:
-                    print "No format for " + releaseId + " " + self.formatDiscSortKey(releaseId)
+                    logging.warning("No format for " + releaseId + " " + \
+                        self.formatDiscSortKey(releaseId))
 
             else:
-                print "No release events for", releaseId + " " + self.formatDiscSortKey(releaseId)
+                logging.warning("No release events for", releaseId + " " + self.formatDiscSortKey(releaseId))
 
-    def getCoverArt(self, releaseId, quiet=False, maxage=60*60):
+    def getCoverArt(self, releaseId, maxage=60*60):
         release = self.getRelease(releaseId)
         imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
         if os.path.isfile(imgPath) and os.path.getmtime(imgPath) > time.time() - maxage:
-            if not quiet:
-                print "Already have cover art for " + releaseId + ", skipping"
+            logging.info("Already have cover art for " + releaseId + ", skipping")
             return
 
         try:
@@ -607,12 +639,12 @@ white-space: nowrap;
             coverart.saveCoverArt(meta, imgPath)
 
         except mb.ResponseError as e:
-            print 'No cover art available from Cover Art Archive'
+            logging.warning('No cover art for ' + releaseId + ' available from Cover Art Archive')
                 
             if 'asin' in release:
                 amazonservices.saveImage(release['asin'], amazonservices.AMAZON_SERVER["amazon.com"], imgPath)
             else:
-                print "No ASIN for", releaseId
+                logging.warning('No ASIN for ' + releaseId)
 
     def refreshAllCoverArt(self, maxage=60*60*24):
         for releaseId in self.getReleaseIds():
@@ -635,11 +667,25 @@ white-space: nowrap;
         return sorted(dists, key=lambda sortKey: sortKey[0])
 
     def getTopSimilarities(self, number=100):
+        """ 
+        Helps the user identify similar, possibly duplicate, releases.
+        """
         lds = self.checkLevenshteinDistances()
         for i in range (number):
-            print str(lds[i][0]) + "\t" + self.formatDiscInfo(lds[i][1]) + " <-> " + self.formatDiscInfo(lds[i][2])
+            logging.info(str(lds[i][0]) + "\t" + \
+                self.formatDiscInfo(lds[i][1]) + " <-> " + \
+                self.formatDiscInfo(lds[i][2]))
 
     def syncCollection(self, colId):
+        """
+        Synchronize the catalog with a MusicBrainz collection. 
+
+        For now, only adds releases from the catalog to the collection
+        if they do not already exist in the collection.
+
+        In the future, should also reconcile releases in the collection
+        that are not in the catalog. 
+        """
         # this is a hack so that the progress will appear immediately
         import sys
         sys.stdout.write('Fetching list of releases in collection...')
