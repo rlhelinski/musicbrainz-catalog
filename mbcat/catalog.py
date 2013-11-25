@@ -266,7 +266,7 @@ class Catalog(object):
                 ''.join([credit if type(credit)==type('') else credit['artist']['sort-name'] for credit in release['artist-credit'] ]), '-', \
                 (release['date'] if 'date' in release else ''), '-', \
                 release['title'], \
-                ('['+release['medium-list'][0]['format']+']' if len(release['medium-list']) else ''), \
+                ('['+release['medium-list'][0]['format']+']' if release['medium-list'] and 'format' in release['medium-list'][0] else ''), \
                 ] )
 
     def formatDiscSortKey(self, releaseId):
@@ -324,7 +324,7 @@ class Catalog(object):
                 self.getSortedList(
                     ReleaseFormat(
                         self.getRelease(releaseId)['medium-list'][0]['format']))
-            except IndexError as e:
+            except KeyError as e:
                 logging.warning("Sorting release " + releaseId + " with no format into a list of all releases.")
                 self.getSortedList()
         else:
