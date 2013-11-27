@@ -2,6 +2,7 @@ from __future__ import print_function
 import os, time, sys
 import xml.etree.ElementTree as ET
 import mbcat.utils
+import logging
 try:
     from StringIO import StringIO
 except ImportError as e:
@@ -26,7 +27,10 @@ class PurchaseEvent:
         return time.strftime(dateFmtStr, time.localtime(self._date))
 
     def setDate(self, date):
-        self._date = time.strptime(date, dateFmtStr)
+        try:
+            self._date = time.strptime(date, dateFmtStr)
+        except ValueError as e:
+            logging.warning(e)
 
     date = property(getDate, setDate, doc='purchase date')
 
@@ -34,7 +38,10 @@ class PurchaseEvent:
         return "%.2f" % (self._price / 100)
 
     def setPrice(self, price):
-        self._price = int(price * 100)
+        try:
+            self._price = int(float(price) * 100)
+        except ValueError as e:
+            logging.warning(e)
 
     price = property(getPrice, setPrice, doc='purchase price')
 

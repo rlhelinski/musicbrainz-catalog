@@ -40,13 +40,18 @@ else:
 def releaseSortCmp(a, b):
     return unicode.lower(a[1]) < unicode.lower(b[1])
 
-import HTMLParser
-h = HTMLParser.HTMLParser()
-
 def chunks(l, n):
     """ Yield successive n-sized chunks from l. """
     for i in xrange(0, len(l), n):
         yield l[i:i+n]
+
+# This goes with getFormatFromUri(), but can we replace that with a library function?
+try:
+    import HTMLParser
+    h = HTMLParser.HTMLParser()
+except ImportError as e:
+    import html.parser
+    h = html.parser.HTMLParser()
 
 def getFormatFromUri(uriStr, escape=True):
     # TODO deprecate
@@ -103,7 +108,7 @@ class Catalog(object):
         self.rootPath = rootPath
         if not os.path.isdir(self.rootPath):
             os.mkdir(self.rootPath)
-        self.prefs = userprefs.PrefManager()
+        self.prefs = mbcat.userprefs.PrefManager()
             
     def _get_xml_path(self, releaseId, fileName='metadata.xml'):
         return os.path.join(self.rootPath, releaseId, fileName)
@@ -135,18 +140,20 @@ class Catalog(object):
     def loadReleaseIds(self):
         fileList = os.listdir(self.rootPath)
 
-        widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Fraction(), " ", progressbar.Percentage() ]
+        # There's no Fraction() provided in progressbar-python3
+        widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Percentage() ]
         pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(fileList)).start()
 
         for releaseId in fileList:
             if len(releaseId) == 36:
-                pbar.increment()
+                #pbar.increment() # progressbar-python3 does not have increment()
+                pbar.update(pbar.currval + 1)
                 yield releaseId
         pbar.finish()
 
     def loadExtraData(self, releaseId):
         # load extra data
-        self.extraIndex[releaseId] = extradata.ExtraData(releaseId)
+        self.extraIndex[releaseId] = mbcat.extradata.ExtraData(releaseId)
         try:
             self.extraIndex[releaseId].load()
         except IOError as e:
@@ -154,7 +161,7 @@ class Catalog(object):
             self.extraIndex[releaseId].save()
 
     def addExtraData(self, releaseId):
-        self.extraIndex[releaseId] = extradata.ExtraData(releaseId)
+        self.extraIndex[releaseId] = mbcat.extradata.ExtraData(releaseId)
         try:
             self.extraIndex[releaseId].load()
         except IOError as e:
