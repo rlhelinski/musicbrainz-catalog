@@ -321,7 +321,7 @@ class Catalog(object):
             # Skip all the fun
             filteredSortKeys = sortKeys
 
-        self.sortedList = sorted(filteredSortKeys, key=lambda sortKey: unicode.lower(unicode(sortKey[1])))
+        self.sortedList = sorted(filteredSortKeys, key=lambda sortKey: sortKey[1].lower())
         return self.sortedList
 
     def getSortNeighbors(self, releaseId, neighborHood=5, matchFormat=False):
@@ -371,7 +371,11 @@ class Catalog(object):
         """
         Write HTML representing the catalog to a file
         """
-        import amazonservices
+
+        def fmt(s):
+            return s.encode('ascii', 'xmlcharrefreplace').decode('utf-8')
+
+
         htf = open(fileName, 'w')
 
         htf.write("""<!DOCTYPE HTML>
@@ -422,11 +426,10 @@ white-space: nowrap;
 <th>Date Added</th>
 </tr>
 """)
-            # TODO there are a lot of calls to ''.encode()
             for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
                 rel = self.getRelease(releaseId)
 
-                #coverartUrl = amazonservices.getAsinImageUrl(rel.asin, amazonservices.AMAZON_SERVER["amazon.com"], 'S')
+                #coverartUrl = mbcat.amazonservices.getAsinImageUrl(rel.asin, mbcat.amazonservices.AMAZON_SERVER["amazon.com"], 'S')
                 # Refer to local copy instead
                 imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
                 if os.path.isfile(imgPath):
@@ -439,31 +442,31 @@ white-space: nowrap;
                 htf.write("<td>" + ''.join( [\
                     credit if type(credit)==type('') else \
                     "<a href=\""+self.artistUrl+credit['artist']['id']+"\">"+\
-                    credit['artist']['name'].encode('ascii', 'xmlcharrefreplace')+\
+                    fmt(credit['artist']['name'])+\
                     "</a>" for credit in rel['artist-credit'] ] ) + "</td>")
                 htf.write("<td><a href=\""+self.releaseUrl+rel['id']+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
-                    ">"+rel['title'].encode('ascii', 'xmlcharrefreplace')\
-                    +(' (%s)' % rel['disambiguation'].encode('ascii', 'xmlcharrefreplace') if 'disambiguation' in rel and rel['disambiguation'] else '')\
+                    ">"+fmt(rel['title'])\
+                    +(' (%s)' % str(rel['disambiguation']) if 'disambiguation' in rel and rel['disambiguation'] else '')\
                     +("<img width=24 height=24 src='tango/Image-x-generic.svg'><span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" \
-                    if coverartUrl else "") + "</a>" + (''.join("<a href='"+path.encode('ascii', 'xmlcharrefreplace')+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
+                    if coverartUrl else "") + "</a>" + (''.join("<a href='"+fmt(path)+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
                     if self.extraIndex[releaseId].digitalPaths else "") + "</td>")
-                htf.write("<td>"+(rel['date'] if 'date' in rel else '')+"</td>")
-                htf.write("<td>"+(rel['country'].encode('ascii', 'xmlcharrefreplace') \
+                htf.write("<td>"+(fmt(rel['date']) if 'date' in rel else '')+"</td>")
+                htf.write("<td>"+(fmt(rel['country']) \
                     if 'country' in rel else '')+"</td>")
                 htf.write("<td>"+', '.join([\
                     "<a href=\""+self.labelUrl+info['label']['id']+"\">"+\
-                    info['label']['name'].encode('ascii', 'xmlcharrefreplace')+\
+                    fmt(info['label']['name'])+\
                     "</a>" if 'label' in info else '' for info in rel['label-info-list']])+"</td>")
                 # TODO handle empty strings here (remove from this list before joining)
                 htf.write("<td>"+', '.join([\
-                    info['catalog-number'].encode('ascii', 'xmlcharrefreplace') if \
+                    fmt(info['catalog-number']) if \
                     'catalog-number' in info else '' for info in rel['label-info-list']])+"</td>")
                 htf.write("<td>"+\
                     ('' if 'barcode' not in rel else \
                     rel['barcode'] if rel['barcode'] else
                     '[none]')+"</td>")
                 htf.write("<td>"+("<a href=\"" + \
-                    amazonservices.getAsinProductUrl(rel['asin']) + \
+                    mbcat.amazonservices.getAsinProductUrl(rel['asin']) + \
                     "\">" + rel['asin'] + "</a>" if 'asin' in rel else '')+"</td>")
                 htf.write("<td>"+' + '.join([medium['format'] for medium in rel['medium-list']])+"</td>")
                 htf.write(\
@@ -604,7 +607,7 @@ white-space: nowrap;
         if not os.path.isdir(os.path.dirname(xmlPath)):
             os.mkdir(os.path.dirname(xmlPath))
         with open(xmlPath, 'w') as xmlf:
-            xmlf.write(meta_xml)
+            xmlf.write(meta_xml.decode('utf-8'))
         #self.writeXml(releaseId, meta_xml)
         self.digestXml(releaseId, meta_xml)
 
@@ -653,7 +656,7 @@ white-space: nowrap;
             logging.warning('No cover art for ' + releaseId + ' available from Cover Art Archive')
                 
             if 'asin' in release:
-                amazonservices.saveImage(release['asin'], amazonservices.AMAZON_SERVER["amazon.com"], imgPath)
+                mbcat.amazonservices.saveImage(release['asin'], mbcat.amazonservices.AMAZON_SERVER["amazon.com"], imgPath)
             else:
                 logging.warning('No ASIN for ' + releaseId)
 
