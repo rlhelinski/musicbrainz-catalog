@@ -70,6 +70,9 @@ def getReleaseId(releaseId):
     else:
         return releaseId
 
+def formatSortCredit(release):
+    return ''.join([credit if type(credit)==str else credit['artist']['sort-name'] for credit in release['artist-credit'] ])
+
 class ReleaseFormat(object):
     def __init__(self, fmtStr=""):
         self.fmtStr = fmtStr
@@ -237,9 +240,7 @@ class Catalog(object):
 
     def getReleaseWords(self, rel):
         words = []
-        # TODO make combining the credits a function
-        for field in [ rel['title'] ] + \
-                [credit if type(credit)==type('') else credit['artist']['name'] for credit in rel['artist-credit'] ]:
+        for field in [ rel['title'], rel['artist-credit-phrase'] ]:
             words.extend(re.findall(r"\w+", field.lower(), re.UNICODE))
         return words
 
@@ -272,10 +273,9 @@ class Catalog(object):
 
     def formatDiscInfo(self, releaseId):
         release = self.getRelease(releaseId)
-        # TODO this is similar to other code
         return ' '.join( [
                 releaseId, ':', \
-                ''.join([credit if type(credit)==type('') else credit['artist']['sort-name'] for credit in release['artist-credit'] ]), '-', \
+                formatSortCredit(release), '-', \
                 (release['date'] if 'date' in release else ''), '-', \
                 release['title'], \
                 ('['+release['medium-list'][0]['format']+']' if len(release['medium-list']) else ''), \
@@ -285,10 +285,9 @@ class Catalog(object):
         release = self.getRelease(releaseId)
 
         try:
-            return ' - '.join ( \
-                    [credit if type(credit)==type('') else credit['artist']['sort-name'] for credit in release['artist-credit'] ] + \
-                    #release['artist-credit-phrase'], \
-                    [ release['date'] if 'date' in release else '', \
+            return ' - '.join ( [ \
+                    formatSortCredit(release), \
+                    release['date'] if 'date' in release else '', \
                     release['title'], \
                     ] ) 
         except IndexError as e:
@@ -374,7 +373,7 @@ class Catalog(object):
         """
 
         def fmt(s):
-            return s.encode('ascii', 'xmlcharrefreplace').decode('utf-8')
+            return str(s.encode('ascii', 'xmlcharrefreplace'))
 
 
         htf = open(fileName, 'w')
@@ -441,13 +440,13 @@ white-space: nowrap;
                 htf.write("<tr>")
                 htf.write("<!-- <td>"+("%04d" % sortIndex)+"</td> -->")
                 htf.write("<td>" + ''.join( [\
-                    credit if type(credit)==type('') else \
+                    credit if type(credit)==str else \
                     "<a href=\""+self.artistUrl+credit['artist']['id']+"\">"+\
                     fmt(credit['artist']['name'])+\
                     "</a>" for credit in rel['artist-credit'] ] ) + "</td>")
                 htf.write("<td><a href=\""+self.releaseUrl+rel['id']+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
                     ">"+fmt(rel['title'])\
-                    +(' (%s)' % str(rel['disambiguation']) if 'disambiguation' in rel and rel['disambiguation'] else '')\
+                    +(' (%s)' % fmt(rel['disambiguation']) if 'disambiguation' in rel and rel['disambiguation'] else '')\
                     +("<img width=24 height=24 src='tango/Image-x-generic.svg'><span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" \
                     if coverartUrl else "") + "</a>" + (''.join("<a href='"+fmt(path)+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
                     if self.extraIndex[releaseId].digitalPaths else "") + "</td>")
