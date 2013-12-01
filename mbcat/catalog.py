@@ -1,4 +1,5 @@
 from __future__ import print_function
+from __future__ import unicode_literals
 import os
 import sys
 import time
@@ -607,7 +608,7 @@ white-space: nowrap;
         if not os.path.isdir(os.path.dirname(xmlPath)):
             os.mkdir(os.path.dirname(xmlPath))
         with open(xmlPath, 'w') as xmlf:
-            xmlf.write(meta_xml.decode('utf-8'))
+            xmlf.write(bytes(meta_xml))
         #self.writeXml(releaseId, meta_xml)
         self.digestXml(releaseId, meta_xml)
 
