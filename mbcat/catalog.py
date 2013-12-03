@@ -146,14 +146,15 @@ class Catalog(object):
 
         # There's no Fraction() provided in progressbar-python3
         widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Percentage() ]
-        pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(fileList)).start()
+        if len(fileList) > 0:
+            pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(fileList)).start()
 
-        for releaseId in fileList:
-            if len(releaseId) == 36:
-                #pbar.increment() # progressbar-python3 does not have increment()
-                pbar.update(pbar.currval + 1)
-                yield releaseId
-        pbar.finish()
+            for releaseId in fileList:
+                if len(releaseId) == 36:
+                    #pbar.increment() # progressbar-python3 does not have increment()
+                    pbar.update(pbar.currval + 1)
+                    yield releaseId
+            pbar.finish()
 
     def loadExtraData(self, releaseId):
         # load extra data
@@ -278,7 +279,7 @@ class Catalog(object):
                 formatSortCredit(release), '-', \
                 (release['date'] if 'date' in release else ''), '-', \
                 release['title'], \
-                ('['+release['medium-list'][0]['format']+']' if len(release['medium-list']) else ''), \
+                ('['+release['medium-list'][0]['format']+']' if release['medium-list'] and 'format' in release['medium-list'][0] else ''), \
                 ] )
 
     def formatDiscSortKey(self, releaseId):
@@ -335,7 +336,7 @@ class Catalog(object):
                 self.getSortedList(
                     ReleaseFormat(
                         self.getRelease(releaseId)['medium-list'][0]['format']))
-            except IndexError as e:
+            except KeyError as e:
                 logging.warning("Sorting release " + releaseId + " with no format into a list of all releases.")
                 self.getSortedList()
         else:
