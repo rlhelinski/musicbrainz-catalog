@@ -78,7 +78,7 @@ while not raw_input('Press enter to read the disc or \'q\' to quit... ').startsw
                 print ("Release  :", rel['id'])
                 print ("Artist   :", rel['artist-credit-phrase'])
                 print ("Title    :", rel['title'])
-                print ("Date    :", rel['date'])
+                print ("Date    :", rel['date'] if 'date' in rel else '')
                 print ("Country    :", rel['country'])
                 if 'barcode' in rel:
                     print ("Barcode    :", rel['barcode'])
