@@ -58,18 +58,18 @@ class Shell:
                     return releaseId
                 matches = list(self.c._search(input))
                 if len(matches) > 1:
-                    self.s.write(len(matches), "matches found:")
+                    self.s.write("%d matches found:\n" % len(matches))
                     for i, match in enumerate(matches):
-                        self.s.write(i, self.c.formatDiscInfo(match))
+                        self.s.write(str(i) + " " + self.c.formatDiscInfo(match) + "\n")
                     while (True):
                         try:
                             index = int(self.s.nextWord("Select a match: "))
                             self.c.getSortNeighbors(matches[index], matchFormat=True)
                             return matches[index]
                         except ValueError as e:
-                            self.s.write(e, "try again")
+                            self.s.write(e + " try again\n")
                         except IndexError as e:
-                            self.s.write(e, "try again")
+                            self.s.write(e + " try again\n")
 
                 elif len(matches) == 1:
                     self.c.getSortNeighbors(matches[0], matchFormat=True)
@@ -85,7 +85,7 @@ class Shell:
         self.c = Catalog()
         self.s.write("Reloading database...")
         self.c.load()
-        self.s.write("DONE")
+        self.s.write("DONE\n")
 
     def EditExtra(self):
         # TODO remove, extra should be transparaent to the user
@@ -106,7 +106,7 @@ class Shell:
         if not releaseId:
             self.c.refreshAllMetaData(maxAge)
         elif releaseId not in self.c:
-            self.s.write("Release not found")
+            self.s.write("Release not found\n")
             return
         else:
             self.c.refreshMetaData(releaseId, olderThan=maxAge)
@@ -134,7 +134,7 @@ class Shell:
         try:
             self.c.refreshMetaData(releaseId)
         except mb.ResponseError as e:
-            self.s.write(e, "bad release ID?")
+            self.s.write(e + " bad release ID?\n")
             return
 
         self.c.addExtraData(releaseId)
@@ -153,7 +153,7 @@ class Shell:
     def Check(self):
         self.s.write("Running checks...")
         self.c.checkReleases()
-        self.s.write("DONE")
+        self.s.write("DONE\n")
 
     def Lend(self):
         releaseId = self.Search()
@@ -183,7 +183,7 @@ class Shell:
         if not releaseId:
             self.c.searchDigitalPaths()
         elif releaseId not in self.c:
-            self.s.write("Release not found")
+            self.s.write("Release not found\n")
             return
         else:
             self.c.searchDigitalPaths(releaseId=releaseId)
@@ -196,7 +196,7 @@ class Shell:
         # TODO this needs to be updated---the commands should all be captured in a tree structure
         self.s.write("Enter sub-command:")
         for cmd, (fun, desc) in self.digitalCommands.items():
-            self.s.write(cmd + ' : ' + desc)
+            self.s.write(cmd + ' : ' + desc + '\n')
         input = self.s.nextWord()
         (self.digitalCommands[input][0])(self)
 
@@ -218,7 +218,7 @@ class Shell:
 
         result = mb.get_collections()
         for i, collection in enumerate(result['collection-list']):
-            self.s.write('%d: "%s" by %s (%s)' % (i, collection['name'], 
+            self.s.write('%d: "%s" by %s (%s)\n' % (i, collection['name'], 
                 collection['editor'], collection['id']))
 
         col_i = int(raw_input('Enter collection index: '))
@@ -265,7 +265,7 @@ class Shell:
                     self.s.write(str(e) + " Command failed.\n")
 
             else:
-                self.s.write("Invalid command")
+                self.s.write("Invalid command\n")
 
 
 if __name__ == "__main__":
