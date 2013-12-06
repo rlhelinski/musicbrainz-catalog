@@ -81,13 +81,23 @@ class ReleaseFormat(object):
         self.fmtStr = fmtStr
 
     def isVinyl(self):
+        # TODO there are many 12" vinyl releases labeled as "Vinyl"---what to do?
         return self.fmtStr.endswith('Vinyl') or \
             self.fmtStr.startswith('7"') or \
             self.fmtStr.startswith('10"') or \
             self.fmtStr.startswith('12"')
 
+    def is7Inch(self):
+        return self.fmtStr.startswith('7"')
+
+    def is10Inch(self):
+        return self.fmtStr.startswith('10"')
+
+    def is12Inch(self):
+        return self.fmtStr.startswith('12"')
+
     def isCD(self):
-        # There are many CDs labeled as '(unknown)' type
+        # TODO There are many CDs labeled as '(unknown)' type--what to do? 
         return self.fmtStr.endswith('CD') or not self.isVinyl()
 
     def isOther(self):
@@ -97,7 +107,9 @@ class ReleaseFormat(object):
         return self.fmtStr == ""
 
     def __eq__(self, other):
-        return (self.isVinyl() and other.isVinyl()) or \
+        return (self.is7Inch() and other.is7Inch()) or \
+                (self.is10Inch() and other.is10Inch()) or \
+                (self.is12Inch() and other.is12Inch()) or \
                 (self.isCD() and other.isCD()) or \
                 (self.isAny() or other.isAny())
 
@@ -411,7 +423,7 @@ white-space: nowrap;
 </head>
 <body>""")
 
-        for releaseType in [ReleaseFormat('CD'), ReleaseFormat('Vinyl')]:
+        for releaseType in [ReleaseFormat('CD'), ReleaseFormat('12"'), ReleaseFormat('7"')]:
             sortedList = self.getSortedList(releaseType)
             htf.write("<h2>" + str(releaseType) + (" (%d Releases)" % len(sortedList)) + "</h2>")
             htf.write("<table>")
