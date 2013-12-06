@@ -48,14 +48,16 @@ class Shell:
         self.c.report()
         self.s = InputSplitter()
 
+    def SearchSort(self):
+        releaseId = self.Search()
+        self.c.getSortNeighbors(releaseId, matchFormat=True)
+
     def Search(self, prompt="Enter search terms (or release ID): "):
-        # TODO Search() should NOT call getSortNeighbors(), this should be done in the parent call
         while(True):
             input = self.s.nextLine(prompt)
             if input:
                 if len(getReleaseId(input)) == 36:
                     releaseId = getReleaseId(input)
-                    self.c.getSortNeighbors(releaseId, matchFormat=True)
                     return releaseId
                 matches = list(self.c._search(input))
                 if len(matches) > 1:
@@ -65,7 +67,6 @@ class Shell:
                     while (True):
                         try:
                             index = int(self.s.nextWord("Select a match: "))
-                            self.c.getSortNeighbors(matches[index], matchFormat=True)
                             return matches[index]
                         except ValueError as e:
                             self.s.write(e + " try again\n")
@@ -73,7 +74,6 @@ class Shell:
                             self.s.write(e + " try again\n")
 
                 elif len(matches) == 1:
-                    self.c.getSortNeighbors(matches[0], matchFormat=True)
                     return matches[0]
                 else:
                     raise ValueError ("No matches.")
@@ -230,7 +230,7 @@ class Shell:
         'h' : (None, 'this help'),
         'q' : (None, 'quit (or press enter)'),
         'extra' : (EditExtra, 'edit extra data'), # TODO replace this command
-        'search' : (Search, 'search for releases'),
+        'search' : (SearchSort, 'search for releases; useful for sorting'),
         'refresh' : (Refresh, 'refresh XML metadata from musicbrainz'),
         'html' : (Html, 'write HTML'),
         'switch' : (Switch, 'substitute one release ID for another'),
