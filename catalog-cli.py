@@ -49,6 +49,7 @@ class Shell:
         self.s = InputSplitter()
 
     def Search(self, prompt="Enter search terms (or release ID): "):
+        # TODO Search() should NOT call getSortNeighbors(), this should be done in the parent call
         while(True):
             input = self.s.nextLine(prompt)
             if input:
@@ -179,12 +180,11 @@ class Shell:
         ed.save()
 
     def DigitalSearch(self):
-        releaseId = getReleaseId(self.s.nextLine("Enter release ID [enter for all]: "))
-        if not releaseId:
+        # TODO this should search
+        try:
+            releaseId = self.Search("Enter search terms or release ID [enter for all]: ")
+        except ValueError as e:
             self.c.searchDigitalPaths()
-        elif releaseId not in self.c:
-            self.s.write("Release not found\n")
-            return
         else:
             self.c.searchDigitalPaths(releaseId=releaseId)
 
