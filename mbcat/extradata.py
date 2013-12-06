@@ -24,7 +24,12 @@ class PurchaseEvent:
         self.vendor = vendor
 
     def getDate(self):
-        return time.strftime(dateFmtStr, time.localtime(self._date))
+        try:
+            return time.strftime(dateFmtStr, time.localtime(self._date))
+        except TypeError:
+            return ''
+        except AttributeError:
+            return ''
 
     def setDate(self, date):
         try:
@@ -35,7 +40,10 @@ class PurchaseEvent:
     date = property(getDate, setDate, doc='purchase date')
 
     def getPrice(self):
-        return "%.2f" % (self._price / 100)
+        try:
+            return "%.2f" % (self._price / 100)
+        except AttributeError:
+            return ''
 
     def setPrice(self, price):
         try:
