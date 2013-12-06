@@ -578,6 +578,7 @@ white-space: nowrap;
         releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
 
         # TODO could use progressbar here
+        # TODO need to be more flexible in capitalization and re-order of words
         for relId in releaseIdList:
             #print relId
             for path in self.prefs.musicPaths:
@@ -593,6 +594,9 @@ white-space: nowrap;
                                 logging.info('Found ' + relId + ' at ' + titlePath)
                                 self.extraIndex[relId].addPath(titlePath)
             self.extraIndex[relId].save()
+
+        if releaseId and not self.extraIndex[relId].digitalPaths:
+            logging.warning('No digital paths found for '+releaseId)
 
     def refreshMetaData(self, releaseId, olderThan=0):
         """Should be renamed to "add release" or something
