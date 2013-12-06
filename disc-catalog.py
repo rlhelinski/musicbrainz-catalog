@@ -35,7 +35,7 @@ while not raw_input('Press enter to read the disc or \'q\' to quit... ').startsw
         dev = sys.argv[1] if len(sys.argv) > 1 else discid.get_default_device()
         print ('Reading from %s' % dev)
         disc = discid.read(dev)
-    except DiscError, e:
+    except DiscError as e:
         print ("DiscID calculation failed:", str(e))
         sys.exit(1)
 
