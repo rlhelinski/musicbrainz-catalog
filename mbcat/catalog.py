@@ -74,6 +74,9 @@ def formatSortCredit(release):
     return ''.join([credit if type(credit)==str else credit['artist']['sort-name'] for credit in release['artist-credit'] ])
 
 class ReleaseFormat(object):
+    """
+    Useful for grouping formats by type or size
+    """
     def __init__(self, fmtStr=""):
         self.fmtStr = fmtStr
 
@@ -304,8 +307,10 @@ class Catalog(object):
         sortKeys = [(releaseId, self.formatDiscSortKey(releaseId)) for releaseId in self.getReleaseIds()]
 
         # TODO this could be sped up using a map from ReleaseId -> Format populated at loading time
-        # if matching any format
-        if matchFmt != ReleaseFormat():
+        if matchFmt.isAny():
+            # Skip all the fun
+            filteredSortKeys = sortKeys
+        else:
             filteredSortKeys = []
             for sortId, sortStr in sortKeys:
                 # TODO need to resolve releases with more than one format 
@@ -313,14 +318,11 @@ class Catalog(object):
                 if 'format' not in self.getRelease(sortId)['medium-list'][0]:
                     logging.warning('No format for ' + sortId + ", " + sortStr)
                 elif 'unknown' in self.getRelease(sortId)['medium-list'][0]['format']:
-                    # it's some type of unknown format message
+                    # it's some type of unknown format string
                     logging.warning(self.getRelease(sortId)['medium-list'][0]['format'] \
                         + " format for release " + sortId + ", " + sortStr)
                 elif matchFmt == ReleaseFormat(self.getRelease(sortId)['medium-list'][0]['format']):
                     filteredSortKeys.append((sortId, sortStr))
-        else:
-            # Skip all the fun
-            filteredSortKeys = sortKeys
 
         self.sortedList = sorted(filteredSortKeys, key=lambda sortKey: sortKey[1].lower())
         return self.sortedList
