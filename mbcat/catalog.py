@@ -521,7 +521,7 @@ white-space: nowrap;
                 overWriteAll = True
 
         logging.info("Writing metadata to '%s'", xmlPath)
-        xmlf = open(xmlPath, 'w')
+        xmlf = open(xmlPath, 'wb')
         xml_writer = wsxml.MbXmlWriter()
         xml_writer.write(xmlf, metaData)
         xmlf.close()
@@ -625,8 +625,8 @@ white-space: nowrap;
         meta_xml = self.getReleaseMetaXml(releaseId)
         if not os.path.isdir(os.path.dirname(xmlPath)):
             os.mkdir(os.path.dirname(xmlPath))
-        with open(xmlPath, 'w') as xmlf:
-            xmlf.write(str(meta_xml))
+        with open(xmlPath, 'wb') as xmlf:
+            xmlf.write(meta_xml)
         #self.writeXml(releaseId, meta_xml)
         self.digestXml(releaseId, meta_xml)
 
