@@ -626,7 +626,7 @@ white-space: nowrap;
         if not os.path.isdir(os.path.dirname(xmlPath)):
             os.mkdir(os.path.dirname(xmlPath))
         with open(xmlPath, 'w') as xmlf:
-            xmlf.write(bytes(meta_xml))
+            xmlf.write(str(meta_xml))
         #self.writeXml(releaseId, meta_xml)
         self.digestXml(releaseId, meta_xml)
 
