@@ -3,6 +3,7 @@
 from __future__ import print_function
 from mbcat.catalog import *
 from mbcat.extradata import *
+from mbcat.barcode import UPC
 import os
 import shutil
 import sys
@@ -69,9 +70,9 @@ class Shell:
                             index = int(self.s.nextWord("Select a match: "))
                             return matches[index]
                         except ValueError as e:
-                            self.s.write(e + " try again\n")
+                            self.s.write(str(e) + " try again\n")
                         except IndexError as e:
-                            self.s.write(e + " try again\n")
+                            self.s.write(str(e) + " try again\n")
 
                 elif len(matches) == 1:
                     return matches[0]
@@ -135,7 +136,7 @@ class Shell:
         try:
             self.c.refreshMetaData(releaseId)
         except mb.ResponseError as e:
-            self.s.write(e + " bad release ID?\n")
+            self.s.write(str(e) + " bad release ID?\n")
             return
 
         self.c.addExtraData(releaseId)
@@ -143,9 +144,11 @@ class Shell:
         self.s.write("Added '%s'.\n" % self.c.getRelease(releaseId)['title'])
 
     def BarcodeSearch(self):
-        barCode = self.s.nextWord("Enter barcode: ")
-        for releaseId in self.c.barCodeMap[barCode]:
-            self.s.write(self.c.formatDiscInfo(releaseId))
+        barCodes = UPC(self.s.nextWord("Enter barcode: ")).variations()
+
+        for barCode in barCodes:
+            for releaseId in self.c.barCodeMap[barCode]:
+                self.s.write(self.c.formatDiscInfo(releaseId)+'\n')
 
     def Delete(self):
         releaseId = self.Search("Enter search terms or release ID to delete: ")
