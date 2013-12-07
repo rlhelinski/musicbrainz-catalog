@@ -648,17 +648,13 @@ white-space: nowrap;
         For now, this creates warnings in the log. 
         """
         for releaseId, release in self.getReleases():
-            if release.releaseEvents:
-                if not release.releaseEvents[0].barcode:
-                    logging.warning("No barcode for " + releaseId + " " + \
-                        self.formatDiscSortKey(releaseId) + " (" + \
-                        getFormatFromUri(release.releaseEvents[0].format) + ")")
-                if not release.releaseEvents[0].format:
-                    logging.warning("No format for " + releaseId + " " + \
-                        self.formatDiscSortKey(releaseId))
-
-            else:
-                logging.warning("No release events for", releaseId + " " + self.formatDiscSortKey(releaseId))
+            if 'date' not in release or not release['date']:
+                logging.warning("No date for " + releaseId)
+            if 'barcode' not in release or not release['barcode']:
+                logging.warning("No barcode for " + releaseId)
+            for medium in release['medium-list']:
+                if 'format' not in medium or not medium['format']:
+                    logging.warning("No format for a medium of " + releaseId)
 
     def getCoverArt(self, releaseId, maxage=60*60):
         release = self.getRelease(releaseId)
