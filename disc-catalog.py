@@ -26,7 +26,11 @@ mb.set_useragent(
 c = Catalog()
 c.load()
 
-while not raw_input('Press enter to read the disc or \'q\' to quit... ').startswith('q'):
+def user_input(prompt):
+    sys.stdout.write(prompt)
+    return sys.stdin.readline().strip()
+
+while not user_input('Press enter to read the disc or \'q\' to quit... ').startswith('q'):
 
     try:
         # Read the disc in the default disc drive. If necessary, you can pass
@@ -103,7 +107,7 @@ while not raw_input('Press enter to read the disc or \'q\' to quit... ').startsw
     if len(result['disc']['release-list']) == 0:
         print ("There were no matches!")
         print ("Enter a note to yourself: ")
-        note = sys.stdin.readline()
+        note = user_input()
         tocf = open(os.path.join('disc-id', disc.id, 'toc.txt'), 'a')
         tocf.write(note)
         tocf.close()
@@ -114,7 +118,7 @@ while not raw_input('Press enter to read the disc or \'q\' to quit... ').startsw
     else:
         print ("There were %d matches." % len(result['disc']['release-list']))
         print ("Choose one making you better feeling: ")
-        choice = sys.stdin.readline().strip()
+        choice = user_input()
         if not choice.isdigit():
             continue
         choice = int(choice)
