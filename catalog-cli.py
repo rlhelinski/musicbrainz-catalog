@@ -100,7 +100,7 @@ class Shell:
             ed.save()
 
     def Refresh(self):
-        releaseId = getReleaseId(self.s.nextLine("Enter release ID [empty for all]: "))
+        releaseId = self.Search("Enter search terms or release ID [empty for all]: ")
 
         maxAge = self.s.nextLine("Enter maximum cache age in minutes [leave empty for one minute]: ")
         maxAge = int(maxAge)*60 if maxAge else 60
@@ -205,7 +205,7 @@ class Shell:
 
     def SyncCollection(self):
         if not self.c.prefs.username:
-            username = raw_input('Enter username: ')
+            username = self.s.nextLine('Enter username: ')
             self.c.prefs.username = username
             self.c.prefs.save()
         else:
@@ -224,7 +224,7 @@ class Shell:
             self.s.write('%d: "%s" by %s (%s)\n' % (i, collection['name'], 
                 collection['editor'], collection['id']))
 
-        col_i = int(input('Enter collection index: '))
+        col_i = int(self.s.nextLine('Enter collection index: '))
         colId = result['collection-list'][col_i]['id']
 
         self.c.syncCollection(colId)
