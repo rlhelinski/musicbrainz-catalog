@@ -155,7 +155,7 @@ class Shell:
         self.c.deleteRelease(releaseId)
 
     def Check(self):
-        self.s.write("Running checks...")
+        self.s.write("Running checks...\n")
         self.c.checkReleases()
         self.s.write("DONE\n")
 
