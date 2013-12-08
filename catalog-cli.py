@@ -224,7 +224,7 @@ class Shell:
             self.s.write('%d: "%s" by %s (%s)\n' % (i, collection['name'], 
                 collection['editor'], collection['id']))
 
-        col_i = int(raw_input('Enter collection index: '))
+        col_i = int(input('Enter collection index: '))
         colId = result['collection-list'][col_i]['id']
 
         self.c.syncCollection(colId)
