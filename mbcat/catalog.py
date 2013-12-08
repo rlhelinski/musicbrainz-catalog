@@ -43,7 +43,7 @@ def releaseSortCmp(a, b):
 
 def chunks(l, n):
     """ Yield successive n-sized chunks from l. """
-    for i in xrange(0, len(l), n):
+    for i in range(0, len(l), n):
         yield l[i:i+n]
 
 # This goes with getFormatFromUri(), but can we replace that with a library function?
