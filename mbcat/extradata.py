@@ -170,7 +170,8 @@ class ExtraData:
                 "\n".join([str(purchase) for purchase in self.purchases]) + \
                 ("\nComment: " + self.comment if self.comment else "") + \
                 ("\nRating: %d / 5" % self.rating) + \
-                ("\n" + ("\n".join([str(lend) for lend in self.lendEvents])) if self.lendEvents else "")
+                (("\n".join([str(lend) for lend in self.lendEvents])) if self.lendEvents else "") + \
+                "\n"
 
     def addDate(self, date=time.time()):
         self.addDates.append(date)
