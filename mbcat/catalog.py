@@ -748,5 +748,17 @@ white-space: nowrap;
             mb.add_releases_to_collection(colId, relIdChunk)
         print('DONE')
 
-
+    def makeLabelTrack(self, releaseId, outPath='Label Track.txt'):
+        """
+        Useful for importing into Audacity
+        """
+        with open(outPath, 'wt') as f:
+            rel = self.getRelease(releaseId)
+            for medium in rel['medium-list']:
+                pos = 0.0
+                for track in medium['track-list']:
+                    rec = track['recording']
+                    length = float(rec['length'])/1000
+                    f.write('%.6f\t%.6f\t%s\n' % (pos, pos+length, rec['title']))
+                    pos += length
 
