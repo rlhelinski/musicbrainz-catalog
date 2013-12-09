@@ -38,7 +38,7 @@ while not io.nextLine('Press enter to read the disc or \'q\' to quit... ').start
         dev = sys.argv[1] if len(sys.argv) > 1 else discid.get_default_device()
         io.write ('Reading from %s\n' % dev)
         disc = discid.read(dev)
-    except DiscError as e:
+    except discid.DiscError as e:
         print ("DiscID calculation failed: " + str(e))
         continue
 
@@ -141,7 +141,7 @@ while not io.nextLine('Press enter to read the disc or \'q\' to quit... ').start
     try:
         ed.load()
     except IOError as e:
-        "Doesn't matter"
+        pass
     ed.addDate()
     ed.save()
 
