@@ -8,9 +8,9 @@ __revision__ = '$Id: utils.py 13322 2011-11-03 13:38:06Z luks $'
 
 import re
 try:
-    import urlparse
+    from urlparse import urlparse
 except ImportError as e:
-    import urllib.parse as urlparse
+    from urllib.parse import urlparse
 
 __all__ = [
 	'extractUuid', 'extractFragment', 'extractEntityType',
