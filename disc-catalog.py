@@ -16,6 +16,7 @@ import musicbrainzngs as mb
 from mbcat.catalog import *
 from mbcat.extradata import *
 from mbcat.utils import *
+from inputsplitter import InputSplitter
 
 mb.set_useragent(
     "python-musicbrainz-ngs-catalog",
@@ -26,22 +27,20 @@ mb.set_useragent(
 c = Catalog()
 c.load()
 
-def user_input(prompt):
-    sys.stdout.write(prompt)
-    return sys.stdin.readline().strip()
+io = InputSplitter()
 
-while not user_input('Press enter to read the disc or \'q\' to quit... ').startswith('q'):
+while not io.nextLine('Press enter to read the disc or \'q\' to quit... ').startswith('q'):
 
     try:
         # Read the disc in the default disc drive. If necessary, you can pass
         # the 'deviceName' parameter to select a different drive.
         #
         dev = sys.argv[1] if len(sys.argv) > 1 else discid.get_default_device()
-        print ('Reading from %s' % dev)
+        io.write ('Reading from %s\n' % dev)
         disc = discid.read(dev)
     except DiscError as e:
-        print ("DiscID calculation failed:", str(e))
-        sys.exit(1)
+        print ("DiscID calculation failed: " + str(e))
+        continue
 
     # This should be replaced with a log output 
     if (not os.path.isdir('disc-id')):
@@ -61,15 +60,16 @@ while not user_input('Press enter to read the disc or \'q\' to quit... ').starts
             i += 1
 
         # TODO fix this
-        print ('Submit via  :', disc.submission_url, file=tocf)
-        print ('Submit via  :', disc.submission_url)
+        print ('Submit via:', disc.submission_url, file=tocf)
+        print ('Submit via:', disc.submission_url)
 
     print ('DiscID:', disc.id)
     
-    print ("Querying MusicBrainz...")
     try:
+        io.write ("Querying MusicBrainz...")
         result = mb.get_releases_by_discid(disc.id,
                 includes=["artists"])
+        io.write ('OK\n')
     except mb.ResponseError:
         print("disc not found or bad response")
         continue
@@ -118,7 +118,7 @@ while not user_input('Press enter to read the disc or \'q\' to quit... ').starts
     else:
         print ("There were %d matches." % len(result['disc']['release-list']))
         print ("Choose one making you better feeling: ")
-        choice = user_input()
+        choice = io.nextLine()
         if not choice.isdigit():
             continue
         choice = int(choice)
