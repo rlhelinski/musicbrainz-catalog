@@ -391,10 +391,10 @@ class Catalog(object):
             fileName = os.path.join(self.prefs.htmlPubPath, "catalog.html")
 
         def fmt(s):
-            return str(s.encode('ascii', 'xmlcharrefreplace'))
+            return s.encode('ascii', 'xmlcharrefreplace').decode()
 
 
-        htf = open(fileName, 'w')
+        htf = open(fileName, 'wt')
 
         htf.write("""<!DOCTYPE HTML>
 <html>
