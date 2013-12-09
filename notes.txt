@@ -1,3 +1,0 @@
-
-Should be easy to re-spin this concept for a DVD/BRD database. Amazon seems to have unique IDs for all their items, could use this ID. Amazon does offer some XML service, but not clear what it is. Might be able to parse their HTML instead. 
-
