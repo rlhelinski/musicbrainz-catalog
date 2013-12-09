@@ -30,11 +30,13 @@ class PrefManager:
         self.prefFile = os.path.expanduser(os.path.join('~', '.mbcat', 'userprefs.xml'))
         self.musicPaths = []
         self.username = ''
+        self.htmlPubPath = ''
 
         if (os.path.isfile(self.prefFile)):
             self.load()
         else:
             self.musicPaths = [os.path.expanduser(os.path.join('~', 'Music'))]
+            self.htmlPubPath = '.'
             self.save()
 
     def load(self):
@@ -51,6 +53,9 @@ class PrefManager:
                 if 'username' in child.attrib:
                     self.username = child.attrib['username']
                     # could also store password
+            elif (child.tag == 'htmlpub'):
+                if 'path' in child.attrib:
+                    self.htmlPubPath = child.attrib['path']
 
         print("Loaded preferences from '%s'" % self.prefFile)
 
@@ -63,6 +68,7 @@ class PrefManager:
             pathTag.text = path
         accountTag = etree.SubElement(myxml, 'account', attrib={'username':self.username})
         # could also load password
+        htmlPathTag = etree.SubElement(myxml, 'htmlpub', attrib={'path':self.htmlPubPath})
 
         if (not os.path.isdir(os.path.dirname(self.prefFile))):
             os.mkdir(os.path.dirname(self.prefFile))

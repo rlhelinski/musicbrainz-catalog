@@ -382,10 +382,13 @@ class Catalog(object):
         print("\n%d releases" % len(self))
         print("%d words in search table" % len(self.wordMap))
 
-    def makeHtml(self, fileName="catalog.html"):
+    def makeHtml(self, fileName=None):
         """
         Write HTML representing the catalog to a file
         """
+
+        if not fileName:
+            fileName = os.path.join(self.prefs.htmlPubPath, "catalog.html")
 
         def fmt(s):
             return str(s.encode('ascii', 'xmlcharrefreplace'))
@@ -744,4 +747,6 @@ white-space: nowrap;
         for relIdChunk in chunks(relIdsToAdd, 100):
             mb.add_releases_to_collection(colId, relIdChunk)
         print('DONE')
+
+
 
