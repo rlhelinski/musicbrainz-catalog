@@ -754,8 +754,8 @@ white-space: nowrap;
         """
         with open(outPath, 'wt') as f:
             rel = self.getRelease(releaseId)
+            pos = 0.0
             for medium in rel['medium-list']:
-                pos = 0.0
                 for track in medium['track-list']:
                     rec = track['recording']
                     length = float(rec['length'])/1000

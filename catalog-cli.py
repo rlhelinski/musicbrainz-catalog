@@ -196,6 +196,9 @@ class Shell:
 
         self.c.syncCollection(colId)
 
+    def LabelTrack(self):
+        self.c.makeLabelTrack(self.Search())
+
     shellCommands = {
         'h' : (None, 'this help'),
         'q' : (None, 'quit (or press enter)'),
@@ -213,6 +216,7 @@ class Shell:
         'path' : (Path, 'add path to digital copy of release'),
         'digital' : (Digital, 'manage links to digital copies'),
         'sync' : (SyncCollection, 'sync with a musicbrainz collection'),
+        'labeltrack' : (LabelTrack, 'create label track file for Audacity'),
         }
 
     def main(self):
