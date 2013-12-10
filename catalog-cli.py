@@ -199,6 +199,9 @@ class Shell:
     def LabelTrack(self):
         self.c.makeLabelTrack(self.Search())
 
+    def TrackList(self):
+        self.c.writeTrackList(self.s, self.Search())
+
     shellCommands = {
         'h' : (None, 'this help'),
         'q' : (None, 'quit (or press enter)'),
@@ -217,6 +220,7 @@ class Shell:
         'digital' : (Digital, 'manage links to digital copies'),
         'sync' : (SyncCollection, 'sync with a musicbrainz collection'),
         'labeltrack' : (LabelTrack, 'create label track file for Audacity'),
+        'tracklist' : (TrackList, 'print track listing'),
         }
 
     def main(self):

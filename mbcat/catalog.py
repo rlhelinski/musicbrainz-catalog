@@ -762,3 +762,19 @@ white-space: nowrap;
                     f.write('%.6f\t%.6f\t%s\n' % (pos, pos+length, rec['title']))
                     pos += length
 
+    def writeTrackList(self, stream, releaseId):
+        """
+        Write ASCII tracklist to 'stream'
+        """
+        stream.write('\n')
+        rel = self.getRelease(releaseId)
+        for medium in rel['medium-list']:
+            for track in medium['track-list']:
+                rec = track['recording']
+                length = float(rec['length'])/1000 if 'length' in rec else None
+                stream.write(
+                    rec['title'] + 
+                    ' '*(60-len(rec['title'])) + 
+                    (('%3d:%02d' % (length/60, length%60)) if length else '  ?:??') + 
+                    '\n')
+
