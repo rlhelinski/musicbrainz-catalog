@@ -7,9 +7,15 @@ http://www.amazon.com/gp/product/B000002M3I?tag=musicbrainz0d-20
 http://ec1.images-amazon.com/images/P/B000002M3I.01.LZZZZZZZ.jpg
 
 """
+from __future__ import print_function
 import re
 from musicbrainzngs.musicbrainz import _rate_limit
-import urllib2
+try:
+    # For Python 3.0 and later
+    from urllib.request import urlopen, HTTPError
+except ImportError:
+    # Fall back to Python 2's urllib2
+    from urllib2 import urlopen, HTTPError
 
 # data transliterated from the perl stuff used to find cover art for the
 # musicbrainz server.
@@ -91,16 +97,16 @@ def getAsinProductUrl(asin):
 @_rate_limit
 def saveImage(releaseAsin, server, imgPath):
     imgUrl = getAsinImageUrl(releaseAsin, server)
-    print imgUrl
+    print(imgUrl)
     try:
-        response = urllib2.urlopen( imgUrl )
-    except urllib2.HTTPError as e:
-        print e
+        response = urlopen( imgUrl )
+    except HTTPError as e:
+        print(e)
         return
 
     with open(imgPath, 'w') as imgf:
         imgf.write(response.read())
-        print "Wrote %d bytes to %s" %(imgf.tell(), imgPath)
+        print("Wrote %d bytes to %s" %(imgf.tell(), imgPath))
 
     response.close()
 

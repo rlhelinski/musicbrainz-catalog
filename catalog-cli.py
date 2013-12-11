@@ -1,68 +1,47 @@
 #!/usr/bin/python
 
+from __future__ import print_function
 from mbcat.catalog import *
 from mbcat.extradata import *
-import os, shutil
-
-class InputSplitter(object):
-    def __init__(self):
-        self.s = sys.stdin
-        self.buffer = []
-
-    def _readline(self):
-        return self.s.readline().strip()
-
-    def nextLine(self):
-        if self.buffer:
-            l = ' '.join(self.buffer)
-            self.buffer = []
-            return l
-        else:
-            return self._readline()
-
-    def nextWord(self):
-        if not self.buffer:
-            self.buffer = self._readline().split()
-
-        if self.buffer:
-            return self.buffer.pop(0)
-        else:
-            return ''
+from mbcat.barcode import UPC
+import os
+import shutil
+import sys
+from inputsplitter import InputSplitter
 
 class Shell:
-    def __init__(self):
+    def __init__(self, s=sys.stdin):
         self.c = Catalog()
         self.c.load()
         self.c.report()
         self.s = InputSplitter()
 
-    def Search(self):
+    def SearchSort(self):
+        releaseId = self.Search()
+        self.c.getSortNeighbors(releaseId, matchFormat=True)
+
+    def Search(self, prompt="Enter search terms (or release ID): "):
         while(True):
-            print "Enter search terms (or release ID): ",
-            input = self.s.nextLine()
+            input = self.s.nextLine(prompt)
             if input:
                 if len(getReleaseId(input)) == 36:
                     releaseId = getReleaseId(input)
-                    self.c.getSortNeighbors(releaseId, matchFormat=True)
                     return releaseId
                 matches = list(self.c._search(input))
                 if len(matches) > 1:
-                    print len(matches), "matches found:"
+                    self.s.write("%d matches found:\n" % len(matches))
                     for i, match in enumerate(matches):
-                        print i, self.c.formatDiscInfo(match)
+                        self.s.write(str(i) + " " + self.c.formatDiscInfo(match) + "\n")
                     while (True):
                         try:
-                            print "Select a match: ",
-                            index = int(self.s.nextWord())
-                            self.c.getSortNeighbors(matches[index], matchFormat=True)
+                            index = int(self.s.nextWord("Select a match: "))
                             return matches[index]
                         except ValueError as e:
-                            print e, "try again"
+                            self.s.write(str(e) + " try again\n")
                         except IndexError as e:
-                            print e, "try again"
+                            self.s.write(str(e) + " try again\n")
 
                 elif len(matches) == 1:
-                    self.c.getSortNeighbors(matches[0], matchFormat=True)
                     return matches[0]
                 else:
                     raise ValueError ("No matches.")
@@ -73,40 +52,37 @@ class Shell:
     def Reload(self):
         del self.c 
         self.c = Catalog()
-        print "Reloading database...",
+        self.s.write("Reloading database...")
         self.c.load()
-        print "DONE"
+        self.s.write("DONE\n")
 
     def EditExtra(self):
         # TODO remove, extra should be transparaent to the user
         releaseId = self.Search()
         ed = self.c.extraIndex[releaseId] 
-        print str(ed)
-        print "Modify? [y/N]",
-        modify = self.s.nextWord()
+        self.s.write(str(ed))
+        modify = self.s.nextWord("Modify? [y/N]")
         if modify.lower().startswith('y'):
             ed.interactiveEntry()
             ed.save()
 
     def Refresh(self):
-        print "Enter release ID [empty for all]: ",
-        releaseId = getReleaseId(self.s.nextLine())
+        releaseId = self.Search("Enter search terms or release ID [empty for all]: ")
 
-        print "Enter maximum cache age in minutes [leave empty for one minute]: ",
-        maxAge = self.s.nextLine()
+        maxAge = self.s.nextLine("Enter maximum cache age in minutes [leave empty for one minute]: ")
         maxAge = int(maxAge)*60 if maxAge else 60
 
         if not releaseId:
             self.c.refreshAllMetaData(maxAge)
         elif releaseId not in self.c:
-            print "Release not found"
+            self.s.write("Release not found\n")
             return
         else:
             self.c.refreshMetaData(releaseId, olderThan=maxAge)
 
     def Switch(self):
         releaseId = self.Search()
-        print "Enter new release ID: "
+        self.s.write("Enter new release ID: ")
         newReleaseId = self.s.nextWord()
         self.c.renameRelease(releaseId, newReleaseId)
 
@@ -116,74 +92,69 @@ class Shell:
         self.c.makeHtml()
 
     def Add(self):
-        print "Enter release ID: ",
+        self.s.write("Enter release ID: ")
         releaseId = getReleaseId(self.s.nextWord())
         if not releaseId:
-            print "No input"
+            self.s.write("No input")
             return
         if releaseId in self.c:
-            print "Release '%s' already exists" % self.c.getRelease(releaseId)['title']
+            self.s.write("Release '%s' already exists.\n" % self.c.getRelease(releaseId)['title'])
             return
         try:
             self.c.refreshMetaData(releaseId)
         except mb.ResponseError as e:
-            print e, "bad release ID?"
+            self.s.write(str(e) + " bad release ID?\n")
             return
 
         self.c.addExtraData(releaseId)
 
-        print "Added '%s'" % self.c.getRelease(releaseId)['title']
+        self.s.write("Added '%s'.\n" % self.c.getRelease(releaseId)['title'])
 
     def BarcodeSearch(self):
-        print "Enter barcode: ",
-        barCode = self.s.nextWord()
-        for releaseId in self.c.barCodeMap[barCode]:
-            print self.c.formatDiscInfo(releaseId)
+        barCodes = UPC(self.s.nextWord("Enter barcode: ")).variations()
+
+        for barCode in barCodes:
+            for releaseId in self.c.barCodeMap[barCode]:
+                self.s.write(self.c.formatDiscInfo(releaseId)+'\n')
 
     def Delete(self):
-        print "Enter release ID to delete: ",
-        releaseId = self.Search()
+        releaseId = self.Search("Enter search terms or release ID to delete: ")
         self.c.deleteRelease(releaseId)
 
     def Check(self):
-        print "Running checks..."
+        self.s.write("Running checks...\n")
         self.c.checkReleases()
-        print "DONE"
+        self.s.write("DONE\n")
 
     def Lend(self):
         releaseId = self.Search()
         ed = self.c.extraIndex[releaseId]
-        print str(ed)
+        self.s.write(str(ed))
 
-        print "Borrower (leave empty to return): ",
-        borrower = self.s.nextLine()
+        borrower = self.s.nextLine("Borrower (leave empty to return): ")
         if not borrower:
             borrower = '[returned]'
-        print "Lend date (leave empty for today): ",
-        date = self.s.nextLine()
+        date = self.s.nextLine("Lend date (leave empty for today): ")
         ed.addLend(borrower, date)
         ed.save()
         
     def Path(self):
         releaseId = self.Search()
         ed = self.c.extraIndex[releaseId]
-        print str(ed)
+        self.s.write(str(ed))
 
-        print "Enter path: ",
-        path = self.s.nextLine()
+        path = self.s.nextLine("Enter path to add: ")
         if path.startswith("'") and path.endswith("'"):
             path = path[1:-1]
         ed.addPath(path)
         ed.save()
 
     def DigitalSearch(self):
-        print "Enter release ID [enter for all]: ",
-        releaseId = getReleaseId(self.s.nextLine())
-        if not releaseId:
+        # TODO this should search
+        try:
+            releaseId = self.Search("Enter search terms or release ID [enter for all]: ")
+        except ValueError as e:
             self.c.searchDigitalPaths()
-        elif releaseId not in self.c:
-            print "Release not found"
-            return
         else:
             self.c.searchDigitalPaths(releaseId=releaseId)
 
@@ -192,15 +163,16 @@ class Shell:
             }
 
     def Digital(self):
-        print "Enter sub-command:"
+        # TODO this needs to be updated---the commands should all be captured in a tree structure
+        self.s.write("Enter sub-command:")
         for cmd, (fun, desc) in self.digitalCommands.items():
-            print cmd + ' : ' + desc
+            self.s.write(cmd + ' : ' + desc + '\n')
         input = self.s.nextWord()
         (self.digitalCommands[input][0])(self)
 
     def SyncCollection(self):
         if not self.c.prefs.username:
-            username = raw_input('Enter username: ')
+            username = self.s.nextLine('Enter username: ')
             self.c.prefs.username = username
             self.c.prefs.save()
         else:
@@ -216,19 +188,25 @@ class Shell:
 
         result = mb.get_collections()
         for i, collection in enumerate(result['collection-list']):
-            print('%d: "%s" by %s (%s)' % (i, collection['name'], 
+            self.s.write('%d: "%s" by %s (%s)\n' % (i, collection['name'], 
                 collection['editor'], collection['id']))
 
-        col_i = int(raw_input('Enter collection index: '))
+        col_i = int(self.s.nextLine('Enter collection index: '))
         colId = result['collection-list'][col_i]['id']
 
         self.c.syncCollection(colId)
+
+    def LabelTrack(self):
+        self.c.makeLabelTrack(self.Search())
+
+    def TrackList(self):
+        self.c.writeTrackList(self.s, self.Search())
 
     shellCommands = {
         'h' : (None, 'this help'),
         'q' : (None, 'quit (or press enter)'),
         'extra' : (EditExtra, 'edit extra data'), # TODO replace this command
-        'search' : (Search, 'search for releases'),
+        'search' : (SearchSort, 'search for releases; useful for sorting'),
         'refresh' : (Refresh, 'refresh XML metadata from musicbrainz'),
         'html' : (Html, 'write HTML'),
         'switch' : (Switch, 'substitute one release ID for another'),
@@ -241,31 +219,31 @@ class Shell:
         'path' : (Path, 'add path to digital copy of release'),
         'digital' : (Digital, 'manage links to digital copies'),
         'sync' : (SyncCollection, 'sync with a musicbrainz collection'),
+        'labeltrack' : (LabelTrack, 'create label track file for Audacity'),
+        'tracklist' : (TrackList, 'print track listing'),
         }
 
     def main(self):
         while (True):
-            print "Enter command ('h' for help): ",
-            input = self.s.nextWord().lower()
+            input = self.s.nextWord("Enter command ('h' for help): ").lower()
 
             if not input or input.startswith('q'):
                 break
 
             if (input == 'h' or input == 'help'):
-                print "\r",
                 for letter in sorted(self.shellCommands.keys()):
-                    print letter + " : " + self.shellCommands[letter][1]
+                    self.s.write(letter + " : " + self.shellCommands[letter][1] + "\n")
 
             elif input in self.shellCommands.keys():
-                print self.shellCommands[input][1]
+                self.s.write(self.shellCommands[input][1] + '\n')
                 # Call the function
                 try:
                     (self.shellCommands[input][0])(self)
                 except ValueError as e:
-                    print e, "Command failed."
+                    self.s.write(str(e) + " Command failed.\n")
 
             else:
-                print "Invalid command"
+                self.s.write("Invalid command\n")
 
 
 if __name__ == "__main__":

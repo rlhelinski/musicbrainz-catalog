@@ -3,6 +3,9 @@
 *.pyc
 *.bak
 *.swp
+*.swo
+*.swn
+*.swm
 *~
 
 # Packages #

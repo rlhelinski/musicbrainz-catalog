@@ -1,6 +1,7 @@
 # defaults
 # TODO scratch that, they should be loaded independently since they are 
 # platform-specific. 
+from __future__ import print_function
 import os
 import xml.etree.ElementTree as etree
 
@@ -29,11 +30,13 @@ class PrefManager:
         self.prefFile = os.path.expanduser(os.path.join('~', '.mbcat', 'userprefs.xml'))
         self.musicPaths = []
         self.username = ''
+        self.htmlPubPath = ''
 
         if (os.path.isfile(self.prefFile)):
             self.load()
         else:
             self.musicPaths = [os.path.expanduser(os.path.join('~', 'Music'))]
+            self.htmlPubPath = '.'
             self.save()
 
     def load(self):
@@ -45,13 +48,16 @@ class PrefManager:
                 for path in child:
                     #print "User Preferences: " + child.attrib['name'] + " = " + child.attrib['value']
                     self.musicPaths.append(path.text)
-                    print 'Music path: ' + path.text
+                    print('Music path:', path.text)
             elif (child.tag == 'account'):
                 if 'username' in child.attrib:
                     self.username = child.attrib['username']
                     # could also store password
+            elif (child.tag == 'htmlpub'):
+                if 'path' in child.attrib:
+                    self.htmlPubPath = child.attrib['path']
 
-        print "Loaded preferences from '%s'" % self.prefFile
+        print("Loaded preferences from '%s'" % self.prefFile)
 
     def save(self):
         myxml = etree.Element('xml', attrib={'version':'1.0', 'encoding':'UTF-8'})
@@ -62,6 +68,7 @@ class PrefManager:
             pathTag.text = path
         accountTag = etree.SubElement(myxml, 'account', attrib={'username':self.username})
         # could also load password
+        htmlPathTag = etree.SubElement(myxml, 'htmlpub', attrib={'path':self.htmlPubPath})
 
         if (not os.path.isdir(os.path.dirname(self.prefFile))):
             os.mkdir(os.path.dirname(self.prefFile))
@@ -70,5 +77,5 @@ class PrefManager:
         with open(self.prefFile, 'w') as xmlfile:
             xmlfile.write(etree.tostring(myxml))
 
-        print "Preferences saved to '%s'" % self.prefFile
+        print("Preferences saved to '%s'" % self.prefFile)
     

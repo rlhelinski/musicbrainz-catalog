@@ -1,9 +1,15 @@
+from __future__ import print_function
 import os, time, sys
 import xml.etree.ElementTree as ET
-import utils
-from StringIO import StringIO
+import mbcat.utils
+import logging
+try:
+    from StringIO import StringIO
+except ImportError as e:
+    from io import StringIO
 
-def getInput():
+def getInput(prompt=""):
+    print(prompt, end="")
     return sys.stdin.readline().strip()
 
 dateFmtStr = '%m/%d/%Y'
@@ -18,18 +24,32 @@ class PurchaseEvent:
         self.vendor = vendor
 
     def getDate(self):
-        return time.strftime(dateFmtStr, time.localtime(self._date))
+        try:
+            return time.strftime(dateFmtStr, time.localtime(self._date))
+        except TypeError:
+            return ''
+        except AttributeError:
+            return ''
 
     def setDate(self, date):
-        self._date = time.strptime(date, dateFmtStr)
+        try:
+            self._date = time.strptime(date, dateFmtStr)
+        except ValueError as e:
+            logging.warning(e)
 
     date = property(getDate, setDate, doc='purchase date')
 
     def getPrice(self):
-        return "%.2f" % (self._price / 100)
+        try:
+            return "%.2f" % (self._price / 100)
+        except AttributeError:
+            return ''
 
     def setPrice(self, price):
-        self._price = int(price * 100)
+        try:
+            self._price = int(float(price) * 100)
+        except ValueError as e:
+            logging.warning(e)
 
     price = property(getPrice, setPrice, doc='purchase price')
 
@@ -150,7 +170,8 @@ class ExtraData:
                 "\n".join([str(purchase) for purchase in self.purchases]) + \
                 ("\nComment: " + self.comment if self.comment else "") + \
                 ("\nRating: %d / 5" % self.rating) + \
-                ("\n" + ("\n".join([str(lend) for lend in self.lendEvents])) if self.lendEvents else "")
+                (("\n".join([str(lend) for lend in self.lendEvents])) if self.lendEvents else "") + \
+                "\n"
 
     def addDate(self, date=time.time()):
         self.addDates.append(date)
@@ -161,24 +182,20 @@ class ExtraData:
             date = time.time()
         self.lendEvents.append(LendEvent(borrower, date))
 
-    def interactiveEntry(self):
-        print "Welcome!"
-        print "Purchase date ("+dateFmtUsr+"): ",
-        dateStr = getInput()
-        print "Vendor: ",
-        vendorStr = getInput()
-        print "Price: ",
-        priceStr = getInput()
+    def interactiveEntry(self, inputFun=getInput):
+        # TODO this should be moved to the shell 
+        print("Welcome!")
+        dateStr = inputFun("Purchase date ("+dateFmtUsr+"): ")
+        vendorStr = inputFun("Vendor: ")
+        priceStr = inputFun("Price: ")
         pe = PurchaseEvent( dateStr, priceStr, vendorStr )
         if len(self.purchases):
             self.purchases[0] = pe
         else:
             self.purchases.append(pe)
 
-        print "Comment: ",
-        self.comment = getInput()
-        print "Rating (x/5): ",
-        self.rating = int(getInput())
+        self.comment = inputFun("Comment: ")
+        self.rating = int(inputFun("Rating (x/5): "))
 
     def addPath(self, path):
         if path not in self.digitalPaths:
