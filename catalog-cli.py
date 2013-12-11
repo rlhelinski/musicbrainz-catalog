@@ -17,10 +17,12 @@ class Shell:
         self.s = InputSplitter()
 
     def SearchSort(self):
+        """Search for a release; useful for sorting physical media."""
         releaseId = self.Search()
         self.c.getSortNeighbors(releaseId, matchFormat=True)
 
     def Search(self, prompt="Enter search terms (or release ID): "):
+        """Search for a release and return release ID."""
         while(True):
             input = self.s.nextLine(prompt)
             if input:
@@ -50,6 +52,7 @@ class Shell:
 
 
     def Reload(self):
+        """Reload database from disk"""
         del self.c 
         self.c = Catalog()
         self.s.write("Reloading database...")
@@ -57,6 +60,7 @@ class Shell:
         self.s.write("DONE\n")
 
     def EditExtra(self):
+        """edit extra data"""
         # TODO remove, extra should be transparaent to the user
         releaseId = self.Search()
         ed = self.c.extraIndex[releaseId] 
@@ -67,6 +71,7 @@ class Shell:
             ed.save()
 
     def Refresh(self):
+        """Refresh XML metadata from MusicBrainz."""
         releaseId = self.Search("Enter search terms or release ID [empty for all]: ")
 
         maxAge = self.s.nextLine("Enter maximum cache age in minutes [leave empty for one minute]: ")
@@ -81,17 +86,20 @@ class Shell:
             self.c.refreshMetaData(releaseId, olderThan=maxAge)
 
     def Switch(self):
+        """Substitute one release ID for another."""
         releaseId = self.Search()
         self.s.write("Enter new release ID: ")
         newReleaseId = self.s.nextWord()
         self.c.renameRelease(releaseId, newReleaseId)
 
     def Html(self):
+        """Write HTML file."""
         #self.c = Catalog()
         #self.c.load()
         self.c.makeHtml()
 
     def Add(self):
+        """Add a release."""
         self.s.write("Enter release ID: ")
         releaseId = getReleaseId(self.s.nextWord())
         if not releaseId:
@@ -111,6 +119,7 @@ class Shell:
         self.s.write("Added '%s'.\n" % self.c.getRelease(releaseId)['title'])
 
     def BarcodeSearch(self):
+        """Search for a release by barcode."""
         barCodes = UPC(self.s.nextWord("Enter barcode: ")).variations()
 
         for barCode in barCodes:
@@ -118,15 +127,18 @@ class Shell:
                 self.s.write(self.c.formatDiscInfo(releaseId)+'\n')
 
     def Delete(self):
+        """Delete a release."""
         releaseId = self.Search("Enter search terms or release ID to delete: ")
         self.c.deleteRelease(releaseId)
 
     def Check(self):
+        """Check releases for missing information."""
         self.s.write("Running checks...\n")
         self.c.checkReleases()
         self.s.write("DONE\n")
 
     def Lend(self):
+        """Check out a release."""
         releaseId = self.Search()
         ed = self.c.extraIndex[releaseId]
         self.s.write(str(ed))
@@ -138,7 +150,8 @@ class Shell:
         ed.addLend(borrower, date)
         ed.save()
         
-    def Path(self):
+    def DigitalPath(self):
+        """Add a path to a digital copy of a release."""
         releaseId = self.Search()
         ed = self.c.extraIndex[releaseId]
         self.s.write(str(ed))
@@ -150,7 +163,7 @@ class Shell:
         ed.save()
 
     def DigitalSearch(self):
-        # TODO this should search
+        """Search for digital copies of releases."""
         try:
             releaseId = self.Search("Enter search terms or release ID [enter for all]: ")
         except ValueError as e:
@@ -158,19 +171,8 @@ class Shell:
         else:
             self.c.searchDigitalPaths(releaseId=releaseId)
 
-    digitalCommands = {
-            'search' : (DigitalSearch, 'search for digital paths'),
-            }
-
-    def Digital(self):
-        # TODO this needs to be updated---the commands should all be captured in a tree structure
-        self.s.write("Enter sub-command:")
-        for cmd, (fun, desc) in self.digitalCommands.items():
-            self.s.write(cmd + ' : ' + desc + '\n')
-        input = self.s.nextWord()
-        (self.digitalCommands[input][0])(self)
-
     def SyncCollection(self):
+        """Synchronize with a musicbrainz collection (currently only pushes releases)."""
         if not self.c.prefs.username:
             username = self.s.nextLine('Enter username: ')
             self.c.prefs.username = username
@@ -197,33 +199,65 @@ class Shell:
         self.c.syncCollection(colId)
 
     def LabelTrack(self):
+        """Create label track file for Audacity; useful when transferring vinyl."""
         self.c.makeLabelTrack(self.Search())
 
     def TrackList(self):
+        """Print a list of track titles and times."""
         self.c.writeTrackList(self.s, self.Search())
 
+    def Quit(self):
+        """quit (or press enter)"""
+        sys.exit(0)
+
     shellCommands = {
-        'h' : (None, 'this help'),
-        'q' : (None, 'quit (or press enter)'),
-        'extra' : (EditExtra, 'edit extra data'), # TODO replace this command
-        'search' : (SearchSort, 'search for releases; useful for sorting'),
-        'refresh' : (Refresh, 'refresh XML metadata from musicbrainz'),
-        'html' : (Html, 'write HTML'),
-        'switch' : (Switch, 'substitute one release ID for another'),
-        'add' : (Add, 'add release'),
-        'reload' : (Reload, 'reload database from disk'),
-        'barcode' : (BarcodeSearch, 'barcode search'),
-        'delete' : (Delete, 'delete release'),
-        'check' : (Check, 'check releases'),
-        'lend' : (Lend, 'lend (checkout) release'),
-        'path' : (Path, 'add path to digital copy of release'),
-        'digital' : (Digital, 'manage links to digital copies'),
-        'sync' : (SyncCollection, 'sync with a musicbrainz collection'),
-        'labeltrack' : (LabelTrack, 'create label track file for Audacity'),
-        'tracklist' : (TrackList, 'print track listing'),
+        'q' : Quit,
+        'extra' : EditExtra, # TODO replace this command
+        'search' : SearchSort, 
+        'refresh' : Refresh, 
+        'html' : Html, 
+        'switch' : Switch, 
+        'add' : Add, 
+        'reload' : Reload, 
+        'barcode' : BarcodeSearch, 
+        'delete' : Delete, 
+        'check' : Check, 
+        'lend' : Lend, 
+        'digital' : {
+            'path' : DigitalPath, 
+            'search' : DigitalSearch, 
+            #'list' : DigitalList,
+            },
+        'sync' : SyncCollection, 
+        'labeltrack' : LabelTrack, 
+        'tracklist' : TrackList, 
         }
 
     def main(self):
+        def cmdSummary(cmdStruct, level=0):
+            """Print a summary of commands."""
+            for cmdname in sorted(cmdStruct.keys()):
+                cmdfun = cmdStruct[cmdname]
+                if type(cmdfun) == dict:
+                    self.s.write(('\t'*level) + cmdname + " :\n")
+                    cmdSummary (cmdfun, level+1)
+                else:
+                    self.s.write(('\t'*level) + cmdname + " : " + 
+                            cmdStruct[cmdname].__doc__.strip() + "\n")
+        
+        def cmdParse(cmdStruct, input):
+            if type(cmdStruct[input]) == dict:
+                # Use the next input word and recur into the structure
+                cmdParse(cmdStruct[input], self.s.nextWord().lower())
+            else: 
+                # Remind the user what this command does
+                self.s.write(cmdStruct[input].__doc__.strip() + '\n')
+                # Call the function
+                try:
+                    (cmdStruct[input])(self)
+                except ValueError as e:
+                    self.s.write(str(e) + " Command failed.\n")
+
         while (True):
             input = self.s.nextWord("Enter command ('h' for help): ").lower()
 
@@ -231,16 +265,10 @@ class Shell:
                 break
 
             if (input == 'h' or input == 'help'):
-                for letter in sorted(self.shellCommands.keys()):
-                    self.s.write(letter + " : " + self.shellCommands[letter][1] + "\n")
+                cmdSummary(self.shellCommands)
 
             elif input in self.shellCommands.keys():
-                self.s.write(self.shellCommands[input][1] + '\n')
-                # Call the function
-                try:
-                    (self.shellCommands[input][0])(self)
-                except ValueError as e:
-                    self.s.write(str(e) + " Command failed.\n")
+                cmdParse(self.shellCommands, input)
 
             else:
                 self.s.write("Invalid command\n")
