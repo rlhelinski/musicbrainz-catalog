@@ -761,10 +761,11 @@ white-space: nowrap;
                     length = float(rec['length'])/1000
                     f.write('%.6f\t%.6f\t%s\n' % (pos, pos+length, rec['title']))
                     pos += length
+        logging.info('Wrote label track for '+releaseId+' to '+outPath)
 
     def writeTrackList(self, stream, releaseId):
         """
-        Write ASCII tracklist to 'stream'
+        Write ASCII tracklist for releaseId to 'stream'
         """
         stream.write('\n')
         rel = self.getRelease(releaseId)
