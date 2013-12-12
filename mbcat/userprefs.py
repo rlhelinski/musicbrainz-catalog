@@ -1,7 +1,7 @@
 # defaults
 # TODO scratch that, they should be loaded independently since they are 
 # platform-specific. 
-from __future__ import print_function
+import logging
 import os
 import xml.etree.ElementTree as etree
 
@@ -48,7 +48,6 @@ class PrefManager:
                 for path in child:
                     #print "User Preferences: " + child.attrib['name'] + " = " + child.attrib['value']
                     self.musicPaths.append(path.text)
-                    print('Music path:', path.text)
             elif (child.tag == 'account'):
                 if 'username' in child.attrib:
                     self.username = child.attrib['username']
@@ -57,7 +56,7 @@ class PrefManager:
                 if 'path' in child.attrib:
                     self.htmlPubPath = child.attrib['path']
 
-        print("Loaded preferences from '%s'" % self.prefFile)
+        logging.info("Loaded preferences from '%s'" % self.prefFile)
 
     def save(self):
         myxml = etree.Element('xml', attrib={'version':'1.0', 'encoding':'UTF-8'})
@@ -74,8 +73,8 @@ class PrefManager:
             os.mkdir(os.path.dirname(self.prefFile))
 
         xml_indent(myxml)
-        with open(self.prefFile, 'w') as xmlfile:
+        with open(self.prefFile, 'wb') as xmlfile:
             xmlfile.write(etree.tostring(myxml))
 
-        print("Preferences saved to '%s'" % self.prefFile)
+        logging.info("Preferences saved to '%s'" % self.prefFile)
     
