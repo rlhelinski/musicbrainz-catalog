@@ -17,8 +17,7 @@ from datetime import datetime
 from collections import defaultdict
 import progressbar
 import logging
-
-logging.basicConfig(level=logging.INFO)
+_log = logging.getLogger("mbcat")
 
 overWriteAll = False
 
@@ -203,7 +202,7 @@ class Catalog(object):
         for releaseId in self.loadReleaseIds():
             xmlPath = self._get_xml_path(releaseId)
             if (not os.path.isfile(xmlPath)):
-                logging.error("Found directory, but no metadata for " + releaseId)
+                _log.error("Found directory, but no metadata for " + releaseId)
                 continue
 
             metadata = self.getMetaData(releaseId)
@@ -307,7 +306,7 @@ class Catalog(object):
                     release['title'], \
                     ] ) 
         except IndexError as e:
-            logging.warning("No releases or date for: " + releaseId + " - " + release.artist.getSortName() + "-" + release.title)
+            _log.warning("No releases or date for: " + releaseId + " - " + release.artist.getSortName() + "-" + release.title)
 
         return ' - '.join ( [
                 release.artist.getSortName(), \
@@ -328,10 +327,10 @@ class Catalog(object):
                 # TODO need to resolve releases with more than one format 
                 # TODO make this next line a function
                 if 'format' not in self.getRelease(sortId)['medium-list'][0]:
-                    logging.warning('No format for ' + sortId + ", " + sortStr)
+                    _log.warning('No format for ' + sortId + ", " + sortStr)
                 elif 'unknown' in self.getRelease(sortId)['medium-list'][0]['format']:
                     # it's some type of unknown format string
-                    logging.warning(self.getRelease(sortId)['medium-list'][0]['format'] \
+                    _log.warning(self.getRelease(sortId)['medium-list'][0]['format'] \
                         + " format for release " + sortId + ", " + sortStr)
                 elif matchFmt == ReleaseFormat(self.getRelease(sortId)['medium-list'][0]['format']):
                     filteredSortKeys.append((sortId, sortStr))
@@ -351,7 +350,7 @@ class Catalog(object):
                     ReleaseFormat(
                         self.getRelease(releaseId)['medium-list'][0]['format']))
             except KeyError as e:
-                logging.warning("Sorting release " + releaseId + " with no format into a list of all releases.")
+                _log.warning("Sorting release " + releaseId + " with no format into a list of all releases.")
                 self.getSortedList()
         else:
             self.getSortedList()
@@ -502,7 +501,7 @@ white-space: nowrap;
     def getReleaseMetaXml(self, releaseId):
         """Fetch release metadata XML from musicbrainz"""
         # get_release_by_id() handles throttling on its own
-        logging.info('Fetching metadata for ' + releaseId)
+        _log.info('Fetching metadata for ' + releaseId)
         mb.set_parser(mb.mb_parser_null)
         xml = mb.get_release_by_id(releaseId, includes=['artists', 'discids', 'media', 'labels', 'recordings'])
         mb.set_parser()
@@ -524,7 +523,7 @@ white-space: nowrap;
             elif (response[0] == 'a'):
                 overWriteAll = True
 
-        logging.info("Writing metadata to '%s'", xmlPath)
+        _log.info("Writing metadata to '%s'", xmlPath)
         xmlf = open(xmlPath, 'wb')
         xml_writer = wsxml.MbXmlWriter()
         xml_writer.write(xmlf, metaData)
@@ -541,7 +540,7 @@ white-space: nowrap;
         """Load metadata from disk"""
         xmlPath = self._get_xml_path(releaseId)
         if (not os.path.isfile(xmlPath)):
-            logging.error("No XML metadata for %s", releaseId)
+            _log.error("No XML metadata for %s", releaseId)
             return None
         with open(xmlPath, 'r') as xmlf:
             metaxml = xmlf.read()
@@ -552,7 +551,7 @@ white-space: nowrap;
             raise ResponseError(cause=exc)
         except Exception as exc:
             if isinstance(exc, ETREE_EXCEPTIONS):
-                logging.error("Got some bad XML for %s!", releaseId)
+                _log.error("Got some bad XML for %s!", releaseId)
                 return 
             else:
                 raise
@@ -580,13 +579,13 @@ white-space: nowrap;
                 words = self.getReleaseWords(rel)
                 self.mapWordsToRelease(words, releaseId)
             except KeyError as e:
-                logging.error("No artists included in XML for %s", releaseId)
+                _log.error("No artists included in XML for %s", releaseId)
 
         except KeyError as e:
-            logging.error("Bad XML for " + releaseId + ": " + str(e))
+            _log.error("Bad XML for " + releaseId + ": " + str(e))
             return
         except TypeError as e:
-            logging.error(releaseId + ' ' + str(type(e)) + ": " + str(e) + ": " + str(dir(e)))
+            _log.error(releaseId + ' ' + str(type(e)) + ": " + str(e) + ": " + str(dir(e)))
             return
         
     def digestXml(self, releaseId, meta_xml):
@@ -609,12 +608,12 @@ white-space: nowrap;
                         for titleName in [rel['title']]:
                             titlePath = os.path.join(artistPath, titleName)
                             if os.path.isdir(titlePath):
-                                logging.info('Found ' + relId + ' at ' + titlePath)
+                                _log.info('Found ' + relId + ' at ' + titlePath)
                                 self.extraIndex[relId].addPath(titlePath)
             self.extraIndex[relId].save()
 
         if releaseId and not self.extraIndex[relId].digitalPaths:
-            logging.warning('No digital paths found for '+releaseId)
+            _log.warning('No digital paths found for '+releaseId)
 
     def refreshMetaData(self, releaseId, olderThan=0):
         """Should be renamed to "add release" or something
@@ -623,7 +622,7 @@ white-space: nowrap;
         releaseId = getReleaseId(releaseId)
         xmlPath = self._get_xml_path(releaseId)
         if (os.path.isfile(xmlPath) and (os.path.getmtime(xmlPath) > (time.time() - olderThan))):
-            logging.info("Skipping fetch of metadata for %s because it is recent", releaseId)
+            _log.info("Skipping fetch of metadata for %s because it is recent", releaseId)
             return 0
 
         meta_xml = self.getReleaseMetaXml(releaseId)
@@ -643,7 +642,7 @@ white-space: nowrap;
 
     def refreshAllMetaData(self, olderThan=0):
         for releaseId in self.loadReleaseIds():
-            logging.info("Refreshing %s", releaseId)
+            _log.info("Refreshing %s", releaseId)
             self.refreshMetaData(releaseId, olderThan)
 
     def checkReleases(self):
@@ -653,18 +652,18 @@ white-space: nowrap;
         """
         for releaseId, release in self.getReleases():
             if 'date' not in release or not release['date']:
-                logging.warning("No date for " + releaseId)
+                _log.warning("No date for " + releaseId)
             if 'barcode' not in release or not release['barcode']:
-                logging.warning("No barcode for " + releaseId)
+                _log.warning("No barcode for " + releaseId)
             for medium in release['medium-list']:
                 if 'format' not in medium or not medium['format']:
-                    logging.warning("No format for a medium of " + releaseId)
+                    _log.warning("No format for a medium of " + releaseId)
 
     def getCoverArt(self, releaseId, maxage=60*60):
         release = self.getRelease(releaseId)
         imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
         if os.path.isfile(imgPath) and os.path.getmtime(imgPath) > time.time() - maxage:
-            logging.info("Already have cover art for " + releaseId + ", skipping")
+            _log.info("Already have cover art for " + releaseId + ", skipping")
             return
 
         try:
@@ -672,12 +671,12 @@ white-space: nowrap;
             mbcat.coverart.saveCoverArt(meta, imgPath)
 
         except mb.ResponseError as e:
-            logging.warning('No cover art for ' + releaseId + ' available from Cover Art Archive')
+            _log.warning('No cover art for ' + releaseId + ' available from Cover Art Archive')
                 
             if 'asin' in release:
                 mbcat.amazonservices.saveImage(release['asin'], mbcat.amazonservices.AMAZON_SERVER["amazon.com"], imgPath)
             else:
-                logging.warning('No ASIN for ' + releaseId)
+                _log.warning('No ASIN for ' + releaseId)
 
     def refreshAllCoverArt(self, maxage=60*60*24):
         for releaseId in self.getReleaseIds():
@@ -705,7 +704,7 @@ white-space: nowrap;
         """
         lds = self.checkLevenshteinDistances()
         for i in range (number):
-            logging.info(str(lds[i][0]) + "\t" + \
+            _log.info(str(lds[i][0]) + "\t" + \
                 self.formatDiscInfo(lds[i][1]) + " <-> " + \
                 self.formatDiscInfo(lds[i][2]))
 
@@ -759,7 +758,7 @@ white-space: nowrap;
                     length = float(rec['length'])/1000
                     f.write('%.6f\t%.6f\t%s\n' % (pos, pos+length, rec['title']))
                     pos += length
-        logging.info('Wrote label track for '+releaseId+' to '+outPath)
+        _log.info('Wrote label track for '+releaseId+' to '+outPath)
 
     def writeMetaTags(self, releaseId, outPath='Tags.xml'):
         """Useful for importing metadata into Audacity."""
@@ -778,7 +777,7 @@ white-space: nowrap;
         with open(outPath, 'wb') as xmlfile:
             xmlfile.write(etree.tostring(myxml))
 
-        logging.info('Saved Audacity tags XML to \'%s\'' % outPath)
+        _log.info('Saved Audacity tags XML to \'%s\'' % outPath)
 
     def writeTrackList(self, stream, releaseId):
         """Write ASCII tracklist for releaseId to 'stream'. """

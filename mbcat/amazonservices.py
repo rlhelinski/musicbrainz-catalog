@@ -9,6 +9,7 @@ http://ec1.images-amazon.com/images/P/B000002M3I.01.LZZZZZZZ.jpg
 """
 import re
 import logging
+_log = logging.getLogger("mbcat")
 from musicbrainzngs.musicbrainz import _rate_limit
 try:
     # For Python 3.0 and later
@@ -97,16 +98,16 @@ def getAsinProductUrl(asin):
 @_rate_limit
 def saveImage(releaseAsin, server, imgPath):
     imgUrl = getAsinImageUrl(releaseAsin, server)
-    logging.info('Fetching \''+imgUrl+'\'')
+    _log.info('Fetching \''+imgUrl+'\'')
     try:
         response = urlopen( imgUrl )
     except HTTPError as e:
-        logging.error(e)
+        _log.error(e)
         return
 
     with open(imgPath, 'w') as imgf:
         imgf.write(response.read())
-        logging.info("Wrote %d bytes to %s" %(imgf.tell(), imgPath))
+        _log.info("Wrote %d bytes to %s" %(imgf.tell(), imgPath))
 
     response.close()
 

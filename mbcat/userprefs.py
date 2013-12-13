@@ -2,6 +2,7 @@
 # TODO scratch that, they should be loaded independently since they are 
 # platform-specific. 
 import logging
+_log = logging.getLogger("mbcat")
 import os
 import xml.etree.ElementTree as etree
 
@@ -55,7 +56,7 @@ class PrefManager:
                 if 'path' in child.attrib:
                     self.htmlPubPath = child.attrib['path']
 
-        logging.info("Loaded preferences from '%s'" % self.prefFile)
+        _log.info("Loaded preferences from '%s'" % self.prefFile)
 
     def save(self):
         myxml = etree.Element('xml', attrib={'version':'1.0', 'encoding':'UTF-8'})
@@ -75,5 +76,5 @@ class PrefManager:
         with open(self.prefFile, 'wb') as xmlfile:
             xmlfile.write(etree.tostring(myxml))
 
-        logging.info("Preferences saved to '%s'" % self.prefFile)
+        _log.info("Preferences saved to '%s'" % self.prefFile)
     

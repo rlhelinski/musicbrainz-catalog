@@ -9,6 +9,7 @@ from musicbrainzngs import util
 import musicbrainzngs.musicbrainz as mb
 import json
 import logging
+_log = logging.getLogger("mbcat")
 try:
     # For Python 3.0 and later
     from urllib.request import urlopen, HTTPError
@@ -25,7 +26,7 @@ def getCoverArtMeta(releaseId):
 
     handlers = [compat.HTTPHandler()]
     opener = compat.build_opener(*handlers)
-    logging.info('Checking for coverart ' + url)
+    _log.info('Checking for coverart ' + url)
     resp = mb._safe_read(opener, req, '')
 
     return json.loads(resp)
@@ -39,6 +40,6 @@ def saveCoverArt(meta, imgPath):
     response = urlopen( imgUrl )
     with open(imgPath, 'w') as imgf:
         imgf.write(response.read())
-        logging.info("Wrote %d bytes to %s" %(imgf.tell(), imgPath))
+        _log.info("Wrote %d bytes to %s" %(imgf.tell(), imgPath))
     response.close()
 

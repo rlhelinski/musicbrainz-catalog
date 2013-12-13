@@ -3,6 +3,7 @@ import os, time, sys
 import xml.etree.ElementTree as ET
 import mbcat.utils
 import logging
+_log = logging.getLogger("mbcat")
 try:
     from StringIO import StringIO
 except ImportError as e:
@@ -35,7 +36,7 @@ class PurchaseEvent:
         try:
             self._date = time.strptime(date, dateFmtStr)
         except ValueError as e:
-            logging.warning(e)
+            _log.warning(e)
 
     date = property(getDate, setDate, doc='purchase date')
 
@@ -49,7 +50,7 @@ class PurchaseEvent:
         try:
             self._price = int(float(price) * 100)
         except ValueError as e:
-            logging.warning(e)
+            _log.warning(e)
 
     price = property(getPrice, setPrice, doc='purchase price')
 
