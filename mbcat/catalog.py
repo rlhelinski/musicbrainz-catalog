@@ -668,8 +668,8 @@ white-space: nowrap;
             return
 
         try:
-            meta = coverart.getCoverArtMeta(releaseId)
-            coverart.saveCoverArt(meta, imgPath)
+            meta = mbcat.coverart.getCoverArtMeta(releaseId)
+            mbcat.coverart.saveCoverArt(meta, imgPath)
 
         except mb.ResponseError as e:
             logging.warning('No cover art for ' + releaseId + ' available from Cover Art Archive')
