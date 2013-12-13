@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 from __future__ import print_function
+import logging
+logging.basicConfig(level=logging.INFO)
 from mbcat.catalog import *
 from mbcat.extradata import *
 from mbcat.barcode import UPC
@@ -8,6 +10,7 @@ import os
 import shutil
 import sys
 from inputsplitter import InputSplitter
+
 
 class Shell:
     def __init__(self, s=sys.stdin):
@@ -52,7 +55,7 @@ class Shell:
 
 
     def Reload(self):
-        """Reload database from disk"""
+        """Reload the database from disk."""
         del self.c 
         self.c = Catalog()
         self.s.write("Reloading database...")
@@ -84,6 +87,14 @@ class Shell:
             return
         else:
             self.c.refreshMetaData(releaseId, olderThan=maxAge)
+
+    def CoverArt(self):
+        """Refresh coverart from coverart.org or Amazon.com."""
+        releaseId = self.Search("Enter search terms or release ID [empty for all]: ")
+        if not releaseId:
+            self.c.refreshAllCoverArt()
+        else:
+            self.c.getCoverArt(releaseId)
 
     def Switch(self):
         """Substitute one release ID for another."""
@@ -236,6 +247,7 @@ class Shell:
         'labeltrack' : LabelTrack, 
         'tracklist' : TrackList, 
         'metatags' : MetaTags,
+        'coverart' : CoverArt,
         }
 
     def main(self):
