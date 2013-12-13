@@ -7,8 +7,8 @@ http://www.amazon.com/gp/product/B000002M3I?tag=musicbrainz0d-20
 http://ec1.images-amazon.com/images/P/B000002M3I.01.LZZZZZZZ.jpg
 
 """
-from __future__ import print_function
 import re
+import logging
 from musicbrainzngs.musicbrainz import _rate_limit
 try:
     # For Python 3.0 and later
@@ -97,16 +97,16 @@ def getAsinProductUrl(asin):
 @_rate_limit
 def saveImage(releaseAsin, server, imgPath):
     imgUrl = getAsinImageUrl(releaseAsin, server)
-    print(imgUrl)
+    logging.info('Fetching \''+imgUrl+'\'')
     try:
         response = urlopen( imgUrl )
     except HTTPError as e:
-        print(e)
+        logging.error(e)
         return
 
     with open(imgPath, 'w') as imgf:
         imgf.write(response.read())
-        print("Wrote %d bytes to %s" %(imgf.tell(), imgPath))
+        logging.info("Wrote %d bytes to %s" %(imgf.tell(), imgPath))
 
     response.close()
 

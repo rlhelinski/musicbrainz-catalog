@@ -46,7 +46,6 @@ class PrefManager:
         for child in myroot:
             if (child.tag == 'musicpaths'):
                 for path in child:
-                    #print "User Preferences: " + child.attrib['name'] + " = " + child.attrib['value']
                     self.musicPaths.append(path.text)
             elif (child.tag == 'account'):
                 if 'username' in child.attrib:
