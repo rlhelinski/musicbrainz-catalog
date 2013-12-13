@@ -202,6 +202,10 @@ class Shell:
         """Create label track file for Audacity; useful when transferring vinyl."""
         self.c.makeLabelTrack(self.Search())
 
+    def MetaTags(self):
+        """Create metadata tags for Audacity."""
+        self.c.writeMetaTags(self.Search())
+
     def TrackList(self):
         """Print a list of track titles and times."""
         self.c.writeTrackList(self.s, self.Search())
@@ -231,6 +235,7 @@ class Shell:
         'sync' : SyncCollection, 
         'labeltrack' : LabelTrack, 
         'tracklist' : TrackList, 
+        'metatags' : MetaTags,
         }
 
     def main(self):

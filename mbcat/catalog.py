@@ -749,11 +749,9 @@ white-space: nowrap;
         print('DONE')
 
     def makeLabelTrack(self, releaseId, outPath='Label Track.txt'):
-        """
-        Useful for importing into Audacity
-        """
+        """Useful for importing into Audacity."""
+        rel = self.getRelease(releaseId)
         with open(outPath, 'wt') as f:
-            rel = self.getRelease(releaseId)
             pos = 0.0
             for medium in rel['medium-list']:
                 for track in medium['track-list']:
@@ -763,10 +761,27 @@ white-space: nowrap;
                     pos += length
         logging.info('Wrote label track for '+releaseId+' to '+outPath)
 
+    def writeMetaTags(self, releaseId, outPath='Tags.xml'):
+        """Useful for importing metadata into Audacity."""
+        myxml = etree.Element('tags')
+        rel = self.getRelease(releaseId)
+
+        for name, value in [
+                ('ALBUM', rel['title']),
+                ('YEAR', rel['date'] if 'date' in rel else ''),
+                ('ARTIST', rel['artist-credit-phrase']),
+                ('COMMENTS', self.releaseUrl+releaseId),
+                ]:
+            subTag = etree.SubElement(myxml, 'tag', attrib=\
+                {'name': name, 'value':value})
+
+        with open(outPath, 'wb') as xmlfile:
+            xmlfile.write(etree.tostring(myxml))
+
+        logging.info('Saved Audacity tags XML to \'%s\'' % outPath)
+
     def writeTrackList(self, stream, releaseId):
-        """
-        Write ASCII tracklist for releaseId to 'stream'
-        """
+        """Write ASCII tracklist for releaseId to 'stream'. """
         stream.write('\n')
         rel = self.getRelease(releaseId)
         for medium in rel['medium-list']:
@@ -778,4 +793,5 @@ white-space: nowrap;
                     ' '*(60-len(rec['title'])) + 
                     (('%3d:%02d' % (length/60, length%60)) if length else '  ?:??') + 
                     '\n')
+
 
