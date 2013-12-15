@@ -127,6 +127,17 @@ class Catalog(object):
         if not os.path.isdir(self.rootPath):
             os.mkdir(self.rootPath)
         self.prefs = mbcat.userprefs.PrefManager()
+        self._resetMaps()
+
+    def _resetMaps(self):
+        self.metaIndex = dict()
+        self.extraIndex = dict()
+        self.wordMap = dict()
+        self.discIdMap = defaultdict(list)
+        self.barCodeMap = defaultdict(list)
+        # To map ReleaseId -> Format
+        #self.formatMap = dict()
+
             
     def _get_xml_path(self, releaseId, fileName='metadata.xml'):
         return os.path.join(self.rootPath, releaseId, fileName)
@@ -191,14 +202,7 @@ class Catalog(object):
     def load(self, releaseIds=None):
         """Load the various tables from the XML metadata on disk"""
 
-        self.metaIndex = dict()
-        self.extraIndex = dict()
-        self.wordMap = dict()
-        self.discIdMap = defaultdict(list)
-        self.barCodeMap = defaultdict(list)
-        # To map ReleaseId -> Format
-        #self.formatMap = dict()
-
+        self._resetMaps()
         for releaseId in self.loadReleaseIds():
             xmlPath = self._get_xml_path(releaseId)
             if (not os.path.isfile(xmlPath)):
