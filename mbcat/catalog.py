@@ -431,6 +431,8 @@ white-space: nowrap;
 
         for releaseType in [ReleaseFormat('CD'), ReleaseFormat('12"'), ReleaseFormat('7"')]:
             sortedList = self.getSortedList(releaseType)
+            if len(sortedList) == 0:
+                continue
             htf.write("<h2>" + str(releaseType) + (" (%d Releases)" % len(sortedList)) + "</h2>")
             htf.write("<table>")
             htf.write("""<tr>
