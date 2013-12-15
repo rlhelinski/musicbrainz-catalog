@@ -65,7 +65,7 @@ def getFormatFromUri(uriStr, escape=True):
 def getReleaseId(releaseId):
     """Should be renamed to get releaseIdFromInput or something"""
     if releaseId.startswith('http'):
-        return utils.extractUuid(releaseId, 'release')
+        return mbcat.utils.extractUuid(releaseId, 'release')
     else:
         return releaseId
 
