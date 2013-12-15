@@ -120,12 +120,10 @@ class Shell:
             self.s.write("Release '%s' already exists.\n" % self.c.getRelease(releaseId)['title'])
             return
         try:
-            self.c.refreshMetaData(releaseId)
+            self.c.addRelease(releaseId)
         except mb.ResponseError as e:
             self.s.write(str(e) + " bad release ID?\n")
             return
-
-        self.c.addExtraData(releaseId)
 
         self.s.write("Added '%s'.\n" % self.c.getRelease(releaseId)['title'])
 

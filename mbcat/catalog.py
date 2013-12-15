@@ -621,6 +621,10 @@ white-space: nowrap;
         if releaseId and not self.extraIndex[relId].digitalPaths:
             _log.warning('No digital paths found for '+releaseId)
 
+    def addRelease(self, releaseId):
+        self.refreshMetaData(releaseId)
+        self.addExtraData(releaseId)
+
     def refreshMetaData(self, releaseId, olderThan=0):
         """Should be renamed to "add release" or something
         get metadata XML from MusicBrainz and save to disk"""
