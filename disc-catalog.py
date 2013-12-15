@@ -17,6 +17,8 @@ from mbcat.catalog import *
 from mbcat.extradata import *
 from mbcat.utils import *
 from inputsplitter import InputSplitter
+import logging
+logging.basicConfig(level=logging.INFO)
 
 mb.set_useragent(
     "python-musicbrainz-ngs-catalog",
