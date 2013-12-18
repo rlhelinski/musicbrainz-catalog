@@ -10,6 +10,7 @@ except ImportError as e:
     from io import StringIO
 
 def getInput(prompt=""):
+    # TODO this should not be here 
     print(prompt, end="")
     return sys.stdin.readline().strip()
 
@@ -109,13 +110,16 @@ class ExtraData:
             self.rating = int(rating.text)
         for lendList in root.findall('./lendlist'):
             for lend in lendList:
-                # TODO check the tag is 'lent'
+                if lend.tag != 'lent':
+                    continue
                 self.lendEvents.append(LendEvent(lend.attrib['who'], \
                     int(lend.attrib['date'])))
         for pathList in root.findall('./digital'):
             for path in pathList:
-                # TODO check the tag is 'path'
-                self.addPath(path.text)
+                if path.tag != 'path':
+                    continue
+                if path.text:
+                    self.addPath(path.text)
         
         return root
 
