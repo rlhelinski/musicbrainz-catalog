@@ -471,7 +471,8 @@ white-space: nowrap;
                     ">"+fmt(rel['title'])\
                     +(' (%s)' % fmt(rel['disambiguation']) if 'disambiguation' in rel and rel['disambiguation'] else '')\
                     +("<img width=24 height=24 src='tango/Image-x-generic.svg'><span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" \
-                    if coverartUrl else "") + "</a>" + (''.join("<a href='"+fmt(path)+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
+                    if coverartUrl else "") + "</a>" + \
+                    (''.join("<a href='"+fmt(path)+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
                     if self.extraIndex[releaseId].digitalPaths else "") + "</td>")
                 htf.write("<td>"+(fmt(rel['date']) if 'date' in rel else '')+"</td>")
                 htf.write("<td>"+(fmt(rel['country']) \
@@ -491,7 +492,7 @@ white-space: nowrap;
                 htf.write("<td>"+("<a href=\"" + \
                     mbcat.amazonservices.getAsinProductUrl(rel['asin']) + \
                     "\">" + rel['asin'] + "</a>" if 'asin' in rel else '')+"</td>")
-                htf.write("<td>"+' + '.join([medium['format'] for medium in rel['medium-list']])+"</td>")
+                htf.write("<td>"+' + '.join([(medium['format'] if 'format' in medium else '(unknown)') for medium in rel['medium-list']])+"</td>")
                 htf.write(\
                     "<td>"+(datetime.fromtimestamp(self.extraIndex[releaseId].addDates[0]).strftime('%Y-%m-%d') if \
                     len(self.extraIndex[releaseId].addDates) else '')+"</td>")
