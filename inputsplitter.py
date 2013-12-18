@@ -1,5 +1,11 @@
 import sys
 
+# Work-around for Python 2.6
+try:
+    sys.stdout.write(u'\xa6\n')
+except UnicodeEncodeError:
+    reload(sys).setdefaultencoding('utf8')
+
 class InputSplitter(object):
     def __init__(self, stdin=sys.stdin, stdout=sys.stdout):
         self.stdin = stdin
