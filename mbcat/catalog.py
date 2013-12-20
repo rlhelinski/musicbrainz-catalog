@@ -94,7 +94,7 @@ class Catalog(object):
         self.discIdMap = defaultdict(list)
         self.barCodeMap = defaultdict(list)
         # To map ReleaseId -> Format
-        #self.formatMap = dict()
+        self.formatMap = defaultdict(list)
 
             
     def _get_xml_path(self, releaseId, fileName='metadata.xml'):
@@ -277,20 +277,11 @@ class Catalog(object):
                 ] ) 
 
     def getSortedList(self, matchFmt=None):
-        sortKeys = [(releaseId, self.formatDiscSortKey(releaseId)) for releaseId in self.getReleaseIds()]
+        relIds = self.formatMap[matchFmt] if matchFmt else self.getReleaseIds()
+            
+        sortKeys = [(relId, self.formatDiscSortKey(relId)) for relId in relIds]
 
-        # TODO this could be sped up using a map from ReleaseId -> Format populated at loading time
-        if not matchFmt:
-            # Skip all the fun
-            filteredSortKeys = sortKeys
-        else:
-            filteredSortKeys = []
-            for sortId, sortStr in sortKeys:
-                if matchFmt == mbcat.formats.getReleaseFormat(self.getRelease(sortId)):
-                    filteredSortKeys.append((sortId, sortStr))
-
-        self.sortedList = sorted(filteredSortKeys, key=lambda sortKey: sortKey[1].lower())
-        return self.sortedList
+        return sorted(sortKeys, key=lambda sortKey: sortKey[1].lower())
 
     def getSortNeighbors(self, releaseId, neighborHood=5, matchFormat=False):
         """
@@ -300,16 +291,16 @@ class Catalog(object):
 
         if matchFormat:
             try:
-                self.getSortedList(mbcat.formats.getReleaseFormat(self.getRelease(releaseId)))
+                sortedList = self.getSortedList(mbcat.formats.getReleaseFormat(self.getRelease(releaseId)))
             except KeyError as e:
                 _log.warning("Sorting release " + releaseId + " with no format into a list of all releases.")
-                self.getSortedList()
+                sortedList = self.getSortedList()
         else:
-            self.getSortedList()
+            sortedList = self.getSortedList()
 
-        index = self.sortedList.index((releaseId, self.formatDiscSortKey(releaseId)))
-        for i in range(max(0,index-neighborHood), min(len(self.sortedList), index+neighborHood)):
-            sortId, sortStr = self.sortedList[i]
+        index = sortedList.index((releaseId, self.formatDiscSortKey(releaseId)))
+        for i in range(max(0,index-neighborHood), min(len(sortedList), index+neighborHood)):
+            sortId, sortStr = sortedList[i]
             print( ('\033[92m' if i == index else "") + "%4d" % i, \
                     sortId, \
                     sortStr, \
@@ -378,17 +369,12 @@ white-space: nowrap;
 <body>""")
 
         # TODO this list should be populated at load time
-        for releaseType in [
-                mbcat.formats.CD(),
-                mbcat.formats.Vinyl12(),
-                mbcat.formats.Vinyl7(),
-                mbcat.formats.Unknown(),
-                mbcat.formats.Digital(),
-                ]:
+        formatsBySize = sorted(self.formatMap.keys(), key=lambda obj: obj())
+        for releaseType in formatsBySize:
             sortedList = self.getSortedList(releaseType)
             if len(sortedList) == 0:
                 continue
-            htf.write("<h2>" + str(releaseType) + (" (%d Releases)" % len(sortedList)) + "</h2>")
+            htf.write("<h2>" + str(releaseType()) + (" (%d Releases)" % len(sortedList)) + "</h2>")
             htf.write("<table>")
             htf.write("""<tr>
 <!-- <th>Sort Index</th> -->
@@ -526,6 +512,9 @@ white-space: nowrap;
         try:
             rel = metadata['release']
             self.metaIndex[releaseId] = rel
+
+            # populate format map
+            self.formatMap[mbcat.formats.getReleaseFormat(rel)].append(releaseId)
 
             # populate DiscId map
             for medium in rel['medium-list']:
