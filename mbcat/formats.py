@@ -47,20 +47,18 @@ class Digital(Format):
 def getFormatObj(fmtStr):
     """Factory function that returns a medium format object given a format string."""
     if not fmtStr:
-        return Unknown()
+        return Unknown
     if fmtStr.startswith('12"') or fmtStr == 'Vinyl':
         # If the format is just "Vinyl", assume it is 12"
-        return Vinyl12()
+        return Vinyl12
     elif fmtStr.startswith('10"'):
-        return Vinyl10()
+        return Vinyl10
     elif fmtStr.startswith('7"'):
-        return Vinyl7()
-    elif 'CD' in fmtStr or fmtStr=='DualDisc':
-        return CD()
-    elif 'DVD' in fmtStr:
-        return DVD()
+        return Vinyl7
+    elif 'CD' in fmtStr or fmtStr=='DualDisc' or 'DVD' in fmtStr:
+        return CD
     elif fmtStr == 'Digital Media':
-        return Digital()
+        return Digital
     else:
         raise ValueError('Format "'+fmtStr+'" not recognized.')
         
@@ -75,7 +73,7 @@ def getReleaseFormat(rel):
         sortFormat = max(fmts)
     except KeyError:
         _log.warning('No format for ' + rel['id'])
-        sortFormat = Unknown()
+        sortFormat = Unknown
 
     return sortFormat
 
