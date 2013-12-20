@@ -62,16 +62,55 @@ class Shell:
         self.c.load()
         self.s.write("DONE\n")
 
-    def EditExtra(self):
-        """edit extra data"""
-        # TODO remove, extra should be transparaent to the user
+    def AddPurchaseEvent(self):
+        """Add a purchase date."""
         releaseId = self.Search()
         ed = self.c.extraIndex[releaseId] 
-        self.s.write(str(ed))
-        modify = self.s.nextWord("Modify? [y/N]")
-        if modify.lower().startswith('y'):
-            ed.interactiveEntry()
-            ed.save()
+        for purchase in ed.purchases:
+            self.s.write(str(purchase)+'\n')
+        dateStr = self.s.nextLine('Purchase date ('+dateFmtUsr+'): ')
+        if not dateStr:
+            raise ValueError('Empty string.')
+        vendorStr = self.s.nextLine('Vendor: ')
+        if not vendorStr:
+            raise ValueError('Empty string.')
+        priceStr = self.s.nextLine('Price: ')
+        if not vendorStr:
+            raise ValueError('Empty string.')
+
+        pe = PurchaseEvent(dateStr, priceStr, vendorStr)
+        ed.addPurchase(pe)
+        ed.save()
+
+    # TODO also need a delete comment function
+    def AddComment(self):
+        """Add a comment."""
+        releaseId = self.Search()
+        ed = self.c.extraIndex[releaseId]
+        if ed.comment:
+            self.s.write('Comments: ' + ed.comment + '\n')
+        cmt = self.s.nextLine('Additional Comment: ')
+        if not cmt:
+            raise ValueError('Empty string.')
+
+        if ed.comment:
+            ed.comment += '\n'+cmt
+        else:
+            ed.comment = cmt
+        ed.save()
+
+
+    def SetRating(self):
+        """Add a rating."""
+        releaseId = self.Search()
+        ed = self.c.extraIndex[releaseId]
+        if ed.rating:
+            self.s.write ('Current rating: %d/5\n' % ed.rating)
+        nr = self.s.nextLine('New rating: ')
+        if not nr:
+            raise ValueError('Empty string.')
+        ed.setRating(nr)
+        ed.save()
 
     def Refresh(self):
         """Refresh XML metadata from MusicBrainz."""
@@ -225,7 +264,6 @@ class Shell:
 
     shellCommands = {
         'q' : Quit,
-        'extra' : EditExtra, # TODO replace this command
         'search' : SearchSort, 
         'refresh' : Refresh, 
         'html' : Html, 
@@ -246,6 +284,9 @@ class Shell:
         'tracklist' : TrackList, 
         'metatags' : MetaTags,
         'coverart' : CoverArt,
+        'purchase' : AddPurchaseEvent,
+        'comment' : AddComment,
+        'rate' : SetRating,
         }
 
     def main(self):

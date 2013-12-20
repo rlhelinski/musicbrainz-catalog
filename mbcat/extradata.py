@@ -1,4 +1,5 @@
 from __future__ import print_function
+from collections import defaultdict
 import os, time, sys
 import xml.etree.ElementTree as ET
 import mbcat.utils
@@ -8,11 +9,6 @@ try:
     from StringIO import StringIO
 except ImportError as e:
     from io import StringIO
-
-def getInput(prompt=""):
-    # TODO this should not be here 
-    print(prompt, end="")
-    return sys.stdin.readline().strip()
 
 dateFmtStr = '%m/%d/%Y'
 dateFmtUsr = 'MM/DD/YYYY'
@@ -187,22 +183,13 @@ class ExtraData:
             date = time.time()
         self.lendEvents.append(LendEvent(borrower, date))
 
-    def interactiveEntry(self, inputFun=getInput):
-        # TODO this should be moved to the shell 
-        print("Welcome!")
-        dateStr = inputFun("Purchase date ("+dateFmtUsr+"): ")
-        vendorStr = inputFun("Vendor: ")
-        priceStr = inputFun("Price: ")
-        pe = PurchaseEvent( dateStr, priceStr, vendorStr )
-        if len(self.purchases):
-            self.purchases[0] = pe
-        else:
-            self.purchases.append(pe)
-
-        self.comment = inputFun("Comment: ")
-        self.rating = int(inputFun("Rating (x/5): "))
+    def setRating(self, rating=0):
+        self.rating = int(rating)
 
     def addPath(self, path):
         if path not in self.digitalPaths:
             self.digitalPaths.append(path)
+
+    def addPurchase(self, purch):
+        self.purchases.append(purch)
 
