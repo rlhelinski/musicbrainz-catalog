@@ -217,7 +217,8 @@ class Catalog(object):
 
     def getReleaseWords(self, rel):
         words = []
-        for field in [ rel['title'], rel['artist-credit-phrase'] ]:
+        for field in [ rel['title'], rel['artist-credit-phrase'] ] + \
+            ([rel['disambiguation']] if 'disambiguation' in rel else []):
             words.extend(re.findall(r"\w+", field.lower(), re.UNICODE))
         return words
 
@@ -255,25 +256,18 @@ class Catalog(object):
                 formatSortCredit(release), '-', \
                 (release['date'] if 'date' in release else ''), '-', \
                 release['title'], \
-                ('['+release['medium-list'][0]['format']+']' if release['medium-list'] and 'format' in release['medium-list'][0] else ''), \
+                '('+release['disambiguation']+')' if 'disambiguation' in release else '', \
+                '['+str(mbcat.formats.getReleaseFormat(release)())+']', \
                 ] )
 
     def formatDiscSortKey(self, releaseId):
         release = self.getRelease(releaseId)
 
-        try:
-            return ' - '.join ( [ \
-                    formatSortCredit(release), \
-                    release['date'] if 'date' in release else '', \
-                    release['title'], \
-                    ] ) 
-        except IndexError as e:
-            _log.warning("No releases or date for: " + releaseId + " - " + release.artist.getSortName() + "-" + release.title)
-
-        return ' - '.join ( [
-                release.artist.getSortName(), \
-                "0", \
-                release.title, \
+        return ' - '.join ( [ \
+                formatSortCredit(release), \
+                release['date'] if 'date' in release else '', \
+                release['title'], \
+                release['disambiguation'] if 'disambiguation' in release else '', \
                 ] ) 
 
     def getSortedList(self, matchFmt=None):
@@ -304,7 +298,7 @@ class Catalog(object):
             print( ('\033[92m' if i == index else "") + "%4d" % i, \
                     sortId, \
                     sortStr, \
-                    ("[" + self.getRelease(sortId)['medium-list'][0]['format'] + "]" if len(self.getRelease(sortId)['medium-list']) else ""), \
+                    ("[" + str(mbcat.formats.getReleaseFormat(self.getRelease(sortId))()) + "]"), \
                     (" <<<" if i == index else "") + \
                     ('\033[0m' if i == index else "") )
 
