@@ -7,6 +7,7 @@ import re
 import musicbrainzngs.mbxml as mbxml
 import musicbrainzngs.util as mbutil
 import musicbrainzngs.musicbrainz as mb
+import mbcat.formats
 import mbcat.amazonservices
 import mbcat.coverart
 import mbcat.userprefs
@@ -28,7 +29,7 @@ mb.set_useragent(
     "https://github.com/rlhelinski/musicbrainz-catalog/",
 )
 
-# Get the XML parsing exceptions to catch. The behavior chnaged with Python 2.7
+# Get the XML parsing exceptions to catch. The behavior changed with Python 2.7
 # and ElementTree 1.3.
 import xml.etree.ElementTree as etree
 from xml.parsers import expat
@@ -71,49 +72,6 @@ def getReleaseId(releaseId):
 
 def formatSortCredit(release):
     return ''.join([credit if type(credit)==str else credit['artist']['sort-name'] for credit in release['artist-credit'] ])
-
-class ReleaseFormat(object):
-    """
-    Useful for grouping formats by type or size
-    """
-    def __init__(self, fmtStr=""):
-        self.fmtStr = fmtStr
-
-    def isVinyl(self):
-        # TODO there are many 12" vinyl releases labeled as "Vinyl"---what to do?
-        return self.fmtStr.endswith('Vinyl') or \
-            self.fmtStr.startswith('7"') or \
-            self.fmtStr.startswith('10"') or \
-            self.fmtStr.startswith('12"')
-
-    def is7Inch(self):
-        return self.fmtStr.startswith('7"')
-
-    def is10Inch(self):
-        return self.fmtStr.startswith('10"')
-
-    def is12Inch(self):
-        return self.fmtStr.startswith('12"')
-
-    def isCD(self):
-        # TODO There are many CDs labeled as '(unknown)' type--what to do? 
-        return self.fmtStr.endswith('CD') or not self.isVinyl()
-
-    def isOther(self):
-        return (not self.isVinyl()) and (not self.isCD())
-
-    def isAny(self):
-        return self.fmtStr == ""
-
-    def __eq__(self, other):
-        return (self.is7Inch() and other.is7Inch()) or \
-                (self.is10Inch() and other.is10Inch()) or \
-                (self.is12Inch() and other.is12Inch()) or \
-                (self.isCD() and other.isCD()) or \
-                (self.isAny() or other.isAny())
-
-    def __str__(self):
-        return self.fmtStr
 
 
 class Catalog(object):
@@ -318,25 +276,17 @@ class Catalog(object):
                 release.title, \
                 ] ) 
 
-    def getSortedList(self, matchFmt=ReleaseFormat()):
+    def getSortedList(self, matchFmt=None):
         sortKeys = [(releaseId, self.formatDiscSortKey(releaseId)) for releaseId in self.getReleaseIds()]
 
         # TODO this could be sped up using a map from ReleaseId -> Format populated at loading time
-        if matchFmt.isAny():
+        if not matchFmt:
             # Skip all the fun
             filteredSortKeys = sortKeys
         else:
             filteredSortKeys = []
             for sortId, sortStr in sortKeys:
-                # TODO need to resolve releases with more than one format 
-                # TODO make this next line a function
-                if 'format' not in self.getRelease(sortId)['medium-list'][0]:
-                    _log.warning('No format for ' + sortId + ", " + sortStr)
-                elif 'unknown' in self.getRelease(sortId)['medium-list'][0]['format']:
-                    # it's some type of unknown format string
-                    _log.warning(self.getRelease(sortId)['medium-list'][0]['format'] \
-                        + " format for release " + sortId + ", " + sortStr)
-                elif matchFmt == ReleaseFormat(self.getRelease(sortId)['medium-list'][0]['format']):
+                if matchFmt == mbcat.formats.getReleaseFormat(self.getRelease(sortId)):
                     filteredSortKeys.append((sortId, sortStr))
 
         self.sortedList = sorted(filteredSortKeys, key=lambda sortKey: sortKey[1].lower())
@@ -350,9 +300,7 @@ class Catalog(object):
 
         if matchFormat:
             try:
-                self.getSortedList(
-                    ReleaseFormat(
-                        self.getRelease(releaseId)['medium-list'][0]['format']))
+                self.getSortedList(mbcat.formats.getReleaseFormat(self.getRelease(releaseId)))
             except KeyError as e:
                 _log.warning("Sorting release " + releaseId + " with no format into a list of all releases.")
                 self.getSortedList()
@@ -429,7 +377,14 @@ white-space: nowrap;
 </head>
 <body>""")
 
-        for releaseType in [ReleaseFormat('CD'), ReleaseFormat('12"'), ReleaseFormat('7"')]:
+        # TODO this list should be populated at load time
+        for releaseType in [
+                mbcat.formats.CD(),
+                mbcat.formats.Vinyl12(),
+                mbcat.formats.Vinyl7(),
+                mbcat.formats.Unknown(),
+                mbcat.formats.Digital(),
+                ]:
             sortedList = self.getSortedList(releaseType)
             if len(sortedList) == 0:
                 continue
