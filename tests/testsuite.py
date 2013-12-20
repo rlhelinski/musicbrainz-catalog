@@ -35,6 +35,10 @@ test_releases = [
     '8765eec6-c74e-420e-b1c8-4415eb284158',
     # 7"
     '3f423bcc-f834-41fd-b35e-c9ed9036b2d7',
+    # Unknown format
+    'be3cc3e7-bdb0-3c13-a60b-a985b30eb603',
+    # Digital
+    '14a12f84-c5f3-473b-87f5-9340174ecbc4',
     ]
 
 for relId in test_releases: 
