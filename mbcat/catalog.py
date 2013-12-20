@@ -257,7 +257,7 @@ class Catalog(object):
                 (release['date'] if 'date' in release else ''), '-', \
                 release['title'], \
                 '('+release['disambiguation']+')' if 'disambiguation' in release else '', \
-                '['+str(mbcat.formats.getReleaseFormat(release)())+']', \
+                '['+str(mbcat.formats.getReleaseFormat(release))+']', \
                 ] )
 
     def formatDiscSortKey(self, releaseId):
@@ -266,8 +266,8 @@ class Catalog(object):
         return ' - '.join ( [ \
                 formatSortCredit(release), \
                 release['date'] if 'date' in release else '', \
-                release['title'], \
-                release['disambiguation'] if 'disambiguation' in release else '', \
+                release['title'] + \
+                (' ('+release['disambiguation']+')' if 'disambiguation' in release else ''), \
                 ] ) 
 
     def getSortedList(self, matchFmt=None):
@@ -285,7 +285,9 @@ class Catalog(object):
 
         if matchFormat:
             try:
-                sortedList = self.getSortedList(mbcat.formats.getReleaseFormat(self.getRelease(releaseId)))
+                sortedList = self.getSortedList(\
+                    mbcat.formats.getReleaseFormat(\
+                        self.getRelease(releaseId)).__class__)
             except KeyError as e:
                 _log.warning("Sorting release " + releaseId + " with no format into a list of all releases.")
                 sortedList = self.getSortedList()
@@ -298,7 +300,7 @@ class Catalog(object):
             print( ('\033[92m' if i == index else "") + "%4d" % i, \
                     sortId, \
                     sortStr, \
-                    ("[" + str(mbcat.formats.getReleaseFormat(self.getRelease(sortId))()) + "]"), \
+                    ("[" + str(mbcat.formats.getReleaseFormat(self.getRelease(sortId))) + "]"), \
                     (" <<<" if i == index else "") + \
                     ('\033[0m' if i == index else "") )
 
@@ -508,7 +510,7 @@ white-space: nowrap;
             self.metaIndex[releaseId] = rel
 
             # populate format map
-            self.formatMap[mbcat.formats.getReleaseFormat(rel)].append(releaseId)
+            self.formatMap[mbcat.formats.getReleaseFormat(rel).__class__].append(releaseId)
 
             # populate DiscId map
             for medium in rel['medium-list']:
@@ -530,6 +532,7 @@ white-space: nowrap;
             _log.error("Bad XML for " + releaseId + ": " + str(e))
             return
         except TypeError as e:
+            raise
             _log.error(releaseId + ' ' + str(type(e)) + ": " + str(e) + ": " + str(dir(e)))
             return
         
