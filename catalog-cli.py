@@ -258,6 +258,16 @@ class Shell:
         """Print a list of track titles and times."""
         self.c.writeTrackList(self.s, self.Search())
 
+    def GetSimilar(self):
+        """Helps the user identify similar, possibly duplicate, releases."""
+        number=20
+        lds = self.c.checkLevenshteinDistances()
+        for i in range (number):
+            self.s.write(str(lds[i][0]) + '\t' + \
+                self.c.formatDiscInfo(lds[i][1]) + ' <-> ' + \
+                self.c.formatDiscInfo(lds[i][2]) + '\n')
+
+
     def Quit(self):
         """quit (or press enter)"""
         sys.exit(0)
@@ -287,6 +297,7 @@ class Shell:
         'purchase' : AddPurchaseEvent,
         'comment' : AddComment,
         'rate' : SetRating,
+        'similar' : GetSimilar,
         }
 
     def main(self):

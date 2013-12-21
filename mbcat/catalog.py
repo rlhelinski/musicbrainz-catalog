@@ -637,6 +637,10 @@ white-space: nowrap;
     def checkLevenshteinDistances(self):
         import Levenshtein
         dists = []
+
+        widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Percentage() ]
+        maxval = (float(len(self)**2) - float(len(self)))/2
+        pbar = progressbar.ProgressBar(widgets=widgets, maxval=maxval).start()
         for leftIdx in range(len(self)):
             for rightIdx in range(leftIdx, len(self)):
                 if  leftIdx == rightIdx :
@@ -647,18 +651,10 @@ white-space: nowrap;
                         self.formatDiscSortKey(rightId))
 
                 dists.append((dist,leftId, rightId))
+                pbar.update(pbar.currval + 1)
+        pbar.finish()
 
         return sorted(dists, key=lambda sortKey: sortKey[0])
-
-    def getTopSimilarities(self, number=100):
-        """ 
-        Helps the user identify similar, possibly duplicate, releases.
-        """
-        lds = self.checkLevenshteinDistances()
-        for i in range (number):
-            _log.info(str(lds[i][0]) + "\t" + \
-                self.formatDiscInfo(lds[i][1]) + " <-> " + \
-                self.formatDiscInfo(lds[i][2]))
 
     def syncCollection(self, colId):
         """
