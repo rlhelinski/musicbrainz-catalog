@@ -7,7 +7,6 @@ from mbcat.catalog import *
 from mbcat.extradata import *
 from mbcat.barcode import UPC
 import os
-import shutil
 import sys
 from inputsplitter import InputSplitter
 
