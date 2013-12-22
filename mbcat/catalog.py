@@ -338,40 +338,116 @@ class Catalog(object):
 <html>
 <head>
 <title>Music Catalog</title>
+<script type="text/javascript" src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+  $("#toc ul").show();
+  $("#togglelink").click(function(e){
+    $("#toc ul").slideToggle();
+    var isShow = $(this).text() == 'Show';
+    $(this).text(isShow ? 'Hide' : 'Show');
+  });
+  $(".releaserow").click(function(e){
+    $(this).toggleClass("active");
+    $(this).next("tr").stop('true','true').slideToggle(1000);
+  });
+});
+</script>
 <style type="text/css">
 .hasTooltip {
-position:relative;
+    position:relative;
 }
+
 .hasTooltip span {
-display:none;
+    display:none;
 }
 
 .hasTooltip:hover span {
-display:block;
-position:absolute;
-z-index:15;
-background-color:black;
-border-radius:5px;
-color:white;
-box-shadow:1px 1px 3px gray;
-padding:5px;
-top:1.3em;
-left:0px;
-white-space: nowrap;
+    display:block;
+    position:absolute;
+    z-index:15;
+    background-color:black;
+    border-radius:5px;
+    color:white;
+    box-shadow:1px 1px 3px gray;
+    padding:5px;
+    top:1.3em;
+    left:0px;
+    white-space: nowrap;
 }
 
+#toc, .toc {
+    float: right;
+    display: table;
+    padding: 7px;
+}
+
+#toc, .toc, .mw-warning {
+    border: 1px solid rgb(170, 170, 170);
+    background-color: rgb(249, 249, 249);
+    padding: 5px;
+    font-size: 95%;
+}
+
+#toc h2, .toc h2 {
+    display: inline;
+    border: medium none;
+    padding: 0px;
+    font-size: 100%;
+    font-weight: bold;
+}
+
+.toctoggle{
+  display:inline-block;
+}
+
+#toc .toctitle, .toc .toctitle {
+    text-align: center;
+}
+
+tr.releaserow:hover{
+  background-color:beige;
+}
+
+.extrarow{
+  display:none;
+}
 </style>
 </head>
 <body>""")
 
-        # TODO this list should be populated at load time
         formatsBySize = sorted(self.formatMap.keys(), key=lambda obj: obj())
+
+        htf.write('<a name="top">\n')
+        htf.write('<div id="toc">\n')
+        htf.write('<div id="toctitle">\n')
+        htf.write('<h2>Contents</h2>\n')
+        htf.write('<span class="toctoggle">&nbsp;[<a href="#" class="internal" id="togglelink">hide</a>]&nbsp;</span>\n</div>\n')
+        htf.write('<ul>\n')
+        for releaseType in formatsBySize:
+            htf.write('\t<li><a href="#'+str(releaseType())+'">'+\
+                str(releaseType())+'</a></li>\n')
+        htf.write('</ul>\n')
+        htf.write('</div>\n')
+
         for releaseType in formatsBySize:
             sortedList = self.getSortedList(releaseType)
             if len(sortedList) == 0:
                 continue
-            htf.write("<h2>" + str(releaseType()) + (" (%d Releases)" % len(sortedList)) + "</h2>")
-            htf.write("<table>")
+            htf.write("<h2><a name=\""+str(releaseType())+"\">" + str(releaseType()) + (" (%d Releases)" %
+            len(sortedList)) + " <a href=\"#top\">top</a></h2>\n")
+            htf.write("<table>\n")
+            mainCols = ['Artist',
+                'Release Title',
+                'Date',
+                'Country',
+                'Label',
+                'Catalog #',
+                'Barcode',
+                'ASIN',
+                'Format',
+                'Date Added',
+                ]
             htf.write("""<tr>
 <!-- <th>Sort Index</th> -->
 <th>Artist</th>
@@ -397,7 +473,7 @@ white-space: nowrap;
                 else:
                     coverartUrl = None
 
-                htf.write("<tr>")
+                htf.write("<tr class=\"releaserow\">")
                 htf.write("<!-- <td>"+("%04d" % sortIndex)+"</td> -->")
                 htf.write("<td>" + ''.join( [\
                     credit if type(credit)==str else \
@@ -434,6 +510,8 @@ white-space: nowrap;
                     "<td>"+(datetime.fromtimestamp(self.extraIndex[releaseId].addDates[0]).strftime('%Y-%m-%d') if \
                     len(self.extraIndex[releaseId].addDates) else '')+"</td>")
                 htf.write("</tr>")
+                htf.write("<tr class=\"extrarow\"><td>Splunge</td></tr>")
+
             htf.write("</table>")
 
         htf.write("<p>%d releases</p>" % len(self))
