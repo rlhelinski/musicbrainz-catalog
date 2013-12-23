@@ -347,9 +347,13 @@ $(document).ready(function(){
     var isShow = $(this).text() == 'Show';
     $(this).text(isShow ? 'Hide' : 'Show');
   });
-  $(".releaserow").click(function(e){
+  $(".releaserow").click(function(){
     $(this).toggleClass("active");
-    $(this).next("tr").stop('true','true').slideToggle(1000);
+    $(this).next("tr").stop('true','true').slideToggle();
+  });
+  $(".extrarow").click(function(){
+    $(this).prev("tr").toggleClass("active");
+    $(this).hide();
   });
 });
 </script>
@@ -397,6 +401,10 @@ $(document).ready(function(){
     font-weight: bold;
 }
 
+h2 {
+    clear: both;
+}
+
 .toctoggle{
   display:inline-block;
 }
@@ -405,13 +413,38 @@ $(document).ready(function(){
     text-align: center;
 }
 
+.formattable {
+    width: 100%;
+}
+
 tr.releaserow:hover{
+  background-color:beige;
+}
+
+.active{
   background-color:beige;
 }
 
 .extrarow{
   display:none;
+  background-color:lightgray;
 }
+
+.extrarow td{
+  vertical-align:top;
+}
+
+.time {
+  align:right;
+}
+
+.coverart {
+  max-width:320px; max-height:320px;
+  border-radius:5px;
+  background-color:black;
+  padding:5px;
+}
+
 </style>
 </head>
 <body>""")
@@ -436,7 +469,8 @@ tr.releaserow:hover{
                 continue
             htf.write("<h2><a name=\""+str(releaseType())+"\">" + str(releaseType()) + (" (%d Releases)" %
             len(sortedList)) + " <a href=\"#top\">top</a></h2>\n")
-            htf.write("<table>\n")
+
+            htf.write("<table class=\"formattable\">\n")
             mainCols = ['Artist',
                 'Release Title',
                 'Date',
@@ -445,72 +479,91 @@ tr.releaserow:hover{
                 'Catalog #',
                 'Barcode',
                 'ASIN',
-                'Format',
-                'Date Added',
                 ]
-            htf.write("""<tr>
-<!-- <th>Sort Index</th> -->
-<th>Artist</th>
-<th>Release Title</th>
-<th>Date</th>
-<th>Country</th>
-<th>Label</th>
-<th>Catalog #</th>
-<th>Barcode</th>
-<th>ASIN</th>
-<th>Format</th>
-<th>Date Added</th>
-</tr>
-""")
-            for sortIndex, (releaseId, releaseSortStr) in enumerate(sortedList):
+            htf.write('<tr>\n' + \
+                '\n'.join(['<th>'+name+'</th>' for name in mainCols]) +\
+                '\n</tr>\n')
+
+            for (releaseId, releaseSortStr) in sortedList:
                 rel = self.getRelease(releaseId)
 
                 #coverartUrl = mbcat.amazonservices.getAsinImageUrl(rel.asin, mbcat.amazonservices.AMAZON_SERVER["amazon.com"], 'S')
                 # Refer to local copy instead
                 imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
-                if os.path.isfile(imgPath):
-                    coverartUrl = imgPath
-                else:
-                    coverartUrl = None
+                coverartUrl = imgPath if os.path.isfile(imgPath) else None
 
-                htf.write("<tr class=\"releaserow\">")
-                htf.write("<!-- <td>"+("%04d" % sortIndex)+"</td> -->")
+                htf.write("<tr class=\"releaserow\">\n")
                 htf.write("<td>" + ''.join( [\
                     credit if type(credit)==str else \
                     "<a href=\""+self.artistUrl+credit['artist']['id']+"\">"+\
                     fmt(credit['artist']['name'])+\
-                    "</a>" for credit in rel['artist-credit'] ] ) + "</td>")
+                    "</a>" for credit in rel['artist-credit'] ] ) + "</td>\n")
                 htf.write("<td><a href=\""+self.releaseUrl+rel['id']+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
                     ">"+fmt(rel['title'])\
                     +(' (%s)' % fmt(rel['disambiguation']) if 'disambiguation' in rel and rel['disambiguation'] else '')\
                     +("<img width=24 height=24 src='tango/Image-x-generic.svg'><span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" \
                     if coverartUrl else "") + "</a>" + \
                     (''.join("<a href='"+fmt(path)+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
-                    if self.extraIndex[releaseId].digitalPaths else "") + "</td>")
-                htf.write("<td>"+(fmt(rel['date']) if 'date' in rel else '')+"</td>")
+                    if self.extraIndex[releaseId].digitalPaths else "") + "</td>\n")
+                htf.write("<td>"+(fmt(rel['date']) if 'date' in rel else '')+"</td>\n")
                 htf.write("<td>"+(fmt(rel['country']) \
-                    if 'country' in rel else '')+"</td>")
+                    if 'country' in rel else '')+"</td>\n")
                 htf.write("<td>"+', '.join([\
                     "<a href=\""+self.labelUrl+info['label']['id']+"\">"+\
                     fmt(info['label']['name'])+\
-                    "</a>" if 'label' in info else '' for info in rel['label-info-list']])+"</td>")
+                    "</a>" if 'label' in info else '' for info in rel['label-info-list']])+"</td>\n")
                 # TODO handle empty strings here (remove from this list before joining)
                 htf.write("<td>"+', '.join([\
                     fmt(info['catalog-number']) if \
-                    'catalog-number' in info else '' for info in rel['label-info-list']])+"</td>")
+                    'catalog-number' in info else '' for info in rel['label-info-list']])+"</td>\n")
                 htf.write("<td>"+\
                     ('' if 'barcode' not in rel else \
                     rel['barcode'] if rel['barcode'] else
-                    '[none]')+"</td>")
+                    '[none]')+"</td>\n")
                 htf.write("<td>"+("<a href=\"" + \
                     mbcat.amazonservices.getAsinProductUrl(rel['asin']) + \
-                    "\">" + rel['asin'] + "</a>" if 'asin' in rel else '')+"</td>")
-                htf.write("<td>"+' + '.join([(medium['format'] if 'format' in medium else '(unknown)') for medium in rel['medium-list']])+"</td>")
+                    "\">" + rel['asin'] + "</a>" if 'asin' in rel else '')+"</td>\n")
+                htf.write("</tr>\n")
+                htf.write("<tr class=\"extrarow\">\n")
+                htf.write("<td colspan=\""+str(len(mainCols))+"\">\n")
+                htf.write('<table class="releasedetail">\n')
+                htf.write('<tr>\n')
+                detailCols = [
+                    'Cover Art',
+                    'Track List',
+                    'Digital Paths',
+                    'Date Added',
+                    'Format',
+                    ]
+                for name in detailCols:
+                    htf.write('<th>'+fmt(name)+'</th>\n')
+                htf.write('</tr>\n<tr>\n')
+                htf.write('<td>'+('<img class="coverart" src="'+ coverartUrl +'">' if coverartUrl else '')+'</td>\n')
+                htf.write('<td>\n')
+                htf.write('<table class="tracklist">\n')
+                for medium in rel['medium-list']:
+                    for track in medium['track-list']:
+                        rec = track['recording']
+                        length = float(rec['length'])/1000 if 'length' in rec else None
+                        htf.write('<tr><td class="time">'+
+                            fmt(rec['title']) + '</td><td>' + 
+                            (('%3d:%02d' % (length/60, length%60)) if length else '  ?:??') + 
+                            '\n</td></tr>\n')
+                htf.write('</table>\n</td>\n')
+                htf.write('<td>\n<table class="pathlist">'+\
+                    ''.join([\
+                        ('<tr><td><a href="'+fmt(path)+'">'+fmt(path)+'</a></td></tr>\n')\
+                        for path in self.extraIndex[releaseId].digitalPaths])+\
+                    '</table>\n</td>\n')
                 htf.write(\
-                    "<td>"+(datetime.fromtimestamp(self.extraIndex[releaseId].addDates[0]).strftime('%Y-%m-%d') if \
-                    len(self.extraIndex[releaseId].addDates) else '')+"</td>")
-                htf.write("</tr>")
-                htf.write("<tr class=\"extrarow\"><td>Splunge</td></tr>")
+                    "<td>"+(datetime.fromtimestamp( \
+                        self.extraIndex[releaseId].addDates[0] \
+                        ).strftime('%Y-%m-%d') if \
+                    len(self.extraIndex[releaseId].addDates) else '')+"</td>\n")
+                htf.write("<td>"+' + '.join([(medium['format'] if 'format' in medium else '(unknown)') for medium in rel['medium-list']])+"</td>\n")
+
+                htf.write('</tr>\n')
+                htf.write("</table>\n</td>\n</tr>\n")
 
             htf.write("</table>")
 
