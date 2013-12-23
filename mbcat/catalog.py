@@ -350,13 +350,15 @@ $(document).ready(function(){
   $(".releaserow").click(function(e){
     if(! $(e.target).is("a")) {
         $(this).toggleClass("active");
-        $(this).next("tr").stop('true','true').slideToggle();
+        $(this).next("tr").slideToggle();
+        $(this).next("tr").children("td").children(".togglediv").stop('true','true').slideToggle();
     }
   });
   $(".extrarow").click(function(e){
     if(! $(e.target).is("a")) {
         $(this).prev("tr").toggleClass("active");
-        $(this).hide();
+        $(this).slideToggle();
+        $(this).children("td").children(".togglediv").slideToggle();
     }
   });
 });
@@ -429,14 +431,18 @@ tr.releaserow:hover{
   background-color:beige;
 }
 
-.extrarow{
+.extrarow {
   display:none;
-  background-color:lightgray;
 }
 
 .extrarow td{
   vertical-align:top;
+  background-color:lightgray;
 }
+
+.togglediv {
+  display:none;
+  }
 
 .time {
   align:right;
@@ -527,6 +533,7 @@ tr.releaserow:hover{
                 htf.write("</tr>\n")
                 htf.write("<tr class=\"extrarow\">\n")
                 htf.write("<td colspan=\""+str(len(mainCols))+"\">\n")
+                htf.write("<div class=\"togglediv\">\n")
                 htf.write('<table class="releasedetail">\n')
                 htf.write('<tr>\n')
                 detailCols = [
@@ -564,7 +571,7 @@ tr.releaserow:hover{
                 htf.write("<td>"+' + '.join([(medium['format'] if 'format' in medium else '(unknown)') for medium in rel['medium-list']])+"</td>\n")
 
                 htf.write('</tr>\n')
-                htf.write("</table>\n</td>\n</tr>\n")
+                htf.write("</table>\n</div>\n</td>\n</tr>\n")
 
             htf.write("</table>")
 
