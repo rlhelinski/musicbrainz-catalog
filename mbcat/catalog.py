@@ -354,7 +354,7 @@ $(document).ready(function(){
         $(this).next("tr").children("td").children(".togglediv").stop('true','true').slideToggle();
     }
   });
-  $(".extrarow").click(function(e){
+  $(".detailrow").click(function(e){
     if(! $(e.target).is("a")) {
         $(this).prev("tr").toggleClass("active");
         $(this).slideToggle();
@@ -431,11 +431,11 @@ tr.releaserow:hover{
   background-color:beige;
 }
 
-.extrarow {
+.detailrow {
   display:none;
 }
 
-.extrarow td{
+.detailrow td{
   vertical-align:top;
   background-color:lightgray;
 }
@@ -531,7 +531,7 @@ tr.releaserow:hover{
                     mbcat.amazonservices.getAsinProductUrl(rel['asin']) + \
                     "\">" + rel['asin'] + "</a>" if 'asin' in rel else '')+"</td>\n")
                 htf.write("</tr>\n")
-                htf.write("<tr class=\"extrarow\">\n")
+                htf.write("<tr class=\"detailrow\">\n")
                 htf.write("<td colspan=\""+str(len(mainCols))+"\">\n")
                 htf.write("<div class=\"togglediv\">\n")
                 htf.write('<table class="releasedetail">\n')
@@ -541,7 +541,7 @@ tr.releaserow:hover{
                     'Track List',
                     'Digital Paths',
                     'Date Added',
-                    'Format',
+                    'Format(s)',
                     ]
                 for name in detailCols:
                     htf.write('<th>'+fmt(name)+'</th>\n')
@@ -555,7 +555,7 @@ tr.releaserow:hover{
                         length = float(rec['length'])/1000 if 'length' in rec else None
                         htf.write('<tr><td class="time">'+
                             fmt(rec['title']) + '</td><td>' + 
-                            (('%d:%d' % (length/60, length%60)) if length else '?:??') + 
+                            (('%d:%02d' % (length/60, length%60)) if length else '?:??') + 
                             '</td></tr>\n')
                 htf.write('</table>\n</td>\n')
                 htf.write('<td>\n<table class="pathlist">'+\
