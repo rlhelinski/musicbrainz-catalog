@@ -347,13 +347,17 @@ $(document).ready(function(){
     var isShow = $(this).text() == 'Show';
     $(this).text(isShow ? 'Hide' : 'Show');
   });
-  $(".releaserow").click(function(){
-    $(this).toggleClass("active");
-    $(this).next("tr").stop('true','true').slideToggle();
+  $(".releaserow").click(function(e){
+    if(! $(e.target).is("a")) {
+        $(this).toggleClass("active");
+        $(this).next("tr").stop('true','true').slideToggle();
+    }
   });
-  $(".extrarow").click(function(){
-    $(this).prev("tr").toggleClass("active");
-    $(this).hide();
+  $(".extrarow").click(function(e){
+    if(! $(e.target).is("a")) {
+        $(this).prev("tr").toggleClass("active");
+        $(this).hide();
+    }
   });
 });
 </script>
@@ -501,10 +505,7 @@ tr.releaserow:hover{
                 htf.write("<td><a href=\""+self.releaseUrl+rel['id']+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
                     ">"+fmt(rel['title'])\
                     +(' (%s)' % fmt(rel['disambiguation']) if 'disambiguation' in rel and rel['disambiguation'] else '')\
-                    +("<img width=24 height=24 src='tango/Image-x-generic.svg'><span><img width=320 height=320 src=\""+ coverartUrl +"\"></span>" \
-                    if coverartUrl else "") + "</a>" + \
-                    (''.join("<a href='"+fmt(path)+"'><img width=24 height=24 src='tango/Audio-x-generic.svg'></a>" for path in self.extraIndex[releaseId].digitalPaths) \
-                    if self.extraIndex[releaseId].digitalPaths else "") + "</td>\n")
+                    + "</a></td>\n")
                 htf.write("<td>"+(fmt(rel['date']) if 'date' in rel else '')+"</td>\n")
                 htf.write("<td>"+(fmt(rel['country']) \
                     if 'country' in rel else '')+"</td>\n")
@@ -547,8 +548,8 @@ tr.releaserow:hover{
                         length = float(rec['length'])/1000 if 'length' in rec else None
                         htf.write('<tr><td class="time">'+
                             fmt(rec['title']) + '</td><td>' + 
-                            (('%3d:%02d' % (length/60, length%60)) if length else '  ?:??') + 
-                            '\n</td></tr>\n')
+                            (('%d:%d' % (length/60, length%60)) if length else '?:??') + 
+                            '</td></tr>\n')
                 htf.write('</table>\n</td>\n')
                 htf.write('<td>\n<table class="pathlist">'+\
                     ''.join([\
