@@ -765,9 +765,10 @@ tr.releaserow:hover{
             _log.warning('No cover art for ' + releaseId + ' available from Cover Art Archive')
                 
             if 'asin' in release:
+                _log.info('Trying to fetch cover art from Amazon instead')
                 mbcat.amazonservices.saveImage(release['asin'], mbcat.amazonservices.AMAZON_SERVER["amazon.com"], imgPath)
             else:
-                _log.warning('No ASIN for ' + releaseId)
+                _log.warning('No ASIN for ' + releaseId + ', cannot fetch from Amazon.')
 
     def refreshAllCoverArt(self, maxage=60*60*24):
         for releaseId in self.getReleaseIds():
