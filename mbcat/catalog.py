@@ -842,6 +842,8 @@ tr.releaserow:hover{
             for medium in rel['medium-list']:
                 for track in medium['track-list']:
                     rec = track['recording']
+                    if 'length' not in rec:
+                        _log.warning('Empty track length in '+releaseId)
                     length = float(rec['length'])/1000 if 'length' in rec else 2*60
                     f.write('%.6f\t%.6f\t%s\n' % (pos, pos+length, rec['title']))
                     pos += length
@@ -853,7 +855,7 @@ tr.releaserow:hover{
         rel = self.getRelease(releaseId)
 
         for name, value in [
-                ('ALBUM', rel['title']),
+                ('ALBUM', rel['title'] + (' ('+rel['disambiguation']+')' if 'disambiguation' in rel else '')),
                 ('YEAR', rel['date'] if 'date' in rel else ''),
                 ('ARTIST', rel['artist-credit-phrase']),
                 ('COMMENTS', self.releaseUrl+releaseId),
