@@ -508,7 +508,7 @@ tr.releaserow:hover{
                     "<a href=\""+self.artistUrl+credit['artist']['id']+"\">"+\
                     fmt(credit['artist']['name'])+\
                     "</a>" for credit in rel['artist-credit'] ] ) + "</td>\n")
-                htf.write("<td><a href=\""+self.releaseUrl+rel['id']+"\"" + (" class=\"hasTooltip\"" if coverartUrl else "") + \
+                htf.write("<td><a href=\""+self.releaseUrl+rel['id']+"\"" + \
                     ">"+fmt(rel['title'])\
                     +(' (%s)' % fmt(rel['disambiguation']) if 'disambiguation' in rel and rel['disambiguation'] else '')\
                     + "</a></td>\n")
