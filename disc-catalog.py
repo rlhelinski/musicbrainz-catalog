@@ -85,7 +85,7 @@ while not io.nextLine('Press enter to read the disc or \'q\' to quit... ').start
                 print ("Artist   :", rel['artist-credit-phrase'])
                 print ("Title    :", rel['title'])
                 print ("Date    :", rel['date'] if 'date' in rel else '')
-                print ("Country    :", rel['country'])
+                print ("Country    :", rel['country'] if 'country' in rel else '')
                 if 'barcode' in rel:
                     print ("Barcode    :", rel['barcode'])
                 if 'label-info-list' in rel:
