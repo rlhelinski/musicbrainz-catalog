@@ -105,7 +105,7 @@ def saveImage(releaseAsin, server, imgPath):
         _log.error(e)
         return
 
-    with open(imgPath, 'w') as imgf:
+    with open(imgPath, 'wb') as imgf:
         imgf.write(response.read())
         _log.info("Wrote %d bytes to %s" %(imgf.tell(), imgPath))
 
