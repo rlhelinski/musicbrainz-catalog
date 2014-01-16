@@ -289,9 +289,11 @@ class Shell:
             #'list' : DigitalList,
             },
         'sync' : SyncCollection, 
-        'labeltrack' : LabelTrack, 
         'tracklist' : TrackList, 
-        'metatags' : MetaTags,
+        'audacity' : {
+            'labeltrack' : LabelTrack, 
+            'metatags' : MetaTags,
+            },
         'coverart' : CoverArt,
         'purchase' : AddPurchaseEvent,
         'comment' : AddComment,
