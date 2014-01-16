@@ -844,7 +844,7 @@ tr.releaserow:hover{
                 for track in medium['track-list']:
                     rec = track['recording']
                     if 'length' not in rec:
-                        _log.warning('Empty track length in '+releaseId)
+                        _log.warning('Track '+track['number']+' length is empty in '+releaseId)
                     length = float(rec['length'])/1000 if 'length' in rec else 2*60
                     f.write('%.6f\t%.6f\t%s\n' % (pos, pos+length, rec['title']))
                     pos += length
@@ -867,7 +867,7 @@ tr.releaserow:hover{
         with open(outPath, 'wb') as xmlfile:
             xmlfile.write(etree.tostring(myxml))
 
-        _log.info('Saved Audacity tags XML to \'%s\'' % outPath)
+        _log.info('Saved Audacity tags XML for '+releaseId+' to \'%s\'' % outPath)
 
     def writeTrackList(self, stream, releaseId):
         """Write ASCII tracklist for releaseId to 'stream'. """
