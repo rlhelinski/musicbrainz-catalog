@@ -1,0 +1,33 @@
+ryan@revelator:~/Dropbox/musicbrainz/sqlite$ sqlite3 test.db
+SQLite version 3.7.17 2013-05-20 00:56:22
+Enter ".help" for instructions
+Enter SQL statements terminated with a ";"
+sqlite> .tables
+release
+sqlite> SELECT * FROM release
+   ...> ;
+sqlite> SELECT * FROM release;
+sqlite> .schema release
+CREATE TABLE release (metadata text);
+sqlite> DROP TABLE release;
+sqlite> CREATE TABLE release (id TEXT, metadata TEXT);
+sqlite> DROP TABLE release;
+sqlite> CREATE TABLE release (id TEXT PRIMARY kEY, metadata TEXT);
+sqlite> insert into release(id, metadata)
+   ...> values('ca519b2d-5fd3-4d7b-a537-2d39da5d5018', '<xml>...</xml>');
+sqlite> insert into release(id, metadata)
+   ...> values(''3355c565-c28f-45b7-bae3-96435978509f', '<xml>.o.</xml>');
+   ...> 
+   ...> ;
+   ...> '
+   ...> '
+   ...> ';
+Error: unrecognized token: "3355c565"
+sqlite> insert into release(id, metadata)
+   ...> values('3355c565-c28f-45b7-bae3-96435978509f', '<xml>.o.</xml>');
+sqlite> select * from release;
+ca519b2d-5fd3-4d7b-a537-2d39da5d5018|<xml>...</xml>
+3355c565-c28f-45b7-bae3-96435978509f|<xml>.o.</xml>
+sqlite> select * from release where id='3355c565-c28f-45b7-bae3-96435978509f';
+3355c565-c28f-45b7-bae3-96435978509f|<xml>.o.</xml>
+
