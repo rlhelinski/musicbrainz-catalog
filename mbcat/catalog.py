@@ -80,22 +80,22 @@ class Catalog(object):
     labelUrl = mbUrl+'label/'
     releaseUrl = mbUrl+'release/'
 
-    def __init__(self, rootPath='release-id'):
-        self.rootPath = rootPath
-        if not os.path.isdir(self.rootPath):
-            os.mkdir(self.rootPath)
+    def __init__(self, dbPath='mbcat.db'):
+        self.dbPath = dbPath
+
         self.prefs = mbcat.userprefs.PrefManager()
-        self._resetMaps()
+
+        # should we connect here, once and for all, or should we make temporary
+        # connections to sqlite3? 
+        # Let's try here for now, just need to make sure we disconnect when this
+        # object is deleted.
+        self.conn = sqlite3.connect(self.dbPath)
+        # For releasing this, can we assume that it will happen when this object
+        # goes out of scope and is deleted? 
 
     def _resetMaps(self):
-        self.metaIndex = dict()
-        self.extraIndex = dict()
-        self.wordMap = dict()
-        self.discIdMap = defaultdict(list)
-        self.barCodeMap = defaultdict(list)
-        # To map ReleaseId -> Format
-        self.formatMap = defaultdict(list)
-
+        """Drop the derived tables in the database and rebuild them"""
+        pass
             
     def _get_xml_path(self, releaseId, fileName='metadata.xml'):
         return os.path.join(self.rootPath, releaseId, fileName)
@@ -215,7 +215,8 @@ class Catalog(object):
             self.metaIndex[releaseId] = metadata
         zf.close()
 
-    def getReleaseWords(self, rel):
+    @staticmethod
+    def getReleaseWords(rel):
         words = []
         for field in [ rel['title'], rel['artist-credit-phrase'] ] + \
             ([rel['disambiguation']] if 'disambiguation' in rel else []):
