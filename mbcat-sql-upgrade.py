@@ -7,6 +7,7 @@ import logging
 
 import musicbrainzngs.musicbrainz as mb
 import musicbrainzngs.mbxml as mbxml
+import progressbar
 # Get the XML parsing exceptions to catch. The behavior changed with Python 2.7
 # and ElementTree 1.3.
 import xml.etree.ElementTree as etree
@@ -21,17 +22,8 @@ print 'pysqlite3:', sqlite3.version, 'sqlite3', sqlite3.sqlite_version
 # Create a new database
 dbname = 'mbcat.db'
 
-class Splunge(list):
-    """It's just a list"""
-
-def splunge_adapt(x):
-    return ';'.join(x)
-
-def splunge_convert(x):
-    return x.split(';')
-
-sqlite3.register_adapter(Splunge, splunge_adapt)
-sqlite3.register_converter("Splunge", splunge_convert)
+sqlite3.register_adapter(list, pickle.dumps)
+sqlite3.register_converter("list", pickle.loads)
 
 rootPath = 'release-id'
 
@@ -49,7 +41,7 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     
     cur.execute('CREATE TABLE words('+\
             'word TEXT PRIMARY KEY, '+\
-            'releases Splunge)')
+            'releases list)')
 
     cur.execute('CREATE TABLE discids('+\
             'discid TEXT PRIMARY KEY, '+\
@@ -65,7 +57,11 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
 
     con.commit()
 
-    for relId in os.listdir(rootPath):
+    fileList = os.listdir(rootPath)
+    widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Percentage() ]
+    if len(fileList):
+        pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(fileList)).start()
+    for relId in fileList:
         #with codecs.open(os.path.join(rootPath, relId, 'metadata.xml'), encoding='utf-8') as f:
         with file(os.path.join(rootPath, relId, 'metadata.xml'), 'r') as f:
             metaXml = f.read()
@@ -90,39 +86,28 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
         cur.execute('insert into releases(id, meta, count, comment, rating) values (?, ?, ?, ?, ?)',
                 (relId, metaXml.decode('utf-8'), 1, ed.comment if ed else '', ed.rating if ed else 0))
 
-        #import pdb; pdb.set_trace()
         try:
             rel_words = mbcat.Catalog.getReleaseWords(metadata)
             for word in rel_words:
-                #print 'Checking for: ' + word,
                 cur.execute('select * from words where word = ?', (word,))
                 row = cur.fetchall()
-                #print 'Fetched row: ' + repr(row)
-                #import pdb; pdb.set_trace()
                 if not row:
-                    #print 'Word not known. '
-                    relList = Splunge()
-                    relList.append(relId)
-                    #print 'adding', repr((word, relList))
-                    #print 'type of relList:', type(relList)
+                    relList = [relId]
                     cur.execute('insert into words(word, releases) values (?, ?)',
                             (word, relList))
-                    cur.execute('select * from words where word = ?', (word,))
-                    #print 'added row:', cur.fetchone()
                 else:
-                    print 'Word known. '
-                    print repr(row)
-                    relList = Splunge(row[0][1])
+                    relList = row[0][1]
                     relList.append(relId)
-                    print 'adding', word, relList
                     cur.execute('replace into words(word, releases) values (?, ?)',
                             (word, relList))
 
         except KeyError as e:
             logging.error('Missing field from release '+relId+': '+str(e))
 
+        pbar.update(pbar.currval + 1)
 
     con.commit()
+    pbar.finish()
 
 with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     cur = con.cursor()
