@@ -28,6 +28,19 @@ sqlite3.register_converter("list", pickle.loads)
 
 rootPath = 'release-id'
 
+def sql_list_append(cursor, table_name, field_name, key, value):
+    cursor.execute('select * from '+table_name+' where '+field_name+' = ?', (key,))
+    row = cursor.fetchall()
+    if not row:
+        relList = [value]
+    else:
+        relList = row[0][1]
+        relList.append(relId)
+
+    cur.execute(('replace' if row else 'insert')+' into '+table_name+'('+field_name+', releases) values (?, ?)',
+            (key, relList))
+
+
 # Create tables
 with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     cur = con.cursor()
@@ -90,63 +103,20 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
         # Update words table
         rel_words = mbcat.Catalog.getReleaseWords(metadata)
         for word in rel_words:
-            cur.execute('select * from words where word = ?', (word,))
-            row = cur.fetchall()
-            if not row:
-                relList = [relId]
-                cur.execute('insert into words(word, releases) values (?, ?)',
-                        (word, relList))
-            else:
-                relList = row[0][1]
-                relList.append(relId)
-                cur.execute('replace into words(word, releases) values (?, ?)',
-                        (word, relList))
+            sql_list_append(cur, 'words', 'word', word, relId)
 
         # Update barcodes -> (barcode, releases)
         if 'barcode' in metadata and metadata['barcode']:
-            cur.execute('select releases from barcodes where barcode = ?',
-                    (metadata['barcode'],))
-            row = cur.fetchall()
-            if not row:
-                relList = [relId]
-                cur.execute('insert into barcodes(barcode, releases) values (?, ?)',
-                        (metadata['barcode'], relList))
-            else:
-                relList = row[0][0]
-                relList.append(relId)
-                cur.execute('replace into barcodes(barcode, releases) values (?, ?)',
-                        (metadata['barcode'], relList))
+            sql_list_append(cur, 'barcodes', 'barcode', metadata['barcode'], relId)
 
         # Update discids -> (discid, releases)
         for medium in metadata['medium-list']:
             for disc in medium['disc-list']:
-                cur.execute('select releases from discids where discid = ?',
-                        (disc['id'],))
-                row = cur.fetchall()
-                if not row:
-                    relList = [relId]
-                    cur.execute('insert into discids(discid, releases) values (?, ?)',
-                            (disc['id'], relList))
-                else:
-                    relList = row[0][0]
-                    relList.append(relId)
-                    cur.execute('replace into discids(discid, releases) values (?, ?)',
-                            (disc['id'], relList))
+                sql_list_append(cur, 'discids', 'discid', disc['id'], relId)
 
         # Update formats -> (format, releases)
         fmt = mbcat.formats.getReleaseFormat(metadata).__class__.__name__
-        cur.execute('select releases from formats where format = ?',
-                (fmt,))
-        row = cur.fetchall()
-        if not row:
-            relList = [relId]
-            cur.execute('insert into formats(format, releases) values (?, ?)',
-                    (fmt, relList))
-        else:
-            relList = row[0][0]
-            relList.append(relId)
-            cur.execute('replace into formats(format, releases) values (?, ?)',
-                    (fmt, relList))
+        sql_list_append(cur, 'formats', 'format', fmt, relId)
 
         pbar.update(pbar.currval + 1)
 
