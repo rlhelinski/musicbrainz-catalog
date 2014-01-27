@@ -16,15 +16,22 @@ if hasattr(etree, 'ParseError'):
 else:
     ETREE_EXCEPTIONS = (expat.ExpatError)
 
-
-
-print sqlite3.version, sqlite3.sqlite_version
+print 'pysqlite3:', sqlite3.version, 'sqlite3', sqlite3.sqlite_version
 
 # Create a new database
 dbname = 'mbcat.db'
 
-sqlite3.register_adapter(list, pickle.dumps)
-sqlite3.register_converter('list', pickle.loads)
+class Splunge(list):
+    """It's just a list"""
+
+def splunge_adapt(x):
+    return ';'.join(x)
+
+def splunge_convert(x):
+    return x.split(';')
+
+sqlite3.register_adapter(Splunge, splunge_adapt)
+sqlite3.register_converter("Splunge", splunge_convert)
 
 rootPath = 'release-id'
 
@@ -42,7 +49,7 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     
     cur.execute('CREATE TABLE words('+\
             'word TEXT PRIMARY KEY, '+\
-            'releases list)')
+            'releases Splunge)')
 
     cur.execute('CREATE TABLE discids('+\
             'discid TEXT PRIMARY KEY, '+\
@@ -85,21 +92,29 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
 
         #import pdb; pdb.set_trace()
         try:
-            words = mbcat.Catalog.getReleaseWords(metadata)
-            for word in words:
-                print 'Checking for: ' + word,
-                cur.execute('select ? from words', (word,))
-                row = cur.fetchone()
-                print 'Fetched row: ' + repr(row)
-                if not row or len(row)<2:
-                    print 'Word not known. '
-                    relList = [relId]
+            rel_words = mbcat.Catalog.getReleaseWords(metadata)
+            for word in rel_words:
+                #print 'Checking for: ' + word,
+                cur.execute('select * from words where word = ?', (word,))
+                row = cur.fetchall()
+                #print 'Fetched row: ' + repr(row)
+                #import pdb; pdb.set_trace()
+                if not row:
+                    #print 'Word not known. '
+                    relList = Splunge()
+                    relList.append(relId)
+                    #print 'adding', repr((word, relList))
+                    #print 'type of relList:', type(relList)
                     cur.execute('insert into words(word, releases) values (?, ?)',
                             (word, relList))
+                    cur.execute('select * from words where word = ?', (word,))
+                    #print 'added row:', cur.fetchone()
                 else:
                     print 'Word known. '
-                    relList = row[1]
+                    print repr(row)
+                    relList = Splunge(row[0][1])
                     relList.append(relId)
+                    print 'adding', word, relList
                     cur.execute('replace into words(word, releases) values (?, ?)',
                             (word, relList))
 
