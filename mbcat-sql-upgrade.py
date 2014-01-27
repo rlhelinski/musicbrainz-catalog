@@ -4,6 +4,7 @@ import os
 import codecs
 import mbcat
 import logging
+logging.basicConfig(level=logging.INFO)
 
 import musicbrainzngs.musicbrainz as mb
 import musicbrainzngs.mbxml as mbxml
@@ -86,23 +87,66 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
         cur.execute('insert into releases(id, meta, count, comment, rating) values (?, ?, ?, ?, ?)',
                 (relId, metaXml.decode('utf-8'), 1, ed.comment if ed else '', ed.rating if ed else 0))
 
-        try:
-            rel_words = mbcat.Catalog.getReleaseWords(metadata)
-            for word in rel_words:
-                cur.execute('select * from words where word = ?', (word,))
+        # Update words table
+        rel_words = mbcat.Catalog.getReleaseWords(metadata)
+        for word in rel_words:
+            cur.execute('select * from words where word = ?', (word,))
+            row = cur.fetchall()
+            if not row:
+                relList = [relId]
+                cur.execute('insert into words(word, releases) values (?, ?)',
+                        (word, relList))
+            else:
+                relList = row[0][1]
+                relList.append(relId)
+                cur.execute('replace into words(word, releases) values (?, ?)',
+                        (word, relList))
+
+        # Update barcodes -> (barcode, releases)
+        if 'barcode' in metadata and metadata['barcode']:
+            cur.execute('select releases from barcodes where barcode = ?',
+                    (metadata['barcode'],))
+            row = cur.fetchall()
+            if not row:
+                relList = [relId]
+                cur.execute('insert into barcodes(barcode, releases) values (?, ?)',
+                        (metadata['barcode'], relList))
+            else:
+                relList = row[0][0]
+                relList.append(relId)
+                cur.execute('replace into barcodes(barcode, releases) values (?, ?)',
+                        (metadata['barcode'], relList))
+
+        # Update discids -> (discid, releases)
+        for medium in metadata['medium-list']:
+            for disc in medium['disc-list']:
+                cur.execute('select releases from discids where discid = ?',
+                        (disc['id'],))
                 row = cur.fetchall()
                 if not row:
                     relList = [relId]
-                    cur.execute('insert into words(word, releases) values (?, ?)',
-                            (word, relList))
+                    cur.execute('insert into discids(discid, releases) values (?, ?)',
+                            (disc['id'], relList))
                 else:
-                    relList = row[0][1]
+                    relList = row[0][0]
                     relList.append(relId)
-                    cur.execute('replace into words(word, releases) values (?, ?)',
-                            (word, relList))
+                    cur.execute('replace into discids(discid, releases) values (?, ?)',
+                            (disc['id'], relList))
 
-        except KeyError as e:
-            logging.error('Missing field from release '+relId+': '+str(e))
+        # Update formats -> (format, releases)
+        fmt = mbcat.formats.getReleaseFormat(metadata).__class__.__name__
+        cur.execute('select releases from formats where format = ?',
+                (fmt,))
+        row = cur.fetchall()
+        if not row:
+            relList = [relId]
+            cur.execute('insert into formats(format, releases) values (?, ?)',
+                    (fmt, relList))
+        else:
+            relList = row[0][0]
+            relList.append(relId)
+            cur.execute('replace into formats(format, releases) values (?, ?)',
+                    (fmt, relList))
 
         pbar.update(pbar.currval + 1)
 
