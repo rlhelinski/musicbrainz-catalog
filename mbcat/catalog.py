@@ -219,9 +219,12 @@ class Catalog(object):
     @staticmethod
     def getReleaseWords(rel):
         words = []
-        for field in [ rel['title'], rel['artist-credit-phrase'] ] + \
-            ([rel['disambiguation']] if 'disambiguation' in rel else []):
-            words.extend(re.findall(r"\w+", field.lower(), re.UNICODE))
+        for field in ['title', 'artist-credit-phrase', 'disambiguation']:
+            if field in rel:
+                words.extend(re.findall(r"\w+", rel[field].lower(), re.UNICODE))
+            elif field != 'disambiguation':
+                _log.error('Missing field from release '+relId+': '+str(e))
+
         return words
 
     def mapWordsToRelease(self, words, releaseId):
