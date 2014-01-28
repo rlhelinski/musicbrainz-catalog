@@ -46,9 +46,14 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     cur = con.cursor()
     cur.execute("CREATE TABLE releases("+\
         "id TEXT PRIMARY KEY, "+\
-        # metadata from musicbrainz
+        # metadata from musicbrainz, maybe store a dict instead of the XML?
         "meta TEXT, "+\
         # now all the extra data
+        "purchases LIST, "+\
+        "added LIST, "+\
+        "lent LIST, "+\
+        "listened LIST, "+\
+        "digital LIST, "+\
         "count INT, "+\
         "comment TEXT, "+\
         "rating INT)")
@@ -97,8 +102,18 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
         except IOError as e:
             ed = None
 
-        cur.execute('insert into releases(id, meta, count, comment, rating) values (?, ?, ?, ?, ?)',
-                (relId, metaXml.decode('utf-8'), 1, ed.comment if ed else '', ed.rating if ed else 0))
+        cur.execute('insert into releases(id, meta, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                (relId, 
+                    metaXml.decode('utf-8'), 
+                    ed.purchases,
+                    ed.addDates,
+                    ed.lendEvents,
+                    ed.listenEvents,
+                    ed.digitalPaths,
+                    1, 
+                    ed.comment if ed else '',
+                    ed.rating if ed else 0)
+                )
 
         # Update words table
         rel_words = mbcat.Catalog.getReleaseWords(metadata)

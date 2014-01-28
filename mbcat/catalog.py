@@ -19,6 +19,7 @@ from collections import defaultdict
 import progressbar
 import logging
 _log = logging.getLogger("mbcat")
+import sqlite3
 
 overWriteAll = False
 
