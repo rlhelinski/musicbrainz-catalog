@@ -6,6 +6,8 @@ import codecs
 import mbcat
 import logging
 logging.basicConfig(level=logging.INFO)
+# After compressing XML column, 1933312 / 3870720 B
+import zlib
 
 import musicbrainzngs.musicbrainz as mb
 import musicbrainzngs.mbxml as mbxml
@@ -57,7 +59,7 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     cur.execute("CREATE TABLE releases("+\
         "id TEXT PRIMARY KEY, "+\
         # metadata from musicbrainz, maybe store a dict instead of the XML?
-        "meta TEXT, "+\
+        "meta BLOB, "+\
         # now all the extra data
         "purchases LIST, "+\
         "added LIST, "+\
@@ -115,7 +117,7 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
                 (
                     relId, 
                     # should musicbrainzngs return unicode?
-                    metaXml.decode('utf-8'), 
+                    buffer(zlib.compress(metaXml)), 
                     ed.purchases,
                     ed.addDates,
                     ed.lendEvents,
@@ -156,8 +158,10 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     cur.execute('select * from releases')
     rows = cur.fetchall()
     for row in rows[:10]:
-        for e in row:
-            if len(repr(e)) > 20:
+        for i, e in enumerate(row):
+            if i==1:
+                print(zlib.decompress(e)[:20]+'...,', end='')
+            elif len(repr(e)) > 20:
                 print(repr(e)[:20] +'..., ', end='')
             else:
                 print(repr(e) +', ', end='')
