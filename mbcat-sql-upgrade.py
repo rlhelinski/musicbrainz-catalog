@@ -60,6 +60,7 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
         "id TEXT PRIMARY KEY, "+\
         # metadata from musicbrainz, maybe store a dict instead of the XML?
         "meta BLOB, "+\
+        "metatime FLOAT, "+\
         # now all the extra data
         "purchases LIST, "+\
         "added LIST, "+\
@@ -93,8 +94,9 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     if len(fileList):
         pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(fileList)).start()
     for relId in fileList:
-        #with codecs.open(os.path.join(rootPath, relId, 'metadata.xml'), encoding='utf-8') as f:
-        with open(os.path.join(rootPath, relId, 'metadata.xml'), 'r') as f:
+        metaPath = os.path.join(rootPath, relId, 'metadata.xml')
+        #with codecs.open(metaPath, encoding='utf-8') as f:
+        with open(metaPath, 'r') as f:
             metaXml = f.read()
 
         try:
@@ -113,11 +115,11 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
         except IOError as e:
             ed = None
 
-        cur.execute('insert into releases(id, meta, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        cur.execute('insert into releases(id, meta, metatime, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 (
                     relId, 
-                    # should musicbrainzngs return unicode?
                     buffer(zlib.compress(metaXml)), 
+                    os.path.getmtime(metaPath),
                     ed.purchases,
                     ed.addDates,
                     ed.lendEvents,
