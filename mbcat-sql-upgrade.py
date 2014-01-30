@@ -21,21 +21,18 @@ else:
 
 print ('pysqlite3: '+sqlite3.version+' sqlite3: '+sqlite3.sqlite_version)
 
-# Create a new database
-dbname = 'mbcat.db'
-
 # Problem: pickle dumps takes unicode strings but returns binary strings
-# base64 encoding fixes it for now, but it will look ugly if the sql db 
-# is inspected directly. 
-import base64
 def listAdapter(l):
-    return base64.b64encode(pickle.dumps(l))
+    return buffer(pickle.dumps(l))
 
 def listConverter(s):
-    return pickle.loads(base64.b64decode(s))
+    return pickle.loads(s)
 
 sqlite3.register_adapter(list, listAdapter)
 sqlite3.register_converter("list", listConverter)
+
+# Create a new database
+dbname = 'mbcat.db'
 
 rootPath = 'release-id'
 
@@ -48,7 +45,8 @@ def sql_list_append(cursor, table_name, field_name, key, value):
         relList = row[0][1]
         relList.append(relId)
 
-    cur.execute(('replace' if row else 'insert')+' into '+table_name+'('+field_name+', releases) values (?, ?)',
+    cur.execute(('replace' if row else 'insert')+
+            ' into '+table_name+'('+field_name+', releases) values (?, ?)',
             (key, relList))
 
 
@@ -107,7 +105,6 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
             else:
                 raise
 
-
         ed = mbcat.extradata.ExtraData(relId)
         try:
             ed.load()
@@ -115,7 +112,9 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
             ed = None
 
         cur.execute('insert into releases(id, meta, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                (relId, 
+                (
+                    relId, 
+                    # should musicbrainzngs return unicode?
                     metaXml.decode('utf-8'), 
                     ed.purchases,
                     ed.addDates,
@@ -125,8 +124,9 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
                     ed.digitalPaths,
                     1, 
                     ed.comment if ed else '',
-                    ed.rating if ed else 0)
+                    ed.rating if ed else 0
                 )
+            )
 
         # Update words table
         rel_words = mbcat.Catalog.getReleaseWords(metadata)
