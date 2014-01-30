@@ -1,5 +1,6 @@
+from __future__ import print_function
 import sqlite3
-import pickle
+import cPickle as pickle
 import os
 import codecs
 import mbcat
@@ -18,13 +19,23 @@ if hasattr(etree, 'ParseError'):
 else:
     ETREE_EXCEPTIONS = (expat.ExpatError)
 
-print 'pysqlite3:', sqlite3.version, 'sqlite3', sqlite3.sqlite_version
+print ('pysqlite3: '+sqlite3.version+' sqlite3: '+sqlite3.sqlite_version)
 
 # Create a new database
 dbname = 'mbcat.db'
 
-sqlite3.register_adapter(list, pickle.dumps)
-sqlite3.register_converter("list", pickle.loads)
+# Problem: pickle dumps takes unicode strings but returns binary strings
+# base64 encoding fixes it for now, but it will look ugly if the sql db 
+# is inspected directly. 
+import base64
+def listAdapter(l):
+    return base64.b64encode(pickle.dumps(l))
+
+def listConverter(s):
+    return pickle.loads(base64.b64decode(s))
+
+sqlite3.register_adapter(list, listAdapter)
+sqlite3.register_converter("list", listConverter)
 
 rootPath = 'release-id'
 
@@ -43,6 +54,7 @@ def sql_list_append(cursor, table_name, field_name, key, value):
 
 # Create tables
 with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
+    #con.text_factory = unicode 
     cur = con.cursor()
     cur.execute("CREATE TABLE releases("+\
         "id TEXT PRIMARY KEY, "+\
@@ -82,7 +94,7 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
         pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(fileList)).start()
     for relId in fileList:
         #with codecs.open(os.path.join(rootPath, relId, 'metadata.xml'), encoding='utf-8') as f:
-        with file(os.path.join(rootPath, relId, 'metadata.xml'), 'r') as f:
+        with open(os.path.join(rootPath, relId, 'metadata.xml'), 'r') as f:
             metaXml = f.read()
 
         try:
@@ -109,6 +121,7 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
                     ed.addDates,
                     ed.lendEvents,
                     ed.listenEvents,
+                    #[p.decode('utf-8') for p in ed.digitalPaths],
                     ed.digitalPaths,
                     1, 
                     ed.comment if ed else '',
@@ -145,13 +158,9 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     for row in rows[:10]:
         for e in row:
             if len(repr(e)) > 20:
-                print repr(e)[:20] +'..., ',
+                print(repr(e)[:20] +'..., ', end='')
             else:
-                print repr(e) +', ',
-        print
-    print '...'
-
-
-
-
+                print(repr(e) +', ', end='')
+        print('...')
+    print ('...')
 
