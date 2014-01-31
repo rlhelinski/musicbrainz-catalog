@@ -131,11 +131,6 @@ class Catalog(object):
             for tab in ['words', 'discids', 'barcodes', 'formats']:
                 cur.execute('delete * from ?', tab)
             
-    def _get_xml_path(self, releaseId, fileName='metadata.xml'):
-        return os.path.join(self.rootPath, releaseId, fileName)
-
-
-
     def renameRelease(self, releaseId, newReleaseId):
         os.rename(os.path.join('release-id', releaseId),
                 os.path.join('release-id', newReleaseId) )
@@ -178,10 +173,6 @@ class Catalog(object):
 
         return metadata['release']
 
-    def getReleases(self):
-        for releaseId, metadata in self.metaIndex.items():
-            yield releaseId, self.getRelease(releaseId)
-
     def __len__(self):
         """Return the number of releases in the catalog."""
         with self._connect() as con:
@@ -213,11 +204,7 @@ class Catalog(object):
 
         with zipfile.ZipFile(zipName, 'w', zipfile.ZIP_DEFLATED) as zf:
             xml_writer = wsxml.MbXmlWriter()
-            for releaseId, release in self.getReleases():
-                # TODO change releaseIndex to metaIndex and store entire metadata
-                # then, change references to releaseIndex to calls to getRelease(),
-                # a new function that will take the release ID, and call getRelease()
-                # on the appropriate metadata
+            for releaseId in self.getReleaseIds():
                 xmlPath = self._get_xml_path(releaseId)
                 XmlParser = wsxml.MbXmlParser()
                 with open(xmlPath, 'r') as xmlf:
@@ -629,7 +616,7 @@ tr.releaserow:hover{
 </html>""")
         htf.close()
 
-    def getReleaseMetaXml(self, releaseId):
+    def fetchReleaseMetaXml(self, releaseId):
         """Fetch release metadata XML from musicbrainz"""
         # get_release_by_id() handles throttling on its own
         _log.info('Fetching metadata for ' + releaseId)
@@ -665,7 +652,7 @@ tr.releaserow:hover{
 
     @deprecated
     def fixMeta(self, discId, releaseId):
-        results_meta = self.getReleaseMetaXml(releaseId)
+        results_meta = self.fetchReleaseMetaXml(releaseId)
 
         self.writeXml(discId, results_meta)
 
@@ -680,77 +667,7 @@ tr.releaserow:hover{
 
         return self.getReleaseDictFromXml(metaxml)['release']
 
-    def digestRelDict(self, releaseId, rel):
-        # some dictionaries to improve performance
-        try:
-            self.metaIndex[releaseId] = rel
-
-            # populate format map
-            self.formatMap[mbcat.formats.getReleaseFormat(rel).__class__].append(releaseId)
-
-            # populate DiscId map
-            for medium in rel['medium-list']:
-                for disc in medium['disc-list']:
-                    self.discIdMap[disc['id']].append(releaseId)
-                    
-            # populate barcode map
-            if 'barcode' in rel and rel['barcode']:
-                self.barCodeMap[rel['barcode']].append(releaseId)
-                    
-            # for searching later
-            try:
-                words = self.getReleaseWords(rel)
-                self.mapWordsToRelease(words, releaseId)
-            except KeyError as e:
-                _log.error("No artists included in XML for %s", releaseId)
-
-        except KeyError as e:
-            _log.error("Bad XML for " + releaseId + ": " + str(e))
-            return
-        except TypeError as e:
-            raise
-            _log.error(releaseId + ' ' + str(type(e)) + ": " + str(e) + ": " + str(dir(e)))
-            return
-        
-    def digestXml(self, releaseId, meta_xml):
-        self.digestRelDict(releaseId, self.getReleaseDictFromXml(meta_xml))
-
-    def searchDigitalPaths(self, releaseId=''):
-        releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
-
-        # TODO could use progressbar here
-        # TODO need to be more flexible in capitalization and re-order of words
-        for relId in releaseIdList:
-            #print relId
-            for path in self.prefs.musicPaths:
-                #print path
-                rel = self.getRelease(relId)
-                for artistName in [ rel['artist-credit-phrase'], rel['artist-credit'][0]['artist']['sort-name'] ]:
-                    artistPath = os.path.join(path, artistName)
-                    if os.path.isdir(artistPath):
-                        #print 'Found ' + artistPath
-                        for titleName in [rel['title']]:
-                            titlePath = os.path.join(artistPath, titleName)
-                            if os.path.isdir(titlePath):
-                                _log.info('Found ' + relId + ' at ' + titlePath)
-                                self.extraIndex[relId].addPath(titlePath)
-            self.extraIndex[relId].save()
-
-        if releaseId and not self.extraIndex[relId].digitalPaths:
-            _log.warning('No digital paths found for '+releaseId)
-
-
-    def addRelease(self, releaseId, olderThan=0):
-        """Get metadata XML from MusicBrainz and add to catalog."""
-
-        releaseId = getReleaseIdFromInput(releaseId)
-        xmlPath = self._get_xml_path(releaseId)
-        if (os.path.isfile(xmlPath) and (os.path.getmtime(xmlPath) > (time.time() - olderThan))):
-            _log.info("Skipping fetch of metadata for %s because it is recent", releaseId)
-            return 0
-
-        metaXml = self.getReleaseMetaXml(releaseId)
-
+    def digestReleaseXml(self, releaseId, metaXml):
         relDict = self.getReleaseDictFromXml(metaXml)
         
         with self._connect() as con:
@@ -793,6 +710,43 @@ tr.releaserow:hover{
 
             con.commit()
 
+    def searchDigitalPaths(self, releaseId=''):
+        releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
+
+        # TODO could use progressbar here
+        # TODO need to be more flexible in capitalization and re-order of words
+        for relId in releaseIdList:
+            #print relId
+            for path in self.prefs.musicPaths:
+                #print path
+                rel = self.getRelease(relId)
+                for artistName in [ rel['artist-credit-phrase'], rel['artist-credit'][0]['artist']['sort-name'] ]:
+                    artistPath = os.path.join(path, artistName)
+                    if os.path.isdir(artistPath):
+                        #print 'Found ' + artistPath
+                        for titleName in [rel['title']]:
+                            titlePath = os.path.join(artistPath, titleName)
+                            if os.path.isdir(titlePath):
+                                _log.info('Found ' + relId + ' at ' + titlePath)
+                                self.extraIndex[relId].addPath(titlePath)
+            self.extraIndex[relId].save()
+
+        if releaseId and not self.extraIndex[relId].digitalPaths:
+            _log.warning('No digital paths found for '+releaseId)
+
+
+    def addRelease(self, releaseId, olderThan=0):
+        """Get metadata XML from MusicBrainz and add to catalog."""
+
+        releaseId = getReleaseIdFromInput(releaseId)
+        xmlPath = self._get_xml_path(releaseId)
+        if (os.path.isfile(xmlPath) and (os.path.getmtime(xmlPath) > (time.time() - olderThan))):
+            _log.info("Skipping fetch of metadata for %s because it is recent", releaseId)
+            return 0
+
+        metaXml = self.fetchReleaseMetaXml(releaseId)
+        self.digestReleaseXml(releaseId, metaXml)
+
     def deleteRelease(self, releaseId):
         releaseId = getReleaseIdFromInput(releaseId)
         shutil.rmtree(os.path.join(self.rootPath, releaseId))
@@ -810,7 +764,8 @@ tr.releaserow:hover{
         Check releases for ugliness such as no barcode, no release format, etc. 
         For now, this creates warnings in the log. 
         """
-        for releaseId, release in self.getReleases():
+        for releaseId in self.getReleaseIds():
+            release = self.getRelease(releaseId)
             if 'date' not in release or not release['date']:
                 _log.warning("No date for " + releaseId)
             if 'barcode' not in release or not release['barcode']:

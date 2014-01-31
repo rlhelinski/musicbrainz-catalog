@@ -4,6 +4,10 @@ from __future__ import unicode_literals
 import mbcat.catalog
 
 c = mbcat.catalog.Catalog()
+
 c.report()
+
 c.search('genesis live')
-print (len(c.getReleaseIds()))
+
+assert len(c.getReleaseIds()) == len(c)
+
