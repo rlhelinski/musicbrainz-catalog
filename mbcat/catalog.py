@@ -20,8 +20,36 @@ import progressbar
 import logging
 _log = logging.getLogger("mbcat")
 import sqlite3
+import cPickle as pickle
+import zlib
+
+# Problem: pickle dumps takes unicode strings but returns binary strings
+def listAdapter(l):
+    return buffer(pickle.dumps(l))
+
+def listConverter(s):
+    return pickle.loads(s)
+
+sqlite3.register_adapter(list, listAdapter)
+sqlite3.register_converter(str("list"), listConverter)
 
 overWriteAll = False
+
+import warnings
+
+def deprecated(func):
+    """This is a decorator which can be used to mark functions
+    as deprecated. It will result in a warning being emmitted
+    when the function is used."""
+    def newFunc(*args, **kwargs):
+        warnings.warn("Call to deprecated function %s." % func.__name__,
+                      category=DeprecationWarning)
+        return func(*args, **kwargs)
+    newFunc.__name__ = func.__name__
+    newFunc.__doc__ = func.__doc__
+    newFunc.__dict__.update(func.__dict__)
+    return newFunc
+
 
 # Have to give an identity for musicbrainzngs
 mb.set_useragent(
@@ -64,8 +92,8 @@ def getFormatFromUri(uriStr, escape=True):
     else:
         return formatStr
 
-def getReleaseId(releaseId):
-    """Should be renamed to get releaseIdFromInput or something"""
+def getReleaseIdFromInput(releaseId):
+    """Extracts a release ID from a string or a URL"""
     if releaseId.startswith('http'):
         return mbcat.utils.extractUuid(releaseId, 'release')
     else:
@@ -73,6 +101,7 @@ def getReleaseId(releaseId):
 
 def formatSortCredit(release):
     return ''.join([credit if type(credit)==str else credit['artist']['sort-name'] for credit in release['artist-credit'] ])
+
 
 
 class Catalog(object):
@@ -88,18 +117,24 @@ class Catalog(object):
 
         # should we connect here, once and for all, or should we make temporary
         # connections to sqlite3? 
+
+    def _connect(self):
         # Let's try here for now, just need to make sure we disconnect when this
         # object is deleted.
         self.conn = sqlite3.connect(self.dbPath)
-        # For releasing this, can we assume that it will happen when this object
-        # goes out of scope and is deleted? 
+        return sqlite3.connect(self.dbPath, detect_types=sqlite3.PARSE_DECLTYPES)
 
     def _resetMaps(self):
         """Drop the derived tables in the database and rebuild them"""
-        pass
+        with self._connect() as con:
+            cur = con.cursor()
+            for tab in ['words', 'discids', 'barcodes', 'formats']:
+                cur.execute('delete * from ?', tab)
             
     def _get_xml_path(self, releaseId, fileName='metadata.xml'):
         return os.path.join(self.rootPath, releaseId, fileName)
+
+
 
     def renameRelease(self, releaseId, newReleaseId):
         os.rename(os.path.join('release-id', releaseId),
@@ -109,18 +144,50 @@ class Catalog(object):
         self.refreshMetaData(newReleaseId, olderThan=60)
 
     def getReleaseIds(self):
-        return self.metaIndex.keys()
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select id from releases')
+            listOfTuples = cur.fetchall()
+            # return all of the tuples as a list
+            return list(sum(listOfTuples, ()))
 
-    # TODO rename metaIndex back to releaseIndex or relIndex
+    @staticmethod
+    def getReleaseDictFromXml(metaxml):
+        try:
+            metadata = mbxml.parse_message(metaxml)
+        except UnicodeError as exc:
+            raise ResponseError(cause=exc)
+        except Exception as exc:
+            if isinstance(exc, ETREE_EXCEPTIONS):
+                _log.error("Got some bad XML for %s!", releaseId)
+                return 
+            else:
+                raise
+
+        return metadata
+    
     def getRelease(self, releaseId):
-        return self.metaIndex[releaseId]
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select meta from releases where id = ?', (releaseId,))
+            releaseXml = zlib.decompress(cur.fetchone()[0])
+
+            # maybe it would be better to store the release as a serialized dict in the table
+            # then, we could skip this parsing step
+            metadata = self.getReleaseDictFromXml(releaseXml)
+
+        return metadata['release']
 
     def getReleases(self):
         for releaseId, metadata in self.metaIndex.items():
             yield releaseId, self.getRelease(releaseId)
 
     def __len__(self):
-        return len(self.metaIndex)
+        """Return the number of releases in the catalog."""
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select count(id) from releases')
+            return cur.fetchone()[0]
 
     def __contains__(self, releaseId):
         return releaseId in self.metaIndex
@@ -139,40 +206,6 @@ class Catalog(object):
                     pbar.update(pbar.currval + 1)
                     yield releaseId
             pbar.finish()
-
-    def loadExtraData(self, releaseId):
-        # load extra data
-        self.extraIndex[releaseId] = mbcat.extradata.ExtraData(releaseId)
-        try:
-            self.extraIndex[releaseId].load()
-        except IOError as e:
-            # write an empty XML for next time
-            self.extraIndex[releaseId].save()
-
-    def addExtraData(self, releaseId):
-        self.extraIndex[releaseId] = mbcat.extradata.ExtraData(releaseId)
-        try:
-            self.extraIndex[releaseId].load()
-        except IOError as e:
-            # write an empty XML for next time
-            self.extraIndex[releaseId].addDate()
-            self.extraIndex[releaseId].save()
-
-    def load(self, releaseIds=None):
-        """Load the various tables from the XML metadata on disk"""
-
-        self._resetMaps()
-        for releaseId in self.loadReleaseIds():
-            xmlPath = self._get_xml_path(releaseId)
-            if (not os.path.isfile(xmlPath)):
-                _log.error("Found directory, but no metadata for " + releaseId)
-                continue
-
-            metadata = self.getMetaData(releaseId)
-
-            self.digestMetaDict(releaseId, metadata)
-
-            self.loadExtraData(releaseId)
 
     def saveZip(self, zipName='catalog.zip'):
         """Exports the database as a ZIP archive"""
@@ -238,19 +271,25 @@ class Catalog(object):
     def _search(self, query):
         query_words = query.lower().split(' ')
         matches = set()
-        for word in query_words:
-            if word in self.wordMap:
-                # for the first word
-                if word == query_words[0]:
-                    # use the whole set of releases that have this word
-                    matches = set(self.wordMap[word])
+        with self._connect() as con:
+            cur = con.cursor()
+            for word in query_words:
+                cur.execute('select releases from words where word = ?', (word,))
+                fetched = cur.fetchone()
+                # if the word is in the table
+                if fetched:
+                    # for the first word
+                    if word == query_words[0]:
+                        # use the whole set of releases that have this word
+                        matches = set(fetched[0])
+                    else:
+                        # intersect the releases that have this word with the current release set 
+                        matches = matches & set(fetched[0])
                 else:
-                    # intersect the releases that have this word with the current release set 
-                    matches = matches & set(self.wordMap[word])
-            else:
-                # this word is not contained in any releases
-                matches = set()
-                break
+                    # this word is not contained in any releases and therefore
+                    # no releases match
+                    matches = set()
+                    break
 
         return matches
 
@@ -311,19 +350,23 @@ class Catalog(object):
 
 
     def search(self, query):
-        """
-        Print a list releases that match words in a query
-        """
+        """Print a list releases that match words in a query."""
         matches = self._search(query)
         for releaseId in matches:
             print(self.formatDiscInfo(releaseId))
 
+    def getWordCount(self):
+        """Fetch the number of words in the search word table."""
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select count(word) from words')
+            return cur.fetchone()[0]
+
     def report(self):
-        """
-        Print statistics about the catalog
-        """
+        """Print some statistics about the catalog as a sanity check."""
+
         print("\n%d releases" % len(self))
-        print("%d words in search table" % len(self.wordMap))
+        print("%d words in search table" % self.getWordCount())
 
     def makeHtml(self, fileName=None):
         """
@@ -595,6 +638,7 @@ tr.releaserow:hover{
         mb.set_parser()
         return xml
 
+    @deprecated
     def writeXml(self, releaseId, metaData):
         global overWriteAll
 
@@ -619,12 +663,13 @@ tr.releaserow:hover{
 
         return 0
 
+    @deprecated
     def fixMeta(self, discId, releaseId):
         results_meta = self.getReleaseMetaXml(releaseId)
 
         self.writeXml(discId, results_meta)
 
-    def getMetaData(self, releaseId):
+    def loadMetaData(self, releaseId):
         """Load metadata from disk"""
         xmlPath = self._get_xml_path(releaseId)
         if (not os.path.isfile(xmlPath)):
@@ -633,24 +678,11 @@ tr.releaserow:hover{
         with open(xmlPath, 'r') as xmlf:
             metaxml = xmlf.read()
 
-        try:
-            metadata = mbxml.parse_message(metaxml)
-        except UnicodeError as exc:
-            raise ResponseError(cause=exc)
-        except Exception as exc:
-            if isinstance(exc, ETREE_EXCEPTIONS):
-                _log.error("Got some bad XML for %s!", releaseId)
-                return 
-            else:
-                raise
+        return self.getReleaseDictFromXml(metaxml)['release']
 
-        return metadata
-
-    def digestMetaDict(self, releaseId, metadata):
+    def digestRelDict(self, releaseId, rel):
         # some dictionaries to improve performance
-        # these should all be tables in an SQL DB
         try:
-            rel = metadata['release']
             self.metaIndex[releaseId] = rel
 
             # populate format map
@@ -681,7 +713,7 @@ tr.releaserow:hover{
             return
         
     def digestXml(self, releaseId, meta_xml):
-        self.digestMetaDict(releaseId, mbxml.parse_message(meta_xml))
+        self.digestRelDict(releaseId, self.getReleaseDictFromXml(meta_xml))
 
     def searchDigitalPaths(self, releaseId=''):
         releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
@@ -707,30 +739,62 @@ tr.releaserow:hover{
         if releaseId and not self.extraIndex[relId].digitalPaths:
             _log.warning('No digital paths found for '+releaseId)
 
-    def addRelease(self, releaseId):
-        self.refreshMetaData(releaseId)
-        self.addExtraData(releaseId)
 
-    def refreshMetaData(self, releaseId, olderThan=0):
-        """Should be renamed to "add release" or something
-        get metadata XML from MusicBrainz and save to disk"""
+    def addRelease(self, releaseId, olderThan=0):
+        """Get metadata XML from MusicBrainz and add to catalog."""
 
-        releaseId = getReleaseId(releaseId)
+        releaseId = getReleaseIdFromInput(releaseId)
         xmlPath = self._get_xml_path(releaseId)
         if (os.path.isfile(xmlPath) and (os.path.getmtime(xmlPath) > (time.time() - olderThan))):
             _log.info("Skipping fetch of metadata for %s because it is recent", releaseId)
             return 0
 
-        meta_xml = self.getReleaseMetaXml(releaseId)
-        if not os.path.isdir(os.path.dirname(xmlPath)):
-            os.mkdir(os.path.dirname(xmlPath))
-        with open(xmlPath, 'wb') as xmlf:
-            xmlf.write(meta_xml)
-        #self.writeXml(releaseId, meta_xml)
-        self.digestXml(releaseId, meta_xml)
+        metaXml = self.getReleaseMetaXml(releaseId)
+
+        relDict = self.getReleaseDictFromXml(metaXml)
+        
+        with self._connect() as con:
+            cur = con.cursor()
+
+            # Update releases table
+            cur.execute('insert into releases(id, meta, metatime, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    (
+                        releaseId, 
+                        buffer(zlib.compress(metaXml)), 
+                        time.time(),
+                        [],
+                        [time.time()],
+                        [],
+                        [],
+                        [],
+                        1, # set count to 1 for now 
+                        '',
+                        0
+                    )
+                )
+
+            # Update words table
+            rel_words = self.getReleaseWords(relDict)
+            for word in rel_words:
+                sql_list_append(cur, 'words', 'word', word, relId)
+
+            # Update barcodes -> (barcode, releases)
+            if 'barcode' in relDict and relDict['barcode']:
+                sql_list_append(cur, 'barcodes', 'barcode', relDict['barcode'], relId)
+
+            # Update discids -> (discid, releases)
+            for medium in relDict['medium-list']:
+                for disc in medium['disc-list']:
+                    sql_list_append(cur, 'discids', 'discid', disc['id'], relId)
+
+            # Update formats -> (format, releases)
+            fmt = mbcat.formats.getReleaseFormat(relDict).__class__.__name__
+            sql_list_append(cur, 'formats', 'format', fmt, relId)
+
+            con.commit()
 
     def deleteRelease(self, releaseId):
-        releaseId = getReleaseId(releaseId)
+        releaseId = getReleaseIdFromInput(releaseId)
         shutil.rmtree(os.path.join(self.rootPath, releaseId))
         # also drop from memory
         #del self.releaseIndex[releaseId] # TODO necessary?
