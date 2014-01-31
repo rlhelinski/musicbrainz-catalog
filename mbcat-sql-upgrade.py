@@ -126,7 +126,7 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
                     ed.listenEvents,
                     #[p.decode('utf-8') for p in ed.digitalPaths],
                     ed.digitalPaths,
-                    1, 
+                    1, # set count to 1 for now 
                     ed.comment if ed else '',
                     ed.rating if ed else 0
                 )
