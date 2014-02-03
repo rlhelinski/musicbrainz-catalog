@@ -19,10 +19,10 @@ from collections import defaultdict
 import progressbar
 import logging
 _log = logging.getLogger("mbcat")
-import sqlite3
 import cPickle as pickle
 import zlib
 
+import sqlite3
 # Problem: pickle dumps takes unicode strings but returns binary strings
 def listAdapter(l):
     return buffer(pickle.dumps(l))
@@ -33,28 +33,15 @@ def listConverter(s):
 sqlite3.register_adapter(list, listAdapter)
 sqlite3.register_converter(str("list"), listConverter)
 
+# For remembering user decision to overwrite existing data
 overWriteAll = False
 
-import warnings
-
-def deprecated(func):
-    """This is a decorator which can be used to mark functions
-    as deprecated. It will result in a warning being emmitted
-    when the function is used."""
-    def newFunc(*args, **kwargs):
-        warnings.warn("Call to deprecated function %s." % func.__name__,
-                      category=DeprecationWarning)
-        return func(*args, **kwargs)
-    newFunc.__name__ = func.__name__
-    newFunc.__doc__ = func.__doc__
-    newFunc.__dict__.update(func.__dict__)
-    return newFunc
-
-
 # Have to give an identity for musicbrainzngs
+__version__ = '0.2a'
+
 mb.set_useragent(
     "musicbrainz-catalog",
-    "0.1",
+    __version__,
     "https://github.com/rlhelinski/musicbrainz-catalog/",
 )
 
@@ -66,41 +53,6 @@ if hasattr(etree, 'ParseError'):
     ETREE_EXCEPTIONS = (etree.ParseError, expat.ExpatError)
 else:
     ETREE_EXCEPTIONS = (expat.ExpatError)
-
-def releaseSortCmp(a, b):
-    return unicode.lower(a[1]) < unicode.lower(b[1])
-
-def chunks(l, n):
-    """ Yield successive n-sized chunks from l. """
-    for i in range(0, len(l), n):
-        yield l[i:i+n]
-
-# This goes with getFormatFromUri(), but can we replace that with a library function?
-try:
-    import HTMLParser
-    h = HTMLParser.HTMLParser()
-except ImportError as e:
-    import html.parser
-    h = html.parser.HTMLParser()
-
-def getFormatFromUri(uriStr, escape=True):
-    # TODO deprecate
-    #return uriStr.split("#")[1].decode('ascii')
-    formatStr = uriStr.split("#", 1)[1]
-    if escape:
-        return h.unescape(formatStr)
-    else:
-        return formatStr
-
-def getReleaseIdFromInput(releaseId):
-    """Extracts a release ID from a string or a URL"""
-    if releaseId.startswith('http'):
-        return mbcat.utils.extractUuid(releaseId, 'release')
-    else:
-        return releaseId
-
-def formatSortCredit(release):
-    return ''.join([credit if type(credit)==str else credit['artist']['sort-name'] for credit in release['artist-credit'] ])
 
 
 
@@ -625,7 +577,7 @@ tr.releaserow:hover{
         mb.set_parser()
         return xml
 
-    @deprecated
+    @mbcat.utils.deprecated
     def writeXml(self, releaseId, metaData):
         global overWriteAll
 
@@ -650,12 +602,13 @@ tr.releaserow:hover{
 
         return 0
 
-    @deprecated
+    @mbcat.utils.deprecated
     def fixMeta(self, discId, releaseId):
         results_meta = self.fetchReleaseMetaXml(releaseId)
 
         self.writeXml(discId, results_meta)
 
+    @mbcat.utils.deprecated
     def loadMetaData(self, releaseId):
         """Load metadata from disk"""
         xmlPath = self._get_xml_path(releaseId)
@@ -668,6 +621,7 @@ tr.releaserow:hover{
         return self.getReleaseDictFromXml(metaxml)['release']
 
     def digestReleaseXml(self, releaseId, metaXml):
+        """Update the appropriate data structes for a new release."""
         relDict = self.getReleaseDictFromXml(metaXml)
         
         with self._connect() as con:
@@ -710,6 +664,9 @@ tr.releaserow:hover{
 
             con.commit()
 
+    def unDigestReleaseXml(self, releaseId):
+        """Remove all references to a release from the data structures."""
+
     def searchDigitalPaths(self, releaseId=''):
         releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
 
@@ -738,7 +695,7 @@ tr.releaserow:hover{
     def addRelease(self, releaseId, olderThan=0):
         """Get metadata XML from MusicBrainz and add to catalog."""
 
-        releaseId = getReleaseIdFromInput(releaseId)
+        releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
         xmlPath = self._get_xml_path(releaseId)
         if (os.path.isfile(xmlPath) and (os.path.getmtime(xmlPath) > (time.time() - olderThan))):
             _log.info("Skipping fetch of metadata for %s because it is recent", releaseId)
@@ -748,7 +705,7 @@ tr.releaserow:hover{
         self.digestReleaseXml(releaseId, metaXml)
 
     def deleteRelease(self, releaseId):
-        releaseId = getReleaseIdFromInput(releaseId)
+        releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
         shutil.rmtree(os.path.join(self.rootPath, releaseId))
         # also drop from memory
         #del self.releaseIndex[releaseId] # TODO necessary?
@@ -855,7 +812,7 @@ tr.releaserow:hover{
         relIdsToAdd = list(set(self.getReleaseIds()) - set(colRelIds))
 
         print('Going to add %d releases to collection...' % len(relIdsToAdd))
-        for relIdChunk in chunks(relIdsToAdd, 100):
+        for relIdChunk in mbcat.utils.chunks(relIdsToAdd, 100):
             mb.add_releases_to_collection(colId, relIdChunk)
         print('DONE')
 
