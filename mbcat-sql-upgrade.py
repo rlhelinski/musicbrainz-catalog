@@ -45,7 +45,7 @@ def sql_list_append(cursor, table_name, field_name, key, value):
         relList = [value]
     else:
         relList = row[0][1]
-        relList.append(relId)
+        relList.append(value)
 
     cur.execute(('replace' if row else 'insert')+
             ' into '+table_name+'('+field_name+', releases) values (?, ?)',

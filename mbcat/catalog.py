@@ -33,6 +33,20 @@ def listConverter(s):
 sqlite3.register_adapter(list, listAdapter)
 sqlite3.register_converter(str("list"), listConverter)
 
+def sql_list_append(cursor, table_name, field_name, key, value):
+    """Append to a list in an SQL table."""
+    cursor.execute('select * from '+table_name+' where '+field_name+' = ?', (key,))
+    row = cursor.fetchall()
+    if not row:
+        relList = [value]
+    else:
+        relList = row[0][1]
+        relList.append(value)
+
+    cursor.execute(('replace' if row else 'insert')+
+            ' into '+table_name+'('+field_name+', releases) values (?, ?)',
+            (key, relList))
+
 # For remembering user decision to overwrite existing data
 overWriteAll = False
 
@@ -195,7 +209,7 @@ class Catalog(object):
             if field in rel:
                 words.extend(re.findall(r"\w+", rel[field].lower(), re.UNICODE))
             elif field != 'disambiguation':
-                _log.error('Missing field from release '+relId+': '+str(e))
+                _log.error('Missing field from release '+rel['id']+': '+str(e))
 
         return words
 
@@ -236,7 +250,7 @@ class Catalog(object):
         release = self.getRelease(releaseId)
         return ' '.join( [
                 releaseId, ':', \
-                formatSortCredit(release), '-', \
+                mbcat.utils.formatSortCredit(release), '-', \
                 (release['date'] if 'date' in release else ''), '-', \
                 release['title'], \
                 '('+release['disambiguation']+')' if 'disambiguation' in release else '', \
@@ -645,22 +659,22 @@ tr.releaserow:hover{
                 )
 
             # Update words table
-            rel_words = self.getReleaseWords(relDict)
+            rel_words = self.getReleaseWords(relDict['release'])
             for word in rel_words:
-                sql_list_append(cur, 'words', 'word', word, relId)
+                sql_list_append(cur, 'words', 'word', word, releaseId)
 
             # Update barcodes -> (barcode, releases)
-            if 'barcode' in relDict and relDict['barcode']:
-                sql_list_append(cur, 'barcodes', 'barcode', relDict['barcode'], relId)
+            if 'barcode' in relDict['release'] and relDict['release']['barcode']:
+                sql_list_append(cur, 'barcodes', 'barcode', relDict['release']['barcode'], releaseId)
 
             # Update discids -> (discid, releases)
-            for medium in relDict['medium-list']:
+            for medium in relDict['release']['medium-list']:
                 for disc in medium['disc-list']:
-                    sql_list_append(cur, 'discids', 'discid', disc['id'], relId)
+                    sql_list_append(cur, 'discids', 'discid', disc['id'], releaseId)
 
             # Update formats -> (format, releases)
-            fmt = mbcat.formats.getReleaseFormat(relDict).__class__.__name__
-            sql_list_append(cur, 'formats', 'format', fmt, relId)
+            fmt = mbcat.formats.getReleaseFormat(relDict['release']).__class__.__name__
+            sql_list_append(cur, 'formats', 'format', fmt, releaseId)
 
             con.commit()
 
@@ -691,13 +705,19 @@ tr.releaserow:hover{
         if releaseId and not self.extraIndex[relId].digitalPaths:
             _log.warning('No digital paths found for '+releaseId)
 
+    def getMetaTime(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select metatime from releases where id = ?',
+                (releaseId,))
+            return cur.fetchone()
 
     def addRelease(self, releaseId, olderThan=0):
         """Get metadata XML from MusicBrainz and add to catalog."""
 
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
-        xmlPath = self._get_xml_path(releaseId)
-        if (os.path.isfile(xmlPath) and (os.path.getmtime(xmlPath) > (time.time() - olderThan))):
+        metaTime = self.getMetaTime(releaseId)
+        if (metaTime and (metaTime[0] > (time.time() - olderThan))):
             _log.info("Skipping fetch of metadata for %s because it is recent", releaseId)
             return 0
 
