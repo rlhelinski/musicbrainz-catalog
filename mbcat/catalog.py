@@ -47,6 +47,17 @@ def sql_list_append(cursor, table_name, field_name, key, value):
             ' into '+table_name+'('+field_name+', releases) values (?, ?)',
             (key, relList))
 
+def sql_list_remove(cursor, table_name, field_name, key, value):
+    """Remove an item from a list in an SQL table."""
+    cursor.execute('select * from '+table_name+' where '+field_name+' = ?', (key,))
+    row = cursor.fetchall()
+    if row:
+        relList = row[0][1]
+        del relList[row.index(value)]
+
+        cursor.execute('replace into '+table_name+'('+field_name+
+                ', releases) values (?, ?)', (key, relList))
+
 # For remembering user decision to overwrite existing data
 overWriteAll = False
 
@@ -102,7 +113,7 @@ class Catalog(object):
                 os.path.join('release-id', newReleaseId) )
         # TODO this is lazy, but it is the only way to correct all the tables created during load()
         self.load()
-        self.refreshMetaData(newReleaseId, olderThan=60)
+        self.addRelease(newReleaseId, olderThan=60)
 
     def getReleaseIds(self):
         with self._connect() as con:
@@ -680,6 +691,33 @@ tr.releaserow:hover{
 
     def unDigestReleaseXml(self, releaseId):
         """Remove all references to a release from the data structures."""
+        relDict = self.getRelease(releaseId)
+        
+        with self._connect() as con:
+            cur = con.cursor()
+
+            # Update releases table
+            cur.execute('delete from releases where id = ?', (releaseId,))
+
+            # Update words table
+            rel_words = self.getReleaseWords(relDict['release'])
+            for word in rel_words:
+                sql_list_remove(cur, 'words', 'word', word, releaseId)
+
+            # Update barcodes -> (barcode, releases)
+            if 'barcode' in relDict['release'] and relDict['release']['barcode']:
+                sql_list_remove(cur, 'barcodes', 'barcode', relDict['release']['barcode'], releaseId)
+
+            # Update discids -> (discid, releases)
+            for medium in relDict['release']['medium-list']:
+                for disc in medium['disc-list']:
+                    sql_list_remove(cur, 'discids', 'discid', disc['id'], releaseId)
+
+            # Update formats -> (format, releases)
+            fmt = mbcat.formats.getReleaseFormat(relDict['release']).__class__.__name__
+            sql_list_remove(cur, 'formats', 'format', fmt, releaseId)
+
+            con.commit()
 
     def searchDigitalPaths(self, releaseId=''):
         releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
@@ -734,7 +772,7 @@ tr.releaserow:hover{
     def refreshAllMetaData(self, olderThan=0):
         for releaseId in self.loadReleaseIds():
             _log.info("Refreshing %s", releaseId)
-            self.refreshMetaData(releaseId, olderThan)
+            self.addRelease(releaseId, olderThan)
 
     def checkReleases(self):
         """
@@ -776,6 +814,11 @@ tr.releaserow:hover{
             self.getCoverArt(releaseId, maxage=maxage)
 
     def checkLevenshteinDistances(self):
+        """
+        Compute the Levenshtein (edit) distance of each pair of releases.
+
+        Returns a sorted list of the most similar releases
+        """
         import Levenshtein
         dists = []
 
