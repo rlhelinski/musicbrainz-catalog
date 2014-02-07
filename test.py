@@ -51,7 +51,7 @@ c.report()
 # test word search
 for query in ['pink moon',
         'jackson abc',
-        'there you', ]:
+        'there', ]:
     result = c._search(query)
     print (result)
     assert len(result) == 1
@@ -63,6 +63,7 @@ random.seed(42)
 victims = random.sample(test_releases, int(len(test_releases)*0.25))
 print ('Deleting %d releases' % len(victims))
 for victim in victims:
+    print ('Deleting '+c.formatDiscSortKey(victim))
     c.deleteRelease(victim)
 
 c.report()

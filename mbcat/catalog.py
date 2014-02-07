@@ -309,10 +309,11 @@ class Catalog(object):
                 ] )
 
     def formatDiscSortKey(self, releaseId):
+        # TODO rename to something like getReleaseSortStr
         release = self.getRelease(releaseId)
 
         return ' - '.join ( [ \
-                formatSortCredit(release), \
+                mbcat.utils.formatSortCredit(release), \
                 release['date'] if 'date' in release else '', \
                 release['title'] + \
                 (' ('+release['disambiguation']+')' if 'disambiguation' in release else ''), \
