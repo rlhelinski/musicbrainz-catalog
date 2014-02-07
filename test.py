@@ -61,6 +61,8 @@ assert len(c.getReleaseIds()) == len(c)
 # make a few deletions
 random.seed(42)
 victims = random.sample(test_releases, int(len(test_releases)*0.25))
+print ('Deleting %d releases' % len(victims))
 for victim in victims:
     c.deleteRelease(victim)
 
+c.report()

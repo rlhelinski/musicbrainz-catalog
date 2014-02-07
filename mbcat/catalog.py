@@ -54,10 +54,14 @@ def sql_list_remove(cursor, table_name, field_name, key, value):
     row = cursor.fetchall()
     if row:
         relList = row[0][1]
-        del relList[row.index(value)]
+        relList.remove(value)
 
-        cursor.execute('replace into '+table_name+'('+field_name+
-                ', releases) values (?, ?)', (key, relList))
+        if relList:
+            cursor.execute('replace into %s (%s, releases) values (?, ?)' % (table_name, field_name),
+                (key, relList))
+        else:
+            cursor.execute('delete from %s where %s=?' % (table_name, field_name),
+                    (key,))
 
 # For remembering user decision to overwrite existing data
 overWriteAll = False
@@ -739,21 +743,21 @@ tr.releaserow:hover{
             cur.execute('delete from releases where id = ?', (releaseId,))
 
             # Update words table
-            rel_words = self.getReleaseWords(relDict['release'])
+            rel_words = self.getReleaseWords(relDict)
             for word in rel_words:
                 sql_list_remove(cur, 'words', 'word', word, releaseId)
 
             # Update barcodes -> (barcode, releases)
-            if 'barcode' in relDict['release'] and relDict['release']['barcode']:
-                sql_list_remove(cur, 'barcodes', 'barcode', relDict['release']['barcode'], releaseId)
+            if 'barcode' in relDict and relDict['barcode']:
+                sql_list_remove(cur, 'barcodes', 'barcode', relDict['barcode'], releaseId)
 
             # Update discids -> (discid, releases)
-            for medium in relDict['release']['medium-list']:
+            for medium in relDict['medium-list']:
                 for disc in medium['disc-list']:
                     sql_list_remove(cur, 'discids', 'discid', disc['id'], releaseId)
 
             # Update formats -> (format, releases)
-            fmt = mbcat.formats.getReleaseFormat(relDict['release']).__class__.__name__
+            fmt = mbcat.formats.getReleaseFormat(relDict).__class__.__name__
             sql_list_remove(cur, 'formats', 'format', fmt, releaseId)
 
             con.commit()
