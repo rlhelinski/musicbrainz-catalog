@@ -1,15 +1,14 @@
+# Python 2/3 compatibility
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import random
+
+import logging
+# set up logging
+logging.basicConfig(level=logging.INFO)
+
 import mbcat.catalog
-
-c = mbcat.catalog.Catalog()
-
-c.report()
-
-c.search('genesis live')
-
-assert len(c.getReleaseIds()) == len(c)
 
 test_releases = [
     'ca519b2d-5fd3-4d7b-a537-2d39da5d5018',
@@ -33,9 +32,35 @@ test_releases = [
     # 7"
     '3f423bcc-f834-41fd-b35e-c9ed9036b2d7',
     # Unknown format
-    'be3cc3e7-bdb0-3c13-a60b-a985b30eb603',
+    #'be3cc3e7-bdb0-3c13-a60b-a985b30eb603', # this disappeared as of 2014/02/06
     # Digital
     '14a12f84-c5f3-473b-87f5-9340174ecbc4',
     ]
 
-c.addRelease(test_releases[0])
+# test the catalog class
+c = mbcat.catalog.Catalog('testcat.db')
+
+c.report()
+assert len(c) == 0
+
+for releaseId in test_releases:
+    c.addRelease(releaseId)
+
+c.report()
+
+# test word search
+for query in ['pink moon',
+        'jackson abc',
+        'there you', ]:
+    result = c._search(query)
+    print (result)
+    assert len(result) == 1
+
+assert len(c.getReleaseIds()) == len(c)
+
+# make a few deletions
+random.seed(42)
+victims = random.sample(test_releases, int(len(test_releases)*0.25))
+for victim in victims:
+    c.deleteRelease(victim)
+

@@ -41,7 +41,8 @@ def sql_list_append(cursor, table_name, field_name, key, value):
         relList = [value]
     else:
         relList = row[0][1]
-        relList.append(value)
+        if value not in relList:
+            relList.append(value)
 
     cursor.execute(('replace' if row else 'insert')+
             ' into '+table_name+'('+field_name+', releases) values (?, ?)',
@@ -94,6 +95,8 @@ class Catalog(object):
 
         # should we connect here, once and for all, or should we make temporary
         # connections to sqlite3? 
+        if not os.path.isfile(dbPath):
+            self._createTables()
 
     def _connect(self):
         # Let's try here for now, just need to make sure we disconnect when this
@@ -101,18 +104,51 @@ class Catalog(object):
         self.conn = sqlite3.connect(self.dbPath)
         return sqlite3.connect(self.dbPath, detect_types=sqlite3.PARSE_DECLTYPES)
 
-    def _resetMaps(self):
+    def _createTables(self):
+        """Create the SQL tables for the catalog. Database is assumed empty."""
+        with self._connect() as con:
+            cur = con.cursor()
+
+            cur.execute("CREATE TABLE releases("+\
+                "id TEXT PRIMARY KEY, "+\
+                # metadata from musicbrainz, maybe store a dict instead of the XML?
+                "meta BLOB, "+\
+                "metatime FLOAT, "+\
+                # now all the extra data
+                "purchases LIST, "+\
+                "added LIST, "+\
+                "lent LIST, "+\
+                "listened LIST, "+\
+                "digital LIST, "+\
+                "count INT, "+\
+                "comment TEXT, "+\
+                "rating INT)")
+            
+            # tables that map specific things to a list of releases
+            for columnName in [
+                    'word',
+                    'discid',
+                    'barcode',
+                    'format'
+                    ]:
+
+                cur.execute('CREATE TABLE '+columnName+'s('+\
+                        columnName+' TEXT PRIMARY KEY, '+\
+                        'releases list)')
+
+            con.commit()
+
+
+    def _resetTables(self):
         """Drop the derived tables in the database and rebuild them"""
         with self._connect() as con:
             cur = con.cursor()
             for tab in ['words', 'discids', 'barcodes', 'formats']:
                 cur.execute('delete * from ?', tab)
+        self._createTables()
             
     def renameRelease(self, releaseId, newReleaseId):
-        os.rename(os.path.join('release-id', releaseId),
-                os.path.join('release-id', newReleaseId) )
-        # TODO this is lazy, but it is the only way to correct all the tables created during load()
-        self.load()
+        self.deleteRelease(releaseId)
         self.addRelease(newReleaseId, olderThan=60)
 
     def getReleaseIds(self):
@@ -653,7 +689,8 @@ tr.releaserow:hover{
             cur = con.cursor()
 
             # Update releases table
-            cur.execute('insert into releases(id, meta, metatime, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            try:
+                cur.execute('insert into releases(id, meta, metatime, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                     (
                         releaseId, 
                         buffer(zlib.compress(metaXml)), 
@@ -668,6 +705,8 @@ tr.releaserow:hover{
                         0
                     )
                 )
+            except sqlite3.IntegrityError as e:
+                logging.warning('Release already exists in catalog')
 
             # Update words table
             rel_words = self.getReleaseWords(relDict['release'])
@@ -689,7 +728,7 @@ tr.releaserow:hover{
 
             con.commit()
 
-    def unDigestReleaseXml(self, releaseId):
+    def unDigestRelease(self, releaseId):
         """Remove all references to a release from the data structures."""
         relDict = self.getRelease(releaseId)
         
@@ -764,10 +803,7 @@ tr.releaserow:hover{
 
     def deleteRelease(self, releaseId):
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
-        shutil.rmtree(os.path.join(self.rootPath, releaseId))
-        # also drop from memory
-        #del self.releaseIndex[releaseId] # TODO necessary?
-        self.load()
+        self.unDigestRelease(releaseId)
 
     def refreshAllMetaData(self, olderThan=0):
         for releaseId in self.loadReleaseIds():
