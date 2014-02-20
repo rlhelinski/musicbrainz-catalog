@@ -67,3 +67,13 @@ for victim in victims:
     c.deleteRelease(victim)
 
 c.report()
+
+import mbcat.shell
+import StringIO
+
+userin = StringIO.StringIO()
+shell = mbcat.shell.Shell(stdin=userin, catalog=c)
+
+userin.write('help\n')
+shell.main()
+
