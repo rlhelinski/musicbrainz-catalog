@@ -19,7 +19,11 @@ from collections import defaultdict
 import progressbar
 import logging
 _log = logging.getLogger("mbcat")
-import cPickle as pickle
+# for compatibility with Python 3
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import zlib
 
 import sqlite3
@@ -387,6 +391,7 @@ class Catalog(object):
 
         htf = open(fileName, 'wt')
 
+        # TODO move all this HTML code to a template file
         htf.write("""<!DOCTYPE HTML>
 <html>
 <head>
