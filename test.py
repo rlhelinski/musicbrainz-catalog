@@ -72,8 +72,18 @@ import mbcat.shell
 import StringIO
 
 userin = StringIO.StringIO()
-shell = mbcat.shell.Shell(stdin=userin, catalog=c)
+shellout = StringIO.StringIO()
+shell = mbcat.shell.Shell(stdin=userin, stdout=shellout, catalog=c)
 
-userin.write('help\n')
-shell.main()
+def enterCmd(shell, cmd):
+    userin.write(cmd+'\n')
+    userin.seek(0) # don't forget to rewind the memory file
+    shell.main()
+
+def printOutput(stdout):
+    stdout.seek(0)
+    print (stdout.read())
+
+enterCmd(shell, 'h')
+printOutput(shellout)
 
