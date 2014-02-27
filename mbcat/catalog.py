@@ -359,6 +359,8 @@ class Catalog(object):
 
 
     def search(self, query):
+        # TODO this is a convenience function which uses print and should
+        # be moved to the shell 
         """Print a list releases that match words in a query."""
         matches = self._search(query)
         for releaseId in matches:
