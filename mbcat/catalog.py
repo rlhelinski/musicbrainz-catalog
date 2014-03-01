@@ -194,6 +194,12 @@ class Catalog(object):
 
         return metadata['release']
 
+    def getReleaseIdsByFormat(self, fmt):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select releases from formats where format = ?', (fmt,))
+            return cur.fetchall()[0][0]
+
     def __len__(self):
         """Return the number of releases in the catalog."""
         with self._connect() as con:
@@ -324,7 +330,7 @@ class Catalog(object):
                 ] ) 
 
     def getSortedList(self, matchFmt=None):
-        relIds = self.formatMap[matchFmt] if matchFmt else self.getReleaseIds()
+        relIds = self.getReleaseIdsByFormat(matchFmt.__name__) if matchFmt else self.getReleaseIds()
             
         sortKeys = [(relId, self.formatDiscSortKey(relId)) for relId in relIds]
 
