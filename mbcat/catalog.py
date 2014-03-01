@@ -121,6 +121,7 @@ class Catalog(object):
                 "id TEXT PRIMARY KEY, "+\
                 # metadata from musicbrainz, maybe store a dict instead of the XML?
                 "meta BLOB, "+\
+                "sortstring TEXT, "+\
                 "metatime FLOAT, "+\
                 # now all the extra data
                 "purchases LIST, "+\
@@ -190,6 +191,8 @@ class Catalog(object):
 
             # maybe it would be better to store the release as a serialized dict in the table
             # then, we could skip this parsing step
+
+            #_log.info('Building sort string for %s' % releaseId)
             metadata = self.getReleaseDictFromXml(releaseXml)
 
         return metadata['release']
@@ -318,16 +321,31 @@ class Catalog(object):
                 '['+str(mbcat.formats.getReleaseFormat(release))+']', \
                 ] )
 
-    def formatDiscSortKey(self, releaseId):
-        # TODO rename to something like getReleaseSortStr
-        release = self.getRelease(releaseId)
-
+    @staticmethod
+    def getSortStringFromRelease(release):
         return ' - '.join ( [ \
                 mbcat.utils.formatSortCredit(release), \
                 release['date'] if 'date' in release else '', \
                 release['title'] + \
                 (' ('+release['disambiguation']+')' if 'disambiguation' in release else ''), \
-                ] ) 
+                ] )
+
+    def formatDiscSortKey(self, releaseId):
+        # TODO rename to something like getReleaseSortStr
+        
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select sortstring from releases where id = ?', (releaseId,))
+            sortstring = cur.fetchone()[0]
+
+            if not sortstring:
+                # cache it for next time
+                sortstring = self.getSortStringFromRelease(self.getRelease(releaseId))
+                cur.execute('update releases set sortstring=? where id=?', (sortstring, releaseId))
+                cur.commit()
+
+        return sortstring
+
 
     def getSortedList(self, matchFmt=None):
         relIds = self.getReleaseIdsByFormat(matchFmt.__name__) if matchFmt else self.getReleaseIds()
@@ -708,10 +726,11 @@ tr.releaserow:hover{
 
             # Update releases table
             try:
-                cur.execute('insert into releases(id, meta, metatime, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                cur.execute('insert into releases(id, meta, sortstring, metatime, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                     (
                         releaseId, 
                         buffer(zlib.compress(metaXml)), 
+                        self.getSortStringFromRelease(relDict),
                         time.time(),
                         [],
                         [time.time()],
