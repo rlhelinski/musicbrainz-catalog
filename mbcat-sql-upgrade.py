@@ -60,6 +60,7 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
         "id TEXT PRIMARY KEY, "+\
         # metadata from musicbrainz, maybe store a dict instead of the XML?
         "meta BLOB, "+\
+        "sortstring TEXT, "+\
         "metatime FLOAT, "+\
         # now all the extra data
         "purchases LIST, "+\
@@ -115,10 +116,13 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
         except IOError as e:
             ed = None
 
-        cur.execute('insert into releases(id, meta, metatime, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        cur.execute('insert into releases(id, meta, sortstring, metatime, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 (
                     relId, 
                     buffer(zlib.compress(metaXml)), 
+                    # If this could be used with Catalog.formatDiscSortKey() without a catalog:
+                    #mbcat.catalog.Catalog.getReleaseDictFromXml(metaXml),
+                    ""
                     os.path.getmtime(metaPath),
                     ed.purchases,
                     ed.addDates,
