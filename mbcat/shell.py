@@ -13,7 +13,8 @@ class Shell:
         self.s = InputSplitter(stdin=stdin, stdout=stdout)
 
     def SearchSort(self):
-        """Search for a release; useful for sorting physical media."""
+        """Search for a release and display its neighbors in the sorting scheme.
+        Useful for sorting physical media."""
         releaseId = self.Search()
         self.c.getSortNeighbors(releaseId, matchFormat=True)
 
@@ -22,7 +23,7 @@ class Shell:
         while(True):
             input = self.s.nextLine(prompt)
             if input:
-                if len(getReleaseId(input)) == 36:
+                if len(mbcat.utils.getReleaseIdFromInput(input)) == 36:
                     releaseId = getReleaseId(input)
                     return releaseId
                 matches = list(self.c._search(input))
