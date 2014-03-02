@@ -8,6 +8,7 @@ import logging
 # set up logging
 logging.basicConfig(level=logging.INFO)
 
+import musicbrainzngs
 import mbcat.catalog
 
 test_releases = [
@@ -35,18 +36,40 @@ test_releases = [
     #'be3cc3e7-bdb0-3c13-a60b-a985b30eb603', # this disappeared as of 2014/02/06
     # Digital
     '14a12f84-c5f3-473b-87f5-9340174ecbc4',
+    # Not a release:
+    '1cbc1a5a-5512-3f8e-997b-d9281b83722b',
+    'f7373a05-cbd2-3385-a67f-35d10e06ac4f',
+    '30df9e9f-4bf8-434a-ac29-1ab773e1c22f',
     ]
 
 # test the catalog class
 c = mbcat.catalog.Catalog('testcat.db')
 
 c.report()
-assert len(c) == 0
+try:
+    assert len(c) == 0
+except AssertionError:
+    print ('database is not empty, not rebuilding for test.')
+else:
 
-for releaseId in test_releases:
-    c.addRelease(releaseId)
+    for releaseId in test_releases:
+        try:
+            c.addRelease(releaseId)
+        except musicbrainzngs.musicbrainz.ResponseError as e:
+            print (releaseId+': '+e)
 
-c.report()
+    c.report()
+    assert len(c.getReleaseIds()) == len(c)
+
+    # make a few deletions
+    random.seed(42)
+    victims = random.sample(test_releases, int(len(test_releases)*0.25))
+    print ('Deleting %d releases' % len(victims))
+    for victim in victims:
+        print ('Deleting '+c.formatDiscSortKey(victim))
+        c.deleteRelease(victim)
+
+    c.report()
 
 # test word search
 for query in ['pink moon',
@@ -56,17 +79,6 @@ for query in ['pink moon',
     print (result)
     assert len(result) == 1
 
-assert len(c.getReleaseIds()) == len(c)
-
-# make a few deletions
-random.seed(42)
-victims = random.sample(test_releases, int(len(test_releases)*0.25))
-print ('Deleting %d releases' % len(victims))
-for victim in victims:
-    print ('Deleting '+c.formatDiscSortKey(victim))
-    c.deleteRelease(victim)
-
-c.report()
 
 import mbcat.shell
 import StringIO
@@ -83,7 +95,12 @@ def enterCmd(shell, cmd):
 def printOutput(stdout):
     stdout.seek(0)
     print (stdout.read())
+    stdout.seek(0)
+    stdout.truncate()
 
 enterCmd(shell, 'h')
 printOutput(shellout)
 
+enterCmd(shell, 'search collins')
+enterCmd(shell, '0')
+printOutput(shellout)
