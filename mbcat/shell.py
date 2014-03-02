@@ -16,7 +16,16 @@ class Shell:
         """Search for a release and display its neighbors in the sorting scheme.
         Useful for sorting physical media."""
         releaseId = self.Search()
-        self.c.getSortNeighbors(releaseId, matchFormat=True)
+        (index, neighborhood) = self.c.getSortNeighbors(releaseId, matchFormat=True)
+
+        for i, (sortId, sortStr) in neighborhood:
+            self.s.write( ' '.join([
+                    ('\033[92m' if i == index else "") + "%4d" % i, \
+                    sortId, \
+                    sortStr, \
+                    ("[" + str(mbcat.formats.getReleaseFormat(self.c.getRelease(sortId))) + "]"), \
+                    (" <<<" if i == index else "") + ('\033[0m' if i == index else "") \
+                    ])+'\n' )
 
     def Search(self, prompt="Enter search terms (or release ID): "):
         """Search for a release and return release ID."""

@@ -358,7 +358,6 @@ class Catalog(object):
         """
         Print release with context (neighbors) to assist in sorting and storage of releases.
         """
-        # This should be broken down since it writes to the console
 
         if matchFormat:
             try:
@@ -372,15 +371,10 @@ class Catalog(object):
             sortedList = self.getSortedList()
 
         index = sortedList.index((releaseId, self.formatDiscSortKey(releaseId)))
-        for i in range(max(0,index-neighborHood), min(len(sortedList), index+neighborHood)):
-            sortId, sortStr = sortedList[i]
-            print( ('\033[92m' if i == index else "") + "%4d" % i, \
-                    sortId, \
-                    sortStr, \
-                    ("[" + str(mbcat.formats.getReleaseFormat(self.getRelease(sortId))) + "]"), \
-                    (" <<<" if i == index else "") + \
-                    ('\033[0m' if i == index else "") )
-
+        neighborhoodIndexes = range(max(0,index-neighborHood), min(len(sortedList), index+neighborHood))
+        return (index, 
+                zip(neighborhoodIndexes, 
+                        [sortedList[i] for i in neighborhoodIndexes]))
 
     def search(self, query):
         # TODO this is a convenience function which uses print and should
