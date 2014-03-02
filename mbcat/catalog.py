@@ -730,7 +730,7 @@ tr.releaserow:hover{
                     (
                         releaseId, 
                         buffer(zlib.compress(metaXml)), 
-                        self.getSortStringFromRelease(relDict),
+                        self.getSortStringFromRelease(relDict['release']),
                         time.time(),
                         [],
                         [time.time()],
