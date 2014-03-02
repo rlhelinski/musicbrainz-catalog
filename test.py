@@ -56,7 +56,7 @@ else:
         try:
             c.addRelease(releaseId)
         except musicbrainzngs.musicbrainz.ResponseError as e:
-            print (releaseId+': '+e)
+            print (releaseId+': '+str(e))
 
     c.report()
     assert len(c.getReleaseIds()) == len(c)
@@ -68,6 +68,14 @@ else:
     for victim in victims:
         print ('Deleting '+c.formatDiscSortKey(victim))
         c.deleteRelease(victim)
+
+    c.report()
+
+    for releaseId in victims:
+        try:
+            c.addRelease(releaseId)
+        except musicbrainzngs.musicbrainz.ResponseError as e:
+            print (releaseId+': '+str(e))
 
     c.report()
 
@@ -102,5 +110,6 @@ enterCmd(shell, 'h')
 printOutput(shellout)
 
 enterCmd(shell, 'search collins')
+printOutput(shellout)
 enterCmd(shell, '0')
 printOutput(shellout)
