@@ -43,7 +43,7 @@ class Shell:
                 elif len(matches) == 1:
                     return matches[0]
                 else:
-                    raise ValueError ("No matches.")
+                    raise ValueError ("No matches for \"%s\"." % input)
             else:
                 raise ValueError ('No release specified.')
 
