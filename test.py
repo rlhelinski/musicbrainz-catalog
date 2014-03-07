@@ -113,3 +113,6 @@ enterCmd(shell, 'search collins')
 printOutput(shellout)
 enterCmd(shell, '0')
 printOutput(shellout)
+
+myshell = mbcat.shell.Shell(catalog=c)
+myshell.main()
