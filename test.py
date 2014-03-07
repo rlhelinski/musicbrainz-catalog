@@ -89,7 +89,10 @@ for query in ['pink moon',
 
 
 import mbcat.shell
-import StringIO
+try:
+    import StringIO
+except ImportError:
+    import io as StringIO
 
 userin = StringIO.StringIO()
 shellout = StringIO.StringIO()
