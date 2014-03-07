@@ -142,7 +142,7 @@ class Catalog(object):
                     ]:
 
                 cur.execute('CREATE TABLE '+columnName+'s('+\
-                        columnName+' TEXT PRIMARY KEY, '+\
+                        columnName+' '+('INT' if columnName is 'barcode' else 'TEXT')+' PRIMARY KEY, '+\
                         'releases list)')
 
             con.commit()
@@ -208,10 +208,9 @@ class Catalog(object):
             cur = con.cursor()
             cur.execute('select releases from barcodes where barcode = ?', (barcode,))
             result = cur.fetchall()
-            import pdb; pdb.set_trace()
             if not result:
                 raise KeyError('Barcode not found')
-            return result
+            return result[0][0]
 
     def __len__(self):
         """Return the number of releases in the catalog."""

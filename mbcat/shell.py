@@ -171,11 +171,21 @@ class Shell:
 
     def BarcodeSearch(self):
         """Search for a release by barcode."""
-        barCodes = UPC(self.s.nextWord("Enter barcode: ")).variations()
+        barCodeEntered = self.s.nextWord("Enter barcode: ")
+        barCodes = UPC(barCodeEntered).variations()
+        found = False
 
         for barCode in barCodes:
-            for releaseId in self.c.barCodeLookup(barCode):
-                self.s.write(self.c.formatDiscInfo(releaseId)+'\n')
+            try:
+                for releaseId in self.c.barCodeLookup(barCode):
+                    self.s.write(self.c.formatDiscInfo(releaseId)+'\n')
+            except KeyError as e:
+                pass
+            else:
+                found = True
+
+        if not found:
+            raise KeyError('No variation of barcode %s found' % barCodeEntered)
 
     def Delete(self):
         """Delete a release."""
