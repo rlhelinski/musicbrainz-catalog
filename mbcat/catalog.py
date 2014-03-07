@@ -203,6 +203,16 @@ class Catalog(object):
             cur.execute('select releases from formats where format = ?', (fmt,))
             return cur.fetchall()[0][0]
 
+    def barCodeLookup(self, barcode):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select releases from barcodes where barcode = ?', (barcode,))
+            result = cur.fetchall()
+            import pdb; pdb.set_trace()
+            if not result:
+                raise KeyError('Barcode not found')
+            return result
+
     def __len__(self):
         """Return the number of releases in the catalog."""
         with self._connect() as con:

@@ -174,7 +174,7 @@ class Shell:
         barCodes = UPC(self.s.nextWord("Enter barcode: ")).variations()
 
         for barCode in barCodes:
-            for releaseId in self.c.barCodeMap[barCode]:
+            for releaseId in self.c.barCodeLookup(barCode):
                 self.s.write(self.c.formatDiscInfo(releaseId)+'\n')
 
     def Delete(self):

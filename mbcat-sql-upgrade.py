@@ -81,7 +81,7 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
             'releases list)')
 
     cur.execute('CREATE TABLE barcodes('+\
-            'barcode TEXT PRIMARY KEY, '+\
+            'barcode INT PRIMARY KEY, '+\
             'releases list)')
 
     cur.execute('CREATE TABLE formats('+\
