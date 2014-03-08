@@ -958,7 +958,7 @@ tr.releaserow:hover{
     def makeLabelTrack(self, releaseId, outPath='Label Track.txt'):
         """Useful for importing into Audacity."""
         rel = self.getRelease(releaseId)
-        with open(outPath, 'wt') as f:
+        with open(outPath, 'w') as f:
             pos = 0.0
             for medium in rel['medium-list']:
                 for track in medium['track-list']:
@@ -966,7 +966,12 @@ tr.releaserow:hover{
                     if 'length' not in rec:
                         _log.warning('Track '+track['number']+' length is empty in '+releaseId)
                     length = float(rec['length'])/1000 if 'length' in rec else 2*60
-                    f.write('%.6f\t%.6f\t%s\n' % (pos, pos+length, rec['title']))
+                    line = '%.6f\t%.6f\t%s\n' % (pos, pos+length, rec['title'])
+                    try:
+                        f.write(line)
+                    except ValueError:
+                        # Python2 compatibility
+                        f.write(line.encode('utf8'))
                     pos += length
         _log.info('Wrote label track for '+releaseId+' to '+outPath)
 
