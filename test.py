@@ -114,8 +114,14 @@ printOutput(shellout)
 
 enterCmd(shell, 'search collins')
 printOutput(shellout)
-enterCmd(shell, '0')
+#enterCmd(shell, '0')
+#printOutput(shellout)
+enterCmd(shell, 'audacity metatags collins')
 printOutput(shellout)
+enterCmd(shell, 'audacity labeltrack collins')
+printOutput(shellout)
+
+
 
 myshell = mbcat.shell.Shell(catalog=c)
 myshell.main()
