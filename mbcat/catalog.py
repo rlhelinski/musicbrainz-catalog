@@ -400,6 +400,23 @@ class Catalog(object):
             cur.execute('select count(word) from words')
             return cur.fetchone()[0]
 
+    def getComment(self, releaseId):
+        """Get the comment for a release (if any)."""
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select comment from releases where id=?',
+                (releaseId,))
+            return cur.fetchone()[0]
+
+    def setComment(self, releaseId, comment):
+        """Set the comment for a release."""
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set comment=? where id=?',
+                (comment, releaseId))
+            con.commit()
+
+
     def report(self):
         """Print some statistics about the catalog as a sanity check."""
 

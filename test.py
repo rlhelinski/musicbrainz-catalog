@@ -116,6 +116,13 @@ enterCmd(shell, 'search collins')
 printOutput(shellout)
 #enterCmd(shell, '0')
 #printOutput(shellout)
+
+enterCmd(shell, 'comment collins')
+printOutput(shellout)
+enterCmd(shell, 'it is very great!')
+printOutput(shellout)
+
+
 enterCmd(shell, 'audacity metatags collins')
 printOutput(shellout)
 enterCmd(shell, 'audacity labeltrack collins')

@@ -89,19 +89,16 @@ class Shell:
     def AddComment(self):
         """Add a comment."""
         releaseId = self.Search()
-        ed = self.c.extraIndex[releaseId]
-        if ed.comment:
-            self.s.write('Comments: ' + ed.comment + '\n')
-        cmt = self.s.nextLine('Additional Comment: ')
-        if not cmt:
+        comment = self.c.getComment(releaseId)
+        if comment:
+            self.s.write('Comments: ' + comment + '\n')
+        newComment = self.s.nextLine('Additional Comment: ')
+        if not newComment:
             raise ValueError('Empty string.')
 
-        if ed.comment:
-            ed.comment += '\n'+cmt
-        else:
-            ed.comment = cmt
-        ed.save()
-
+        if comment:
+            newComment = comment+'\n'+newComment
+        self.c.setComment(releaseId, newComment)
 
     def SetRating(self):
         """Add a rating."""
