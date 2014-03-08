@@ -96,8 +96,15 @@ class Catalog(object):
     labelUrl = mbUrl+'label/'
     releaseUrl = mbUrl+'release/'
 
-    def __init__(self, dbPath='mbcat.db'):
-        self.dbPath = dbPath
+    def __init__(self, dbPath=None, cachePath=None):
+        """Open or create a new catalog"""
+
+        prefPath = os.path.join(os.path.expanduser('~'), '.mbcat')
+        self.dbPath = dbPath if dbPath else os.path.join(prefPath, 'mbcat.db')
+        self.cachePath = cachePath if cachePath else os.path.join(prefPath, 'cache')
+
+        if not os.path.isdir(prefPath):
+            os.mkdir(prefPath)
 
         self.prefs = mbcat.userprefs.PrefManager()
 
@@ -603,7 +610,7 @@ tr.releaserow:hover{
 
                 #coverartUrl = mbcat.amazonservices.getAsinImageUrl(rel.asin, mbcat.amazonservices.AMAZON_SERVER["amazon.com"], 'S')
                 # Refer to local copy instead
-                imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
+                imgPath = self._getCoverArtPath(releaseId)
                 coverartUrl = imgPath if os.path.isfile(imgPath) else None
 
                 htf.write("<tr class=\"releaserow\">\n")
@@ -882,9 +889,12 @@ tr.releaserow:hover{
                 if 'format' not in medium or not medium['format']:
                     _log.warning("No format for a medium of " + releaseId)
 
+    def _getCoverArtPath(self, releaseId):
+        return os.path.join(self.cachePath, releaseId[0], releaseId[0:2], releaseId, 'cover.jpg')
+
     def getCoverArt(self, releaseId, maxage=60*60):
         release = self.getRelease(releaseId)
-        imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
+        imgPath = self._getCoverArtPath(releaseId)
         if os.path.isfile(imgPath) and os.path.getmtime(imgPath) > time.time() - maxage:
             _log.info("Already have cover art for " + releaseId + ", skipping")
             return
