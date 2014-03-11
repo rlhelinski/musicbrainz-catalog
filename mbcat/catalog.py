@@ -432,13 +432,16 @@ class Catalog(object):
     def getDigitalPaths(self, releaseId):
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('select digital from releases where release = ?', (releaseId,))
+            cur.execute('select digital from releases where id=?', (releaseId,))
             return cur.fetchall()[0][0]
 
     def addDigitalPath(self, releaseId, path):
+        existingPaths = self.getDigitalPaths(releaseId)
         with self._connect() as con:
             cur = con.cursor()
-            sql_list_append(cur, 'releases', 'digital', path, releaseId)
+            cur.execute('update releases set digital=? where id=?', 
+                (existingPaths+[path],releaseId))
+            con.commit()
 
     def report(self):
         """Print some statistics about the catalog as a sanity check."""
@@ -846,15 +849,12 @@ tr.releaserow:hover{
         for path in self.prefs.musicPaths:
             _log.info("Searching '%s'"%path)
             for relId in releaseIdList:
-                #print (relId)
                 rel = self.getRelease(relId)
-                for artistName in [ rel['artist-credit-phrase'], rel['artist-credit'][0]['artist']['sort-name'] ]:
+                for artistName in set([ rel['artist-credit-phrase'], rel['artist-credit'][0]['artist']['sort-name'] ]):
                     artistPath = os.path.join(path, artistName)
                     if os.path.isdir(artistPath):
-                        #print 'Found ' + artistPath
                         for titleName in [rel['title']]:
                             titlePath = os.path.join(artistPath, titleName)
-                            print (titlePath)
                             if os.path.isdir(titlePath):
                                 _log.info('Found ' + relId + ' at ' + titlePath)
                                 self.addDigitalPath(relId, titlePath)
