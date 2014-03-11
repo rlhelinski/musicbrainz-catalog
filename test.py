@@ -117,18 +117,25 @@ printOutput(shellout)
 #enterCmd(shell, '0')
 #printOutput(shellout)
 
+enterCmd(shell, 'barcode 78221869928')
+# Should return 8765eec6-c74e-420e-b1c8-4415eb284158
+printOutput(shellout)
+
 enterCmd(shell, 'comment collins')
 printOutput(shellout)
 enterCmd(shell, 'it is very great!')
 printOutput(shellout)
 
+enterCmd(shell, 'coverart collins')
+printOutput(shellout)
 
 enterCmd(shell, 'audacity metatags collins')
 printOutput(shellout)
 enterCmd(shell, 'audacity labeltrack collins')
 printOutput(shellout)
 
-
+enterCmd(shell, 'check')
+printOutput(shellout)
 
 myshell = mbcat.shell.Shell(catalog=c)
 myshell.main()
