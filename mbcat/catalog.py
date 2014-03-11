@@ -210,6 +210,12 @@ class Catalog(object):
             cur.execute('select releases from formats where format = ?', (fmt,))
             return cur.fetchall()[0][0]
 
+    def getFormats(self):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select format from formats')
+            return cur.fetchall()[0]
+
     def barCodeLookup(self, barcode):
         with self._connect() as con:
             cur = con.cursor()
@@ -423,6 +429,16 @@ class Catalog(object):
                 (comment, releaseId))
             con.commit()
 
+    def getDigitalPaths(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select digital from releases where release = ?', (releaseId,))
+            return cur.fetchall()[0][0]
+
+    def addDigitalPath(self, releaseId, path):
+        with self._connect() as con:
+            cur = con.cursor()
+            sql_list_append(cur, 'releases', 'digital', path, releaseId)
 
     def report(self):
         """Print some statistics about the catalog as a sanity check."""
@@ -827,10 +843,10 @@ tr.releaserow:hover{
 
         # TODO could use progressbar here
         # TODO need to be more flexible in capitalization and re-order of words
-        for relId in releaseIdList:
-            #print relId
-            for path in self.prefs.musicPaths:
-                #print path
+        for path in self.prefs.musicPaths:
+            _log.info("Searching '%s'"%path)
+            for relId in releaseIdList:
+                #print (relId)
                 rel = self.getRelease(relId)
                 for artistName in [ rel['artist-credit-phrase'], rel['artist-credit'][0]['artist']['sort-name'] ]:
                     artistPath = os.path.join(path, artistName)
@@ -838,10 +854,10 @@ tr.releaserow:hover{
                         #print 'Found ' + artistPath
                         for titleName in [rel['title']]:
                             titlePath = os.path.join(artistPath, titleName)
+                            print (titlePath)
                             if os.path.isdir(titlePath):
                                 _log.info('Found ' + relId + ' at ' + titlePath)
-                                self.extraIndex[relId].addPath(titlePath)
-            self.extraIndex[relId].save()
+                                self.addDigitalPath(relId, titlePath)
 
         if releaseId and not self.extraIndex[relId].digitalPaths:
             _log.warning('No digital paths found for '+releaseId)
