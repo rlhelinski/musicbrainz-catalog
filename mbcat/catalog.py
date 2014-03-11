@@ -290,12 +290,19 @@ class Catalog(object):
 
     @staticmethod
     def getReleaseWords(rel):
-        words = []
-        for field in ['title', 'artist-credit-phrase', 'disambiguation']:
-            if field in rel:
-                words.extend(re.findall(r"\w+", rel[field].lower(), re.UNICODE))
+        words = set()
+        relId = rel['id']
+        def processWords(field, d):
+            if field in d:
+                words.update(re.findall(r"\w+", d[field].lower(), re.UNICODE))
             elif field != 'disambiguation':
-                _log.error('Missing field from release '+rel['id']+': '+str(e))
+                _log.warning('Missing field from release '+relId+': '+field)
+
+        for field in ['title', 'artist-credit-phrase', 'disambiguation']:
+            processWords(field, rel)
+        for credit in rel['artist-credit']:
+            for field in ['sort-name', 'disambiguation', 'name']:
+                processWords(field, credit['artist'])
 
         return words
 
