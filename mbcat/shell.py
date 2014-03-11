@@ -128,7 +128,7 @@ class Shell:
             self.c.refreshMetaData(releaseId, olderThan=maxAge)
 
     def CoverArt(self):
-        """Refresh coverart from coverart.org or Amazon.com."""
+        """Refresh cover art from coverart.org or Amazon.com."""
         releaseId = self.Search("Enter search terms or release ID [empty for all]: ")
         if not releaseId:
             self.c.refreshAllCoverArt()
