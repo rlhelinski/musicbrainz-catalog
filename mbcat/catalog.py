@@ -450,6 +450,21 @@ class Catalog(object):
                 (existingPaths+[path],releaseId))
             con.commit()
 
+    def getAddedDates(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select added from releases where id=?', (releaseId,))
+            return cur.fetchall()[0][0]
+
+    def addAddedDates(self, releaseId, date):
+        existingDates = self.getAddedDates(releaseId)
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set added=? where id=?', 
+                (existingDates+[date],releaseId))
+            con.commit()
+
+
     def report(self):
         """Print some statistics about the catalog as a sanity check."""
 
@@ -596,7 +611,7 @@ tr.releaserow:hover{
 </head>
 <body>""")
 
-        formatsBySize = sorted(self.formatMap.keys(), key=lambda obj: obj())
+        formatsBySize = sorted(self.getFormats(), key=lambda s: mbcat.formats.getFormatObj(s))
 
         htf.write('<a name="top">\n')
         htf.write('<div id="toc">\n')
@@ -605,16 +620,16 @@ tr.releaserow:hover{
         htf.write('<span class="toctoggle">&nbsp;[<a href="#" class="internal" id="togglelink">hide</a>]&nbsp;</span>\n</div>\n')
         htf.write('<ul>\n')
         for releaseType in formatsBySize:
-            htf.write('\t<li><a href="#'+str(releaseType())+'">'+\
-                str(releaseType())+'</a></li>\n')
+            htf.write('\t<li><a href="#'+releaseType+'">'+\
+                releaseType+'</a></li>\n')
         htf.write('</ul>\n')
         htf.write('</div>\n')
 
         for releaseType in formatsBySize:
-            sortedList = self.getSortedList(releaseType)
+            sortedList = self.getSortedList(mbcat.formats.getFormatObj(releaseType).__class__)
             if len(sortedList) == 0:
                 continue
-            htf.write("<h2><a name=\""+str(releaseType())+"\">" + str(releaseType()) + (" (%d Releases)" %
+            htf.write("<h2><a name=\""+str(releaseType)+"\">" + str(releaseType) + (" (%d Releases)" %
             len(sortedList)) + " <a href=\"#top\">top</a></h2>\n")
 
             htf.write("<table class=\"formattable\">\n")
@@ -698,13 +713,13 @@ tr.releaserow:hover{
                 htf.write('<td>\n<table class="pathlist">'+\
                     ''.join([\
                         ('<tr><td><a href="'+fmt(path)+'">'+fmt(path)+'</a></td></tr>\n')\
-                        for path in self.extraIndex[releaseId].digitalPaths])+\
+                        for path in self.getDigitalPaths(releaseId)])+\
                     '</table>\n</td>\n')
                 htf.write(\
                     "<td>"+(datetime.fromtimestamp( \
-                        self.extraIndex[releaseId].addDates[0] \
+                        self.getAddedDates(releaseId)[0] \
                         ).strftime('%Y-%m-%d') if \
-                    len(self.extraIndex[releaseId].addDates) else '')+"</td>\n")
+                    len(self.getAddedDates(releaseId)) else '')+"</td>\n")
                 htf.write("<td>"+' + '.join([(medium['format'] if 'format' in medium else '(unknown)') for medium in rel['medium-list']])+"</td>\n")
 
                 htf.write('</tr>\n')

@@ -129,12 +129,18 @@ printOutput(shellout)
 enterCmd(shell, 'coverart collins')
 printOutput(shellout)
 
+enterCmd(shell, 'digital search\n')
+printOutput(shellout)
+
 enterCmd(shell, 'audacity metatags collins')
 printOutput(shellout)
 enterCmd(shell, 'audacity labeltrack collins')
 printOutput(shellout)
 
 enterCmd(shell, 'check')
+printOutput(shellout)
+
+enterCmd(shell, 'similar')
 printOutput(shellout)
 
 myshell = mbcat.shell.Shell(catalog=c)

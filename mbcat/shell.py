@@ -211,14 +211,11 @@ class Shell:
     def DigitalPath(self):
         """Add a path to a digital copy of a release."""
         releaseId = self.Search()
-        ed = self.c.extraIndex[releaseId]
-        self.s.write(str(ed))
 
         path = self.s.nextLine("Enter path to add: ")
         if path.startswith("'") and path.endswith("'"):
             path = path[1:-1]
-        ed.addPath(path)
-        ed.save()
+        self.c.addDigitalPath(releaseId, path)
 
     def DigitalSearch(self):
         """Search for digital copies of releases."""
