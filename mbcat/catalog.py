@@ -233,7 +233,11 @@ class Catalog(object):
             return cur.fetchone()[0]
 
     def __contains__(self, releaseId):
-        return releaseId in self.metaIndex
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select count(id) from releases where id=?', (releaseId,))
+            count = cur.fetchone()[0]
+        return count > 0
 
     def loadReleaseIds(self):
         fileList = os.listdir(self.rootPath)
@@ -457,6 +461,13 @@ class Catalog(object):
             return cur.fetchall()[0][0]
 
     def addAddedDates(self, releaseId, date):
+        # input error checking
+        if (type(date) != float):
+            try:
+                date = float(date)
+            except ValueError as e:
+                raise ValueError('Date object must be a floating-point number')
+
         existingDates = self.getAddedDates(releaseId)
         with self._connect() as con:
             cur = con.cursor()
@@ -812,6 +823,7 @@ tr.releaserow:hover{
                 )
             except sqlite3.IntegrityError as e:
                 logging.warning('Release already exists in catalog')
+                self.addAddedDates(releaseId, time.time())
 
             # Update words table
             rel_words = self.getReleaseWords(relDict['release'])
