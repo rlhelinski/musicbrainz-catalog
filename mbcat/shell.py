@@ -33,7 +33,7 @@ class Shell:
             input = self.s.nextLine(prompt)
             if input:
                 if len(mbcat.utils.getReleaseIdFromInput(input)) == 36:
-                    releaseId = getReleaseId(input)
+                    releaseId = mbcat.utils.getReleaseIdFromInput(input)
                     return releaseId
                 matches = list(self.c._search(input))
                 if len(matches) > 1:
@@ -151,7 +151,7 @@ class Shell:
     def Add(self):
         """Add a release."""
         self.s.write("Enter release ID: ")
-        releaseId = getReleaseId(self.s.nextWord())
+        releaseId = mbcat.utils.getReleaseIdFromInput(self.s.nextWord())
         if not releaseId:
             self.s.write("No input")
             return
