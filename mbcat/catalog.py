@@ -822,7 +822,7 @@ tr.releaserow:hover{
                     )
                 )
             except sqlite3.IntegrityError as e:
-                logging.warning('Release already exists in catalog')
+                _log.warning('Release already exists in catalog')
                 self.addAddedDates(releaseId, time.time())
 
             # Update words table
