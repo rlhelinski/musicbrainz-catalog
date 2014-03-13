@@ -88,10 +88,9 @@ if hasattr(etree, 'ParseError'):
 else:
     ETREE_EXCEPTIONS = (expat.ExpatError)
 
-
-
 class Catalog(object):
-    mbUrl = 'http://musicbrainz.org/'
+
+    mbUrl = 'http://'+mb.hostname+'/'
     artistUrl = mbUrl+'artist/'
     labelUrl = mbUrl+'label/'
     releaseUrl = mbUrl+'release/'
