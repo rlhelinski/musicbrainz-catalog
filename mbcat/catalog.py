@@ -459,7 +459,7 @@ class Catalog(object):
             cur.execute('select added from releases where id=?', (releaseId,))
             return cur.fetchall()[0][0]
 
-    def addAddedDates(self, releaseId, date):
+    def addAddedDate(self, releaseId, date):
         # input error checking
         if (type(date) != float):
             try:
@@ -474,6 +474,22 @@ class Catalog(object):
                 (existingDates+[date],releaseId))
             con.commit()
 
+    def getLendEvents(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select lent from releases where id=?', (releaseId,))
+            return cur.fetchall()[0][0]
+
+    def addLendEvent(self, releaseId, event):
+        # Some precursory error checking
+        if type(event) != mbcat.extradata.LendEvent:
+            raise ValueError ('Wrong type for lend event')
+        existingEvents = self.getLendEvents(releaseId)
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set added=? where id=?', 
+                (existingEvents+[event],releaseId))
+            con.commit()
 
     def report(self):
         """Print some statistics about the catalog as a sanity check."""
@@ -822,7 +838,7 @@ tr.releaserow:hover{
                 )
             except sqlite3.IntegrityError as e:
                 _log.warning('Release already exists in catalog')
-                self.addAddedDates(releaseId, time.time())
+                self.addAddedDate(releaseId, time.time())
 
             # Update words table
             rel_words = self.getReleaseWords(relDict['release'])
