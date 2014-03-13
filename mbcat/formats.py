@@ -34,11 +34,18 @@ class MD(Format):
 
 class DVD(Format):
     """Digital Versatile Disc"""
-    size = 12
+    # We make this the same size as CDs because these DVDs are packed with music CDs
+    # (not to be confused with video releases)
+    size = 12 
 
 class Unknown(Format):
     """(unknown)"""
     size = -1
+
+class Cassette(Format):
+    """Cassette"""
+    # 64 mm x 100.5 mm
+    size = 10
 
 class Digital(Format):
     """Digital Media"""
@@ -60,6 +67,8 @@ def getFormatObj(fmtStr):
         return CD()
     elif fmtStr == 'Digital Media':
         return Digital()
+    elif fmtStr == 'Cassette':
+        return Cassette()
     else:
         raise ValueError('Format "'+fmtStr+'" not recognized.')
         
@@ -71,6 +80,7 @@ def getReleaseFormat(rel):
         for medium in rel['medium-list']:
             fmts.append(getFormatObj(medium['format']))
 
+        # the largest format in the release dictates its category for sorting
         sortFormat = max(fmts)
     except KeyError:
         _log.warning('No format for ' + rel['id'])
