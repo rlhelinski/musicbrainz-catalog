@@ -143,5 +143,13 @@ printOutput(shellout)
 enterCmd(shell, 'similar')
 printOutput(shellout)
 
+enterCmd(shell, 'tracklist collins')
+printOutput(shellout)
+
+enterCmd(shell, 'switch collins 9c0801b6-79ab-3ba9-93c0-64f8438debc3')
+printOutput(shellout)
+enterCmd(shell, 'switch collins f7373a05-cbd2-3385-a67f-35d10e06ac4f')
+printOutput(shellout)
+
 myshell = mbcat.shell.Shell(catalog=c)
 myshell.main()
