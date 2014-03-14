@@ -193,7 +193,10 @@ class Catalog(object):
         with self._connect() as con:
             cur = con.cursor()
             cur.execute('select meta from releases where id = ?', (releaseId,))
-            releaseXml = zlib.decompress(cur.fetchone()[0])
+            try:
+                releaseXml = zlib.decompress(cur.fetchone()[0])
+            except TypeError:
+                raise KeyError ('release %s not found' % releaseId)
 
             # maybe it would be better to store the release as a serialized dict in the table
             # then, we could skip this parsing step
