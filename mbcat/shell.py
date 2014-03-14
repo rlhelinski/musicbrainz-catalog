@@ -57,14 +57,6 @@ class Shell:
                 raise ValueError ('No release specified.')
 
 
-    def Reload(self):
-        """Reload the database from disk."""
-        del self.c 
-        self.c = Catalog()
-        self.s.write("Reloading database...")
-        self.c.load()
-        self.s.write("DONE\n")
-
     def AddPurchaseEvent(self):
         """Add a purchase date."""
         releaseId = self.Search()
@@ -292,7 +284,6 @@ class Shell:
         'html' : Html, 
         'switch' : Switch, 
         'add' : Add, 
-        'reload' : Reload, 
         'barcode' : BarcodeSearch, 
         'delete' : Delete, 
         'check' : Check, 
