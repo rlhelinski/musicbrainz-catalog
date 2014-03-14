@@ -1,4 +1,5 @@
 from __future__ import print_function
+from __future__ import unicode_literals
 from mbcat.catalog import *
 from mbcat.extradata import *
 from mbcat.barcode import UPC
@@ -95,14 +96,17 @@ class Shell:
     def SetRating(self):
         """Add a rating."""
         releaseId = self.Search()
-        ed = self.c.extraIndex[releaseId]
-        if ed.rating:
-            self.s.write ('Current rating: %d/5\n' % ed.rating)
+        currentRating = self.c.getRating(releaseId)
+        if currentRating:
+            self.s.write ('Current rating: %d/5\n' % currentRating)
+        else:
+            self.s.write ('No rating set\n')
         nr = self.s.nextLine('New rating: ')
         if not nr:
             raise ValueError('Empty string.')
-        ed.setRating(nr)
-        ed.save()
+        if not nr.isdigit() or (nr < 0) or (nr > 5):
+            raise ValueError('Rating must be an integer between 0 and 5')
+        self.c.setRating(releaseId, nr)
 
     def Refresh(self):
         """Refresh XML metadata from MusicBrainz."""
