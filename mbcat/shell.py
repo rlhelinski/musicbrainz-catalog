@@ -138,9 +138,15 @@ class Shell:
     def Switch(self):
         """Substitute one release ID for another."""
         releaseId = self.Search()
+        oldReleaseTitle = self.c.getRelease(releaseId)['title']
         self.s.write("Enter new release ID: ")
         newReleaseId = self.s.nextWord()
         self.c.renameRelease(releaseId, newReleaseId)
+        newReleaseTitle = self.c.getRelease(newReleaseId)['title']
+        if oldReleaseTitle != newReleaseTitle:
+            self.s.write("Replaced '%s' with '%s'\n" % (oldReleaseTitle, newReleaseTitle))
+        else:
+            self.s.write("Replaced '%s'\n" % (oldReleaseTitle))
 
     def Html(self):
         """Write HTML file."""
