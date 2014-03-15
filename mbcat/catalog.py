@@ -841,30 +841,42 @@ tr.releaserow:hover{
         """Update the appropriate data structes for a new release."""
         relDict = self.getReleaseDictFromXml(metaXml)
         
+        exists = releaseId in self
+        now = time.time()
+
         with self._connect() as con:
             cur = con.cursor()
 
-            # Update releases table
-            try:
-                cur.execute('insert into releases(id, meta, sortstring, metatime, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    (
-                        releaseId, 
-                        buffer(zlib.compress(metaXml)), 
-                        self.getSortStringFromRelease(relDict['release']),
-                        time.time(),
-                        [],
-                        [time.time()],
-                        [],
-                        [],
-                        [],
-                        1, # set count to 1 for now 
-                        '',
-                        0
+            if not exists:
+                # Update releases table
+                try:
+                    cur.execute('insert into releases(id, meta, sortstring, metatime, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        (
+                            releaseId, 
+                            buffer(zlib.compress(metaXml)), 
+                            self.getSortStringFromRelease(relDict['release']),
+                            now,
+                            [],
+                            [now],
+                            [],
+                            [],
+                            [],
+                            1, # set count to 1 for now 
+                            '',
+                            0
+                        )
                     )
-                )
-            except sqlite3.IntegrityError as e:
-                _log.warning('Release already exists in catalog')
-                self.addAddedDate(releaseId, time.time())
+                except sqlite3.IntegrityError as e:
+                    _log.error('Release already exists in catalog.')
+            else:
+                # Remove references to this release from the words, barcodes, etc. tables
+                self.unDigestRelease(releaseId, delete=False)
+                cur.execute('update releases set meta=?,sortstring=?,metatime=?',
+                        (buffer(zlib.compress(metaXml)),
+                        self.getSortStringFromRelease(relDict['release']),
+                        now,
+                        )
+                    )
 
             # Update words table
             rel_words = self.getReleaseWords(relDict['release'])
@@ -886,15 +898,17 @@ tr.releaserow:hover{
 
             con.commit()
 
-    def unDigestRelease(self, releaseId):
-        """Remove all references to a release from the data structures."""
+    def unDigestRelease(self, releaseId, delete=True):
+        """Remove all references to a release from the data structures.
+        Optionally, leave the release in the releases table. """
         relDict = self.getRelease(releaseId)
         
         with self._connect() as con:
             cur = con.cursor()
 
-            # Update releases table
-            cur.execute('delete from releases where id = ?', (releaseId,))
+            if delete:
+                # Update releases table
+                cur.execute('delete from releases where id = ?', (releaseId,))
 
             # Update words table
             rel_words = self.getReleaseWords(relDict)
@@ -945,7 +959,7 @@ tr.releaserow:hover{
             return cur.fetchone()
 
     def addRelease(self, releaseId, olderThan=0):
-        """Get metadata XML from MusicBrainz and add to catalog."""
+        """Get metadata XML from MusicBrainz and add to or refresh the catalog."""
 
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
         metaTime = self.getMetaTime(releaseId)
