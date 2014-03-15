@@ -151,5 +151,10 @@ printOutput(shellout)
 enterCmd(shell, 'switch collins\nf7373a05-cbd2-3385-a67f-35d10e06ac4f')
 printOutput(shellout)
 
+enterCmd(shell, 'refresh fleetwood')
+enterCmd(shell, '0')
+printOutput(shellout)
+
+
 myshell = mbcat.shell.Shell(catalog=c)
 myshell.main()
