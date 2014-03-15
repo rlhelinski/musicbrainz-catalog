@@ -241,6 +241,17 @@ class Catalog(object):
             count = cur.fetchone()[0]
         return count > 0
 
+    def getCopyCount(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select count from releases where id=?', (releaseId,))
+            return cur.fetchone()[0]
+
+    def setCopyCount(self, releaseId, count):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set count=? where id=?', (count, releaseId))
+
     def loadReleaseIds(self):
         fileList = os.listdir(self.rootPath)
 
@@ -492,6 +503,18 @@ class Catalog(object):
             cur = con.cursor()
             cur.execute('update releases set added=? where id=?', 
                 (existingEvents+[event],releaseId))
+            con.commit()
+
+    def getRating(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select rating from releases where id=?', (releaseId,))
+            return cur.fetchall()[0][0]
+
+    def setRating(self, releaseId, rating):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set rating=? where id=?', (rating, releaseId))
             con.commit()
 
     def report(self):
