@@ -497,7 +497,7 @@ class Catalog(object):
 
     def addLendEvent(self, releaseId, event):
         # Some precursory error checking
-        if (type(event) != mbcat.extradata.CheckOutEvent) or 
+        if (type(event) != mbcat.extradata.CheckOutEvent) or \
             (type(event) != mbcat.extradata.CheckInEvent):
             raise ValueError ('Wrong type for lend event')
         existingEvents = self.getLendEvents(releaseId)

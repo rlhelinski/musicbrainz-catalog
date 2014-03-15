@@ -54,15 +54,6 @@ class PurchaseEvent:
     def __str__(self):
         return "Purchased on "+self.date+" from "+self.vendor+" for "+self.price
 
-class CheckOutEvent(CheckInEvent):
-    """Same as CheckInEvent, but adds a borrower field"""
-    def __init__(self, borrower, date):
-        self._date = date
-        self.borrower = borrower 
-
-    def __str__(self):
-        return "Lent on: " + self.date + " to: " + self.borrower
-
 class CheckInEvent:
     def __init__(self, date):
         self._date = date
@@ -77,6 +68,15 @@ class CheckInEvent:
 
     def __str__(self):
         return "Returned on: " + self.date
+
+class CheckOutEvent(CheckInEvent):
+    """Same as CheckInEvent, but adds a borrower field"""
+    def __init__(self, borrower, date):
+        self._date = date
+        self.borrower = borrower 
+
+    def __str__(self):
+        return "Lent on: " + self.date + " to: " + self.borrower
 
 class DigitalPath:
     def __init__(self, path, digiFormat):
