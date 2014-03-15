@@ -54,6 +54,37 @@ class PurchaseEvent:
     def __str__(self):
         return "Purchased on "+self.date+" from "+self.vendor+" for "+self.price
 
+class CheckOutEvent:
+    def __init__(self, borrower, date):
+        self._date = date
+        self.borrower = borrower 
+
+    def getDate(self):
+        return time.strftime(dateFmtStr, time.localtime(self._date))
+
+    def setDate(self, date):
+        self._date = time.strptime(date, dateFmtStr)
+
+    date = property(getDate, setDate, doc='purchase date')
+
+    def __str__(self):
+        return "Lent on: " + self.date + " to: " + self.borrower
+
+class CheckInEvent:
+    def __init__(self, date):
+        self._date = date
+
+    def getDate(self):
+        return time.strftime(dateFmtStr, time.localtime(self._date))
+
+    def setDate(self, date):
+        self._date = time.strptime(date, dateFmtStr)
+
+    date = property(getDate, setDate, doc='purchase date')
+
+    def __str__(self):
+        return "Returned on: " + self.date
+
 class LendEvent:
     def __init__(self, borrower, date):
         self._date = date

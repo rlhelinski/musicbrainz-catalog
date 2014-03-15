@@ -251,6 +251,7 @@ class Catalog(object):
         with self._connect() as con:
             cur = con.cursor()
             cur.execute('update releases set count=? where id=?', (count, releaseId))
+            con.commit()
 
     def loadReleaseIds(self):
         fileList = os.listdir(self.rootPath)
@@ -496,7 +497,8 @@ class Catalog(object):
 
     def addLendEvent(self, releaseId, event):
         # Some precursory error checking
-        if type(event) != mbcat.extradata.LendEvent:
+        if (type(event) != mbcat.extradata.CheckOutEvent) or 
+            (type(event) != mbcat.extradata.CheckInEvent):
             raise ValueError ('Wrong type for lend event')
         existingEvents = self.getLendEvents(releaseId)
         with self._connect() as con:
@@ -515,6 +517,23 @@ class Catalog(object):
         with self._connect() as con:
             cur = con.cursor()
             cur.execute('update releases set rating=? where id=?', (rating, releaseId))
+            con.commit()
+
+    def getPurchases(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select purchases from releases where id=?', (releaseId,))
+            return cur.fetchall()[0][0]
+        
+    def addPurchase(self, releaseId, purchaseObj):
+        # Some precursory error checking
+        if type(purchaseObj) != mbcat.extradata.PurchaseEvent:
+            raise ValueError ('Wrong type for purchase event')
+        existingEvents = self.getLendEvents(releaseId)
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set added=? where id=?', 
+                (existingEvents+[event],releaseId))
             con.commit()
 
     def report(self):
