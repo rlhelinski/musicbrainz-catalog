@@ -497,13 +497,13 @@ class Catalog(object):
 
     def addLendEvent(self, releaseId, event):
         # Some precursory error checking
-        if (type(event) != mbcat.extradata.CheckOutEvent) or \
-            (type(event) != mbcat.extradata.CheckInEvent):
+        if not isinstance(event, mbcat.extradata.CheckOutEvent) and \
+            not isinstance(event, mbcat.extradata.CheckInEvent):
             raise ValueError ('Wrong type for lend event')
         existingEvents = self.getLendEvents(releaseId)
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('update releases set added=? where id=?', 
+            cur.execute('update releases set lent=? where id=?', 
                 (existingEvents+[event],releaseId))
             con.commit()
 

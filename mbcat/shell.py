@@ -197,18 +197,35 @@ class Shell:
         self.c.checkReleases()
         self.s.write("DONE\n")
 
-    def Lend(self):
+    def CheckOut(self):
         """Check out a release."""
         releaseId = self.Search()
-        ed = self.c.extraIndex[releaseId]
-        self.s.write(str(ed))
+
+        lendEvents = self.c.getLendEvents(releaseId)
+        for event in lendEvents:
+            print (event)
 
         borrower = self.s.nextLine("Borrower (leave empty to return): ")
         if not borrower:
-            borrower = '[returned]'
+            raise ValueError ('No release specified.')
+
         date = self.s.nextLine("Lend date (leave empty for today): ")
-        ed.addLend(borrower, date)
-        ed.save()
+        if not date:
+            date = time.time()
+        self.c.addLendEvent(releaseId, CheckOutEvent(borrower, date))
+
+    def CheckIn(self):
+        """Check in a release."""
+        releaseId = self.Search()
+
+        lendEvents = self.c.getLendEvents(releaseId)
+        if not lendEvents or not isinstance(lendEvents[-1], CheckOutEvent):
+            raise ValueError ('Release is not checked out.')
+
+        date = self.s.nextLine("Return date (leave empty for today): ")
+        if not date:
+            date = time.time()
+        self.c.addLendEvent(releaseId, CheckInEvent(date))
         
     def DigitalPath(self):
         """Add a path to a digital copy of a release."""
@@ -291,7 +308,8 @@ class Shell:
         'barcode' : BarcodeSearch, 
         'delete' : Delete, 
         'check' : Check, 
-        'lend' : Lend, 
+        'checkout' : CheckOut, 
+        'checkin' : CheckIn,
         'digital' : {
             'path' : DigitalPath, 
             'search' : DigitalSearch, 
