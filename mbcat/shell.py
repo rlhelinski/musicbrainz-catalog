@@ -121,7 +121,7 @@ class Shell:
             self.s.write("Release not found\n")
             return
         else:
-            self.c.refreshMetaData(releaseId, olderThan=maxAge)
+            self.c.addRelease(releaseId, olderThan=maxAge)
 
     def CoverArt(self):
         """Refresh cover art from coverart.org or Amazon.com."""
