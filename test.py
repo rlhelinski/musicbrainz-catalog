@@ -79,13 +79,15 @@ else:
 
     c.report()
 
-# test word search
-for query in ['pink moon',
-        'jackson abc',
-        'there', ]:
-    result = c._search(query)
-    print (result)
-    assert len(result) == 1
+if False:
+
+    # test word search
+    for query in ['pink moon',
+            'jackson abc',
+            'there', ]:
+        result = c._search(query)
+        print (result)
+        assert len(result) == 1
 
 
 import mbcat.shell
@@ -109,51 +111,52 @@ def printOutput(stdout):
     stdout.seek(0)
     stdout.truncate()
 
-enterCmd(shell, 'h')
-printOutput(shellout)
+if False:
+    enterCmd(shell, 'h')
+    printOutput(shellout)
 
-enterCmd(shell, 'search collins')
-printOutput(shellout)
-#enterCmd(shell, '0')
-#printOutput(shellout)
+    enterCmd(shell, 'search collins')
+    printOutput(shellout)
+    #enterCmd(shell, '0')
+    #printOutput(shellout)
 
-enterCmd(shell, 'barcode 78221869928')
-# Should return 8765eec6-c74e-420e-b1c8-4415eb284158
-printOutput(shellout)
+    enterCmd(shell, 'barcode 78221869928')
+    # Should return 8765eec6-c74e-420e-b1c8-4415eb284158
+    printOutput(shellout)
 
-enterCmd(shell, 'comment collins')
-printOutput(shellout)
-enterCmd(shell, 'it is very great!')
-printOutput(shellout)
+    enterCmd(shell, 'comment collins')
+    printOutput(shellout)
+    enterCmd(shell, 'it is very great!')
+    printOutput(shellout)
 
-enterCmd(shell, 'coverart collins')
-printOutput(shellout)
+    enterCmd(shell, 'coverart collins')
+    printOutput(shellout)
 
-enterCmd(shell, 'digital search\n')
-printOutput(shellout)
+    enterCmd(shell, 'digital search\n')
+    printOutput(shellout)
 
-enterCmd(shell, 'audacity metatags collins')
-printOutput(shellout)
-enterCmd(shell, 'audacity labeltrack collins')
-printOutput(shellout)
+    enterCmd(shell, 'audacity metatags collins')
+    printOutput(shellout)
+    enterCmd(shell, 'audacity labeltrack collins')
+    printOutput(shellout)
 
-enterCmd(shell, 'check')
-printOutput(shellout)
+    enterCmd(shell, 'check')
+    printOutput(shellout)
 
-enterCmd(shell, 'similar')
-printOutput(shellout)
+    enterCmd(shell, 'similar')
+    printOutput(shellout)
 
-enterCmd(shell, 'tracklist collins')
-printOutput(shellout)
+    enterCmd(shell, 'tracklist collins')
+    printOutput(shellout)
 
-enterCmd(shell, 'switch collins\n9c0801b6-79ab-3ba9-93c0-64f8438debc3')
-printOutput(shellout)
-enterCmd(shell, 'switch collins\nf7373a05-cbd2-3385-a67f-35d10e06ac4f')
-printOutput(shellout)
+    enterCmd(shell, 'switch collins\n9c0801b6-79ab-3ba9-93c0-64f8438debc3')
+    printOutput(shellout)
+    enterCmd(shell, 'switch collins\nf7373a05-cbd2-3385-a67f-35d10e06ac4f')
+    printOutput(shellout)
 
-enterCmd(shell, 'refresh fleetwood')
-enterCmd(shell, '0')
-printOutput(shellout)
+    enterCmd(shell, 'refresh fleetwood')
+    enterCmd(shell, '0')
+    printOutput(shellout)
 
 
 myshell = mbcat.shell.Shell(catalog=c)
