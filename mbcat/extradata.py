@@ -116,7 +116,7 @@ class ExtraData:
             for lend in lendList:
                 if lend.tag != 'lent':
                     continue
-                self.lendEvents.append(LendEvent(lend.attrib['who'], \
+                self.lendEvents.append(CheckOutEvent(lend.attrib['who'], \
                     int(lend.attrib['date'])))
         for pathList in root.findall('./digital'):
             for path in pathList:
@@ -189,7 +189,7 @@ class ExtraData:
         if not date:
             #date = time.strftime(dateFmtStr)
             date = time.time()
-        self.lendEvents.append(LendEvent(borrower, date))
+        self.lendEvents.append(CheckOutEvent(borrower, date))
 
     def setRating(self, rating=0):
         self.rating = int(rating)
