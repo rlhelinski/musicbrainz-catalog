@@ -56,6 +56,7 @@ def sql_list_append(cursor, table_name, field_name, key, value):
 with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     #con.text_factory = unicode 
     cur = con.cursor()
+    
     cur.execute("CREATE TABLE releases("+\
         "id TEXT PRIMARY KEY, "+\
         # metadata from musicbrainz, maybe store a dict instead of the XML?
@@ -121,8 +122,7 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
                     relId, 
                     buffer(zlib.compress(metaXml)), 
                     # If this could be used with Catalog.formatDiscSortKey() without a catalog:
-                    #mbcat.catalog.Catalog.getReleaseDictFromXml(metaXml),
-                    ""
+                    mbcat.catalog.Catalog.getSortStringFromRelease(metadata),
                     os.path.getmtime(metaPath),
                     ed.purchases,
                     ed.addDates,
@@ -158,6 +158,10 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
 
     con.commit()
     pbar.finish()
+
+print """
+Preview of new database:
+"""
 
 with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     cur = con.cursor()
