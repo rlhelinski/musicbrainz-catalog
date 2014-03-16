@@ -159,9 +159,9 @@ with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     con.commit()
     pbar.finish()
 
-print """
+print ("""
 Preview of new database:
-"""
+""")
 
 with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     cur = con.cursor()
