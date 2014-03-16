@@ -320,7 +320,8 @@ class Catalog(object):
             processWords(field, rel)
         for credit in rel['artist-credit']:
             for field in ['sort-name', 'disambiguation', 'name']:
-                processWords(field, credit['artist'])
+                if field in credit:
+                    processWords(field, credit['artist'])
 
         return words
 
