@@ -109,7 +109,7 @@ class Catalog(object):
 
         # should we connect here, once and for all, or should we make temporary
         # connections to sqlite3? 
-        if not os.path.isfile(dbPath):
+        if not os.path.isfile(self.dbPath):
             self._createTables()
 
     def _connect(self):
