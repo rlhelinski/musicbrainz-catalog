@@ -527,13 +527,13 @@ class Catalog(object):
         
     def addPurchase(self, releaseId, purchaseObj):
         # Some precursory error checking
-        if type(purchaseObj) != mbcat.extradata.PurchaseEvent:
+        if not isinstance(purchaseObj, mbcat.extradata.PurchaseEvent):
             raise ValueError ('Wrong type for purchase event')
         existingEvents = self.getLendEvents(releaseId)
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('update releases set added=? where id=?', 
-                (existingEvents+[event],releaseId))
+            cur.execute('update releases set purchases=? where id=?', 
+                (existingEvents+[purchaseObj],releaseId))
             con.commit()
 
     def report(self):

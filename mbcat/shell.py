@@ -61,22 +61,22 @@ class Shell:
     def AddPurchaseEvent(self):
         """Add a purchase date."""
         releaseId = self.Search()
-        ed = self.c.extraIndex[releaseId] 
-        for purchase in ed.purchases:
+        
+        purchases = self.c.getPurchases(releaseId)
+        for purchase in purchases:
             self.s.write(str(purchase)+'\n')
-        dateStr = self.s.nextLine('Purchase date ('+dateFmtUsr+'): ')
+        dateStr = self.s.nextLine('Enter purchase date ('+dateFmtUsr+'): ')
         if not dateStr:
-            raise ValueError('Empty string.')
+            raise ValueError('Empty date string.')
         vendorStr = self.s.nextLine('Vendor: ')
         if not vendorStr:
-            raise ValueError('Empty string.')
+            raise ValueError('Empty vendor string.')
         priceStr = self.s.nextLine('Price: ')
         if not vendorStr:
-            raise ValueError('Empty string.')
+            raise ValueError('Empty price string.')
 
         pe = PurchaseEvent(dateStr, priceStr, vendorStr)
-        ed.addPurchase(pe)
-        ed.save()
+        self.c.addPurchase(releaseId, pe)
 
     # TODO also need a delete comment function
     def AddComment(self):
