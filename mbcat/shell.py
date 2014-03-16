@@ -209,7 +209,7 @@ class Shell:
         if not borrower:
             raise ValueError ('No release specified.')
 
-        date = self.s.nextLine("Lend date (leave empty for today): ")
+        date = self.s.nextLine("Lend date  ("+dateFmtUsr+") (leave empty for today): ")
         if not date:
             date = time.time()
         self.c.addLendEvent(releaseId, CheckOutEvent(borrower, date))
@@ -222,7 +222,7 @@ class Shell:
         if not lendEvents or not isinstance(lendEvents[-1], CheckOutEvent):
             raise ValueError ('Release is not checked out.')
 
-        date = self.s.nextLine("Return date (leave empty for today): ")
+        date = self.s.nextLine("Return date ("+dateFmtUsr+") (leave empty for today): ")
         if not date:
             date = time.time()
         self.c.addLendEvent(releaseId, CheckInEvent(date))
