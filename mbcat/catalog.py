@@ -1156,6 +1156,7 @@ tr.releaserow:hover{
     def writeTrackList(self, stream, releaseId):
         """Write ASCII tracklist for releaseId to 'stream'. """
         stream.write('\n')
+        _log.info('Printing tracklist for \'%s\'' % releaseId)
         rel = self.getRelease(releaseId)
         for medium in rel['medium-list']:
             for track in medium['track-list']:
