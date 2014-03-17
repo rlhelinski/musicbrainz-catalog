@@ -101,10 +101,10 @@ class Shell:
             self.s.write ('Current rating: %d/5\n' % currentRating)
         else:
             self.s.write ('No rating set\n')
-        nr = self.s.nextLine('New rating: ')
+        nr = self.s.nextLine('New rating [leave empty for no change]: ')
         if not nr:
             raise ValueError('Empty string.')
-        if not nr.isdigit() or (nr < 0) or (nr > 5):
+        if not nr.isdigit() or (int(nr) < 0) or (int(nr) > 5):
             raise ValueError('Rating must be an integer between 0 and 5')
         self.c.setRating(releaseId, nr)
 
