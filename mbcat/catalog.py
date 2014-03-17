@@ -543,17 +543,18 @@ class Catalog(object):
         print("\n%d releases" % len(self))
         print("%d words in search table" % self.getWordCount())
 
-    def makeHtml(self, fileName=None):
+    def makeHtml(self, fileName=None, pbar=None):
         """
         Write HTML representing the catalog to a file
         """
 
-        if not fileName:
-            fileName = os.path.join(self.prefs.htmlPubPath, "catalog.html")
-
         def fmt(s):
             return s.encode('ascii', 'xmlcharrefreplace').decode()
 
+        if not fileName:
+            fileName = os.path.join(self.prefs.htmlPubPath, "catalog.html")
+
+        _log.info('Writing HTML to \'%s\'' % fileName)
 
         htf = open(fileName, 'wt')
 
@@ -720,6 +721,9 @@ tr.releaserow:hover{
 
             for (releaseId, releaseSortStr) in sortedList:
                 rel = self.getRelease(releaseId)
+
+                if pbar:
+                    pbar.update(pbar.currval + 1)
 
                 #coverartUrl = mbcat.amazonservices.getAsinImageUrl(rel.asin, mbcat.amazonservices.AMAZON_SERVER["amazon.com"], 'S')
                 # Refer to local copy instead

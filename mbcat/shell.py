@@ -146,9 +146,10 @@ class Shell:
 
     def Html(self):
         """Write HTML file."""
-        #self.c = Catalog()
-        #self.c.load()
-        self.c.makeHtml()
+        widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Percentage() ]
+        pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(self.c)).start()
+        self.c.makeHtml(pbar=pbar)
+        pbar.finish()
 
     def Add(self):
         """Add a release."""
