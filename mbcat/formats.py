@@ -54,18 +54,18 @@ class Digital(Format):
 
 def getFormatObj(fmtStr):
     """Factory function that returns a medium format object given a format string."""
-    if not fmtStr:
+    if not fmtStr or 'Unknown' in fmtStr:
         return Unknown()
-    if fmtStr.startswith('12"') or fmtStr == 'Vinyl':
+    if fmtStr.startswith('12"') or fmtStr == 'Vinyl' or fmtStr == 'Vinyl12':
         # If the format is just "Vinyl", assume it is 12"
         return Vinyl12()
     elif fmtStr.startswith('10"'):
         return Vinyl10()
-    elif fmtStr.startswith('7"'):
+    elif fmtStr.startswith('7"') or fmtStr == 'Vinyl7':
         return Vinyl7()
     elif 'CD' in fmtStr or fmtStr=='DualDisc' or 'DVD' in fmtStr:
         return CD()
-    elif fmtStr == 'Digital Media':
+    elif fmtStr.startswith('Digital'):
         return Digital()
     elif fmtStr == 'Cassette':
         return Cassette()
