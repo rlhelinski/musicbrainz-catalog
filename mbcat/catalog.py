@@ -891,10 +891,11 @@ tr.releaserow:hover{
             else:
                 # Remove references to this release from the words, barcodes, etc. tables
                 self.unDigestRelease(releaseId, delete=False)
-                cur.execute('update releases set meta=?,sortstring=?,metatime=?',
+                cur.execute('update releases set meta=?,sortstring=?,metatime=? where id=?',
                         (buffer(zlib.compress(metaXml)),
                         self.getSortStringFromRelease(relDict['release']),
                         now,
+                        releaseId
                         )
                     )
 
