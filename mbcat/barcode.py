@@ -35,8 +35,6 @@ http://en.wikipedia.org/wiki/Universal_Product_Code#Check_digits
             barCodes.append('0'+self.code)
         barCodes.append(self.code+str(UPC.checksum_isbn(self.code)))
         barCodes.append(self.code+str(UPC.checksum_upc_a(self.code)))
-        if self.code.endswith(str(UPC.checksum_isbn(self.code[:-1]))):
-            barCodes.append(self.code[:-2])
 
         return barCodes
 
