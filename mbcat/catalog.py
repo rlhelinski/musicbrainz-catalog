@@ -216,7 +216,7 @@ class Catalog(object):
         with self._connect() as con:
             cur = con.cursor()
             cur.execute('select format from formats')
-            return cur.fetchall()[0]
+            return [t[0] for t in cur.fetchall()]
 
     def barCodeLookup(self, barcode):
         with self._connect() as con:
