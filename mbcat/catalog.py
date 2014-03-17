@@ -955,15 +955,17 @@ tr.releaserow:hover{
 
             con.commit()
 
-    def searchDigitalPaths(self, releaseId=''):
+    def searchDigitalPaths(self, releaseId='', pbar=None):
         releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
 
-        # TODO could use progressbar here
         # TODO need to be more flexible in capitalization and re-order of words
         for path in self.prefs.musicPaths:
             _log.info("Searching '%s'"%path)
             for relId in releaseIdList:
                 rel = self.getRelease(relId)
+                if pbar:
+                    pbar.update(pbar.currval + 1)
+
                 for artistName in set([ rel['artist-credit-phrase'], rel['artist-credit'][0]['artist']['sort-name'] ]):
                     artistPath = os.path.join(path, artistName)
                     if os.path.isdir(artistPath):
