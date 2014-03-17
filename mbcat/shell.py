@@ -174,14 +174,18 @@ class Shell:
         barCodes = UPC(barCodeEntered).variations()
         found = False
 
+        pairs = set()
         for barCode in barCodes:
             try:
                 for releaseId in self.c.barCodeLookup(barCode):
-                    self.s.write(self.c.formatDiscInfo(releaseId)+'\n')
+                    pairs.add(releaseId)
             except KeyError as e:
                 pass
             else:
                 found = True
+
+        for releaseId in pairs:
+            self.s.write(self.c.formatDiscInfo(releaseId)+'\n')
 
         if not found:
             raise KeyError('No variation of barcode %s found' % barCodeEntered)
@@ -351,6 +355,8 @@ class Shell:
                 try:
                     (cmdStruct[input])(self)
                 except ValueError as e:
+                    self.s.write(str(e) + " Command failed.\n")
+                except KeyError as e:
                     self.s.write(str(e) + " Command failed.\n")
 
         while (True):
