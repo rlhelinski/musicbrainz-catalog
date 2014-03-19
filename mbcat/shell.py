@@ -125,8 +125,9 @@ class Shell:
 
     def CoverArt(self):
         """Refresh cover art from coverart.org or Amazon.com."""
-        releaseId = self.Search("Enter search terms or release ID [empty for all]: ")
-        if not releaseId:
+        try:
+            releaseId = self.Search("Enter search terms or release ID [empty for all]: ")
+        except ValueError as e:
             self.c.refreshAllCoverArt()
         else:
             self.c.getCoverArt(releaseId)
