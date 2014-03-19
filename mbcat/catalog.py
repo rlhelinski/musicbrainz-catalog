@@ -71,7 +71,7 @@ def sql_list_remove(cursor, table_name, field_name, key, value):
 overWriteAll = False
 
 # Have to give an identity for musicbrainzngs
-__version__ = '0.2a'
+__version__ = '0.2'
 
 mb.set_useragent(
     "musicbrainz-catalog",
