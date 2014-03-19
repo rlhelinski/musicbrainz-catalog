@@ -8,6 +8,7 @@ http://ec1.images-amazon.com/images/P/B000002M3I.01.LZZZZZZZ.jpg
 
 """
 import re
+import os
 import logging
 _log = logging.getLogger("mbcat")
 from musicbrainzngs.musicbrainz import _rate_limit
@@ -105,6 +106,8 @@ def saveImage(releaseAsin, server, imgPath):
         _log.error(e)
         return
 
+    if not os.path.isdir(os.path.dirname(imgPath)):
+        os.makedirs(os.path.dirname(imgPath))
     with open(imgPath, 'wb') as imgf:
         imgf.write(response.read())
         _log.info("Wrote %d bytes to %s" %(imgf.tell(), imgPath))

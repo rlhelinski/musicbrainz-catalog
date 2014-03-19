@@ -37,6 +37,8 @@ def getCoverArtUrl(meta, size='large'):
 
 @mb._rate_limit
 def saveCoverArt(meta, imgPath):
+    if not os.path.isdir(os.path.dirname(imgPath)):
+        os.makedirs(os.path.dirname(imgPath))
     imgUrl = getCoverArtUrl(meta)
     response = urlopen( imgUrl )
     if not os.path.isdir(os.path.dirname(imgPath)):
