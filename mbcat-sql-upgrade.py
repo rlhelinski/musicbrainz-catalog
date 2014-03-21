@@ -168,12 +168,16 @@ with sqlite3.connect(args.output, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     con.commit()
     pbar.finish()
 
-print ("""
-Preview of new database:
-""")
-
 with sqlite3.connect(args.output, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     cur = con.cursor()
+    cur.execute('select count(id) from releases')
+    print ("""
+Imported %d releases.
+    """ % (cur.fetchone()[0]))
+
+    print ("""Preview of new database:
+    """)
+
     cur.execute('select * from releases')
     rows = cur.fetchall()
     for row in rows[:10]:
