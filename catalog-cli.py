@@ -9,17 +9,15 @@ from mbcat.barcode import UPC
 import os
 import sys
 from mbcat.shell import *
+import argparse
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        # TODO expand this to full command-line argument parsing
-        search_terms = sys.argv
-        del search_terms[0]
-        c = Catalog()
-        c.load()
-        c.search(' '.join(search_terms))
+    parser = argparse.ArgumentParser(description='Runs the MusicBrainz-Catalog shell')
+    parser.add_argument('--database', help='Specify the path to the catalog database')
+    parser.add_argument('--cache', help='Specify the path to the file cache')
+    args = parser.parse_args()
 
-    else:
-        s = Shell()
-        s.main()
+    c = Catalog(dbPath=args.database, cachePath=args.cache)
+    s = Shell(catalog=c)
+    s.main()
 

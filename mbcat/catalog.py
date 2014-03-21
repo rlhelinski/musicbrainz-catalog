@@ -112,6 +112,9 @@ class Catalog(object):
         if not os.path.isfile(self.dbPath):
             self._createTables()
 
+        _log.info('Using \'%s\' for the catalog the database' % self.dbPath)
+        _log.info('Using \'%s\' for the file cache path' % self.cachePath)
+
     def _connect(self):
         # Let's try here for now, just need to make sure we disconnect when this
         # object is deleted.
