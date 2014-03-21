@@ -1114,7 +1114,7 @@ tr.releaserow:hover{
             mb.add_releases_to_collection(colId, relIdChunk)
         print('DONE')
 
-    def makeLabelTrack(self, releaseId, outPath='Label Track.txt'):
+    def makeLabelTrack(self, releaseId, outPath='Audacity Label Track.txt'):
         """Useful for importing into Audacity."""
         rel = self.getRelease(releaseId)
         with open(outPath, 'w') as f:
@@ -1134,7 +1134,7 @@ tr.releaserow:hover{
                     pos += length
         _log.info('Wrote label track for '+releaseId+' to '+outPath)
 
-    def writeMetaTags(self, releaseId, outPath='Tags.xml'):
+    def writeMetaTags(self, releaseId, outPath='Audacity Meta Tags.xml'):
         """Useful for importing metadata into Audacity."""
         myxml = etree.Element('tags')
         rel = self.getRelease(releaseId)
