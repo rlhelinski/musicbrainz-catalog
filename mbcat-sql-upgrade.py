@@ -8,10 +8,18 @@ import logging
 logging.basicConfig(level=logging.INFO)
 # After compressing XML column, 1933312 / 3870720 B
 import zlib
+import argparse
+
+parser = argparse.ArgumentParser( \
+        description='Convert a MusicBrainz-Catalog version 0.1 file store into a version 0.2 sqlite3 database.')
+parser.add_argument('store_path', nargs='*', default='release-id', help='Path to the version 0.1 file store')
+parser.add_argument('--output', default=os.path.expanduser('~/.mbcat/mbcat.db'), help='Path to which to write database file')
+args = parser.parse_args()
 
 import musicbrainzngs.musicbrainz as mb
 import musicbrainzngs.mbxml as mbxml
 import progressbar
+
 # Get the XML parsing exceptions to catch. The behavior changed with Python 2.7
 # and ElementTree 1.3.
 import xml.etree.ElementTree as etree
@@ -34,7 +42,8 @@ sqlite3.register_adapter(list, listAdapter)
 sqlite3.register_converter("list", listConverter)
 
 # Create a new database
-dbname = 'mbcat.db'
+if os.path.isfile(args.output):
+    raise Exception ('Refusing to overwrite existing database file at \'%s\'' % args.output)
 
 rootPath = 'release-id'
 
@@ -53,7 +62,7 @@ def sql_list_append(cursor, table_name, field_name, key, value):
 
 
 # Create tables
-with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
+with sqlite3.connect(args.output, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     #con.text_factory = unicode 
     cur = con.cursor()
     
@@ -163,7 +172,7 @@ print ("""
 Preview of new database:
 """)
 
-with sqlite3.connect(dbname, detect_types=sqlite3.PARSE_DECLTYPES) as con:
+with sqlite3.connect(args.output, detect_types=sqlite3.PARSE_DECLTYPES) as con:
     cur = con.cursor()
     cur.execute('select * from releases')
     rows = cur.fetchall()
