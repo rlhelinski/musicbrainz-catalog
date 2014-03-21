@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import logging
 _log = logging.getLogger("mbcat")
 
@@ -33,11 +34,18 @@ class MD(Format):
 
 class DVD(Format):
     """Digital Versatile Disc"""
-    size = 12
+    # We make this the same size as CDs because these DVDs are packed with music CDs
+    # (not to be confused with video releases)
+    size = 12 
 
 class Unknown(Format):
     """(unknown)"""
     size = -1
+
+class Cassette(Format):
+    """Cassette"""
+    # 64 mm x 100.5 mm
+    size = 10
 
 class Digital(Format):
     """Digital Media"""
@@ -46,19 +54,21 @@ class Digital(Format):
 
 def getFormatObj(fmtStr):
     """Factory function that returns a medium format object given a format string."""
-    if not fmtStr:
+    if not fmtStr or 'Unknown' in fmtStr:
         return Unknown()
-    if fmtStr.startswith('12"') or fmtStr == 'Vinyl':
+    if fmtStr.startswith('12"') or fmtStr == 'Vinyl' or fmtStr == 'Vinyl12':
         # If the format is just "Vinyl", assume it is 12"
         return Vinyl12()
     elif fmtStr.startswith('10"'):
         return Vinyl10()
-    elif fmtStr.startswith('7"'):
+    elif fmtStr.startswith('7"') or fmtStr == 'Vinyl7':
         return Vinyl7()
     elif 'CD' in fmtStr or fmtStr=='DualDisc' or 'DVD' in fmtStr:
         return CD()
-    elif fmtStr == 'Digital Media':
+    elif fmtStr.startswith('Digital'):
         return Digital()
+    elif fmtStr == 'Cassette':
+        return Cassette()
     else:
         raise ValueError('Format "'+fmtStr+'" not recognized.')
         
@@ -70,6 +80,7 @@ def getReleaseFormat(rel):
         for medium in rel['medium-list']:
             fmts.append(getFormatObj(medium['format']))
 
+        # the largest format in the release dictates its category for sorting
         sortFormat = max(fmts)
     except KeyError:
         _log.warning('No format for ' + rel['id'])

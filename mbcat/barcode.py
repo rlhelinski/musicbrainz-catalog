@@ -4,11 +4,23 @@ class UPC(object):
         self.code = code
 
     @staticmethod
-    def checksum(code):
+    def checksum_isbn(code):
         s = 0
         for c in code:
             s += int(c)
         return s % 10
+
+    @staticmethod
+    def checksum_upc_a(code):
+        """Implementation of the algorithm described in:
+http://en.wikipedia.org/wiki/Universal_Product_Code#Check_digits
+"""
+        digits = [int(c) for c in code]
+        step_1 = 3 * sum(digits[0:11:2])
+        step_2 = step_1 + sum(digits[1:10:2])
+        step_3 = step_2 % 10
+        step_4 = step_3 if step_3 == 0 else 10 - step_3
+        return step_4
 
     def variations(self):
         """
@@ -17,12 +29,12 @@ class UPC(object):
         barCodes = [self.code]
         if self.code.startswith('0'):
             barCodes.append(self.code[1:])
-            barCodes.append(self.code[1:]+str(UPC.checksum(self.code)))
+            barCodes.append(self.code[1:]+str(UPC.checksum_isbn(self.code)))
+            barCodes.append(self.code[1:]+str(UPC.checksum_upc_a(self.code)))
         else:
             barCodes.append('0'+self.code)
-        barCodes.append(self.code+str(UPC.checksum(self.code)))
-        if self.code.endswith(str(UPC.checksum(self.code[:-1]))):
-            barCodes.append(self.code[:-2])
+        barCodes.append(self.code+str(UPC.checksum_isbn(self.code)))
+        barCodes.append(self.code+str(UPC.checksum_upc_a(self.code)))
 
         return barCodes
 

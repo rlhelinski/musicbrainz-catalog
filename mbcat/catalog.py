@@ -19,13 +19,63 @@ from collections import defaultdict
 import progressbar
 import logging
 _log = logging.getLogger("mbcat")
+# for compatibility with Python 3
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+import zlib
 
+import sqlite3
+# Problem: pickle dumps takes unicode strings but returns binary strings
+def listAdapter(l):
+    return buffer(pickle.dumps(l))
+
+def listConverter(s):
+    return pickle.loads(s)
+
+sqlite3.register_adapter(list, listAdapter)
+sqlite3.register_converter(str("list"), listConverter)
+
+def sql_list_append(cursor, table_name, field_name, key, value):
+    """Append to a list in an SQL table."""
+    cursor.execute('select * from '+table_name+' where '+field_name+' = ?', (key,))
+    row = cursor.fetchall()
+    if not row:
+        relList = [value]
+    else:
+        relList = row[0][1]
+        if value not in relList:
+            relList.append(value)
+
+    cursor.execute(('replace' if row else 'insert')+
+            ' into '+table_name+'('+field_name+', releases) values (?, ?)',
+            (key, relList))
+
+def sql_list_remove(cursor, table_name, field_name, key, value):
+    """Remove an item from a list in an SQL table."""
+    cursor.execute('select * from '+table_name+' where '+field_name+' = ?', (key,))
+    row = cursor.fetchall()
+    if row:
+        relList = row[0][1]
+        relList.remove(value)
+
+        if relList:
+            cursor.execute('replace into %s (%s, releases) values (?, ?)' % (table_name, field_name),
+                (key, relList))
+        else:
+            cursor.execute('delete from %s where %s=?' % (table_name, field_name),
+                    (key,))
+
+# For remembering user decision to overwrite existing data
 overWriteAll = False
 
 # Have to give an identity for musicbrainzngs
+__version__ = '0.2'
+
 mb.set_useragent(
     "musicbrainz-catalog",
-    "0.1",
+    __version__,
     "https://github.com/rlhelinski/musicbrainz-catalog/",
 )
 
@@ -38,91 +88,170 @@ if hasattr(etree, 'ParseError'):
 else:
     ETREE_EXCEPTIONS = (expat.ExpatError)
 
-def releaseSortCmp(a, b):
-    return unicode.lower(a[1]) < unicode.lower(b[1])
-
-def chunks(l, n):
-    """ Yield successive n-sized chunks from l. """
-    for i in range(0, len(l), n):
-        yield l[i:i+n]
-
-# This goes with getFormatFromUri(), but can we replace that with a library function?
-try:
-    import HTMLParser
-    h = HTMLParser.HTMLParser()
-except ImportError as e:
-    import html.parser
-    h = html.parser.HTMLParser()
-
-def getFormatFromUri(uriStr, escape=True):
-    # TODO deprecate
-    #return uriStr.split("#")[1].decode('ascii')
-    formatStr = uriStr.split("#", 1)[1]
-    if escape:
-        return h.unescape(formatStr)
-    else:
-        return formatStr
-
-def getReleaseId(releaseId):
-    """Should be renamed to get releaseIdFromInput or something"""
-    if releaseId.startswith('http'):
-        return mbcat.utils.extractUuid(releaseId, 'release')
-    else:
-        return releaseId
-
-def formatSortCredit(release):
-    return ''.join([credit if type(credit)==str else credit['artist']['sort-name'] for credit in release['artist-credit'] ])
-
-
 class Catalog(object):
-    mbUrl = 'http://musicbrainz.org/'
+
+    mbUrl = 'http://'+mb.hostname+'/'
     artistUrl = mbUrl+'artist/'
     labelUrl = mbUrl+'label/'
     releaseUrl = mbUrl+'release/'
 
-    def __init__(self, rootPath='release-id'):
-        self.rootPath = rootPath
-        if not os.path.isdir(self.rootPath):
-            os.mkdir(self.rootPath)
+    def __init__(self, dbPath=None, cachePath=None):
+        """Open or create a new catalog"""
+
+        prefPath = os.path.join(os.path.expanduser('~'), '.mbcat')
+        self.dbPath = dbPath if dbPath else os.path.join(prefPath, 'mbcat.db')
+        self.cachePath = cachePath if cachePath else os.path.join(prefPath, 'cache')
+
+        if not os.path.isdir(prefPath):
+            os.mkdir(prefPath)
+
         self.prefs = mbcat.userprefs.PrefManager()
-        self._resetMaps()
 
-    def _resetMaps(self):
-        self.metaIndex = dict()
-        self.extraIndex = dict()
-        self.wordMap = dict()
-        self.discIdMap = defaultdict(list)
-        self.barCodeMap = defaultdict(list)
-        # To map ReleaseId -> Format
-        self.formatMap = defaultdict(list)
+        # should we connect here, once and for all, or should we make temporary
+        # connections to sqlite3? 
+        if not os.path.isfile(self.dbPath):
+            self._createTables()
 
+    def _connect(self):
+        # Let's try here for now, just need to make sure we disconnect when this
+        # object is deleted.
+        self.conn = sqlite3.connect(self.dbPath)
+        return sqlite3.connect(self.dbPath, detect_types=sqlite3.PARSE_DECLTYPES)
+
+    def _createTables(self):
+        """Create the SQL tables for the catalog. Database is assumed empty."""
+        with self._connect() as con:
+            cur = con.cursor()
+
+            cur.execute("CREATE TABLE releases("+\
+                "id TEXT PRIMARY KEY, "+\
+                # metadata from musicbrainz, maybe store a dict instead of the XML?
+                "meta BLOB, "+\
+                "sortstring TEXT, "+\
+                "metatime FLOAT, "+\
+                # now all the extra data
+                "purchases LIST, "+\
+                "added LIST, "+\
+                "lent LIST, "+\
+                "listened LIST, "+\
+                "digital LIST, "+\
+                "count INT, "+\
+                "comment TEXT, "+\
+                "rating INT)")
             
-    def _get_xml_path(self, releaseId, fileName='metadata.xml'):
-        return os.path.join(self.rootPath, releaseId, fileName)
+            # tables that map specific things to a list of releases
+            for columnName in [
+                    'word',
+                    'discid',
+                    'barcode',
+                    'format'
+                    ]:
 
+                cur.execute('CREATE TABLE '+columnName+'s('+\
+                        columnName+' '+('INT' if columnName is 'barcode' else 'TEXT')+' PRIMARY KEY, '+\
+                        'releases list)')
+
+            con.commit()
+
+
+    def _resetTables(self):
+        """Drop the derived tables in the database and rebuild them"""
+        with self._connect() as con:
+            cur = con.cursor()
+            for tab in ['words', 'discids', 'barcodes', 'formats']:
+                cur.execute('delete * from ?', tab)
+        self._createTables()
+            
     def renameRelease(self, releaseId, newReleaseId):
-        os.rename(os.path.join('release-id', releaseId),
-                os.path.join('release-id', newReleaseId) )
-        # TODO this is lazy, but it is the only way to correct all the tables created during load()
-        self.load()
-        self.refreshMetaData(newReleaseId, olderThan=60)
+        self.deleteRelease(releaseId)
+        self.addRelease(newReleaseId, olderThan=60)
 
     def getReleaseIds(self):
-        return self.metaIndex.keys()
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select id from releases')
+            listOfTuples = cur.fetchall()
+            # return all of the tuples as a list
+            return list(sum(listOfTuples, ()))
 
-    # TODO rename metaIndex back to releaseIndex or relIndex
+    @staticmethod
+    def getReleaseDictFromXml(metaxml):
+        try:
+            metadata = mbxml.parse_message(metaxml)
+        except UnicodeError as exc:
+            raise ResponseError(cause=exc)
+        except Exception as exc:
+            if isinstance(exc, ETREE_EXCEPTIONS):
+                _log.error("Got some bad XML for %s!", releaseId)
+                return 
+            else:
+                raise
+
+        return metadata
+    
     def getRelease(self, releaseId):
-        return self.metaIndex[releaseId]
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select meta from releases where id = ?', (releaseId,))
+            try:
+                releaseXml = zlib.decompress(cur.fetchone()[0])
+            except TypeError:
+                raise KeyError ('release %s not found' % releaseId)
 
-    def getReleases(self):
-        for releaseId, metadata in self.metaIndex.items():
-            yield releaseId, self.getRelease(releaseId)
+            # maybe it would be better to store the release as a serialized dict in the table
+            # then, we could skip this parsing step
+
+            #_log.info('Building sort string for %s' % releaseId)
+            metadata = self.getReleaseDictFromXml(releaseXml)
+
+        return metadata['release']
+
+    def getReleaseIdsByFormat(self, fmt):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select releases from formats where format = ?', (fmt,))
+            return cur.fetchall()[0][0]
+
+    def getFormats(self):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select format from formats')
+            return [t[0] for t in cur.fetchall()]
+
+    def barCodeLookup(self, barcode):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select releases from barcodes where barcode = ?', (barcode,))
+            result = cur.fetchall()
+            if not result:
+                raise KeyError('Barcode not found')
+            return result[0][0]
 
     def __len__(self):
-        return len(self.metaIndex)
+        """Return the number of releases in the catalog."""
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select count(id) from releases')
+            return cur.fetchone()[0]
 
     def __contains__(self, releaseId):
-        return releaseId in self.metaIndex
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select count(id) from releases where id=?', (releaseId,))
+            count = cur.fetchone()[0]
+        return count > 0
+
+    def getCopyCount(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select count from releases where id=?', (releaseId,))
+            return cur.fetchone()[0]
+
+    def setCopyCount(self, releaseId, count):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set count=? where id=?', (count, releaseId))
+            con.commit()
 
     def loadReleaseIds(self):
         fileList = os.listdir(self.rootPath)
@@ -139,51 +268,13 @@ class Catalog(object):
                     yield releaseId
             pbar.finish()
 
-    def loadExtraData(self, releaseId):
-        # load extra data
-        self.extraIndex[releaseId] = mbcat.extradata.ExtraData(releaseId)
-        try:
-            self.extraIndex[releaseId].load()
-        except IOError as e:
-            # write an empty XML for next time
-            self.extraIndex[releaseId].save()
-
-    def addExtraData(self, releaseId):
-        self.extraIndex[releaseId] = mbcat.extradata.ExtraData(releaseId)
-        try:
-            self.extraIndex[releaseId].load()
-        except IOError as e:
-            # write an empty XML for next time
-            self.extraIndex[releaseId].addDate()
-            self.extraIndex[releaseId].save()
-
-    def load(self, releaseIds=None):
-        """Load the various tables from the XML metadata on disk"""
-
-        self._resetMaps()
-        for releaseId in self.loadReleaseIds():
-            xmlPath = self._get_xml_path(releaseId)
-            if (not os.path.isfile(xmlPath)):
-                _log.error("Found directory, but no metadata for " + releaseId)
-                continue
-
-            metadata = self.getMetaData(releaseId)
-
-            self.digestMetaDict(releaseId, metadata)
-
-            self.loadExtraData(releaseId)
-
     def saveZip(self, zipName='catalog.zip'):
         """Exports the database as a ZIP archive"""
         import zipfile, StringIO
 
         with zipfile.ZipFile(zipName, 'w', zipfile.ZIP_DEFLATED) as zf:
             xml_writer = wsxml.MbXmlWriter()
-            for releaseId, release in self.getReleases():
-                # TODO change releaseIndex to metaIndex and store entire metadata
-                # then, change references to releaseIndex to calls to getRelease(),
-                # a new function that will take the release ID, and call getRelease()
-                # on the appropriate metadata
+            for releaseId in self.getReleaseIds():
                 xmlPath = self._get_xml_path(releaseId)
                 XmlParser = wsxml.MbXmlParser()
                 with open(xmlPath, 'r') as xmlf:
@@ -215,11 +306,23 @@ class Catalog(object):
             self.metaIndex[releaseId] = metadata
         zf.close()
 
-    def getReleaseWords(self, rel):
-        words = []
-        for field in [ rel['title'], rel['artist-credit-phrase'] ] + \
-            ([rel['disambiguation']] if 'disambiguation' in rel else []):
-            words.extend(re.findall(r"\w+", field.lower(), re.UNICODE))
+    @staticmethod
+    def getReleaseWords(rel):
+        words = set()
+        relId = rel['id']
+        def processWords(field, d):
+            if field in d:
+                words.update(re.findall(r"\w+", d[field].lower(), re.UNICODE))
+            elif field != 'disambiguation':
+                _log.warning('Missing field from release '+relId+': '+field)
+
+        for field in ['title', 'artist-credit-phrase', 'disambiguation']:
+            processWords(field, rel)
+        for credit in rel['artist-credit']:
+            for field in ['sort-name', 'disambiguation', 'name']:
+                if field in credit:
+                    processWords(field, credit['artist'])
+
         return words
 
     def mapWordsToRelease(self, words, releaseId):
@@ -233,19 +336,25 @@ class Catalog(object):
     def _search(self, query):
         query_words = query.lower().split(' ')
         matches = set()
-        for word in query_words:
-            if word in self.wordMap:
-                # for the first word
-                if word == query_words[0]:
-                    # use the whole set of releases that have this word
-                    matches = set(self.wordMap[word])
+        with self._connect() as con:
+            cur = con.cursor()
+            for word in query_words:
+                cur.execute('select releases from words where word = ?', (word,))
+                fetched = cur.fetchone()
+                # if the word is in the table
+                if fetched:
+                    # for the first word
+                    if word == query_words[0]:
+                        # use the whole set of releases that have this word
+                        matches = set(fetched[0])
+                    else:
+                        # intersect the releases that have this word with the current release set 
+                        matches = matches & set(fetched[0])
                 else:
-                    # intersect the releases that have this word with the current release set 
-                    matches = matches & set(self.wordMap[word])
-            else:
-                # this word is not contained in any releases
-                matches = set()
-                break
+                    # this word is not contained in any releases and therefore
+                    # no releases match
+                    matches = set()
+                    break
 
         return matches
 
@@ -253,25 +362,41 @@ class Catalog(object):
         release = self.getRelease(releaseId)
         return ' '.join( [
                 releaseId, ':', \
-                formatSortCredit(release), '-', \
+                mbcat.utils.formatSortCredit(release), '-', \
                 (release['date'] if 'date' in release else ''), '-', \
                 release['title'], \
                 '('+release['disambiguation']+')' if 'disambiguation' in release else '', \
                 '['+str(mbcat.formats.getReleaseFormat(release))+']', \
                 ] )
 
-    def formatDiscSortKey(self, releaseId):
-        release = self.getRelease(releaseId)
-
+    @staticmethod
+    def getSortStringFromRelease(release):
         return ' - '.join ( [ \
-                formatSortCredit(release), \
+                mbcat.utils.formatSortCredit(release), \
                 release['date'] if 'date' in release else '', \
                 release['title'] + \
                 (' ('+release['disambiguation']+')' if 'disambiguation' in release else ''), \
-                ] ) 
+                ] )
+
+    def formatDiscSortKey(self, releaseId):
+        # TODO rename to something like getReleaseSortStr
+        
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select sortstring from releases where id = ?', (releaseId,))
+            sortstring = cur.fetchone()[0]
+
+            if not sortstring:
+                # cache it for next time
+                sortstring = self.getSortStringFromRelease(self.getRelease(releaseId))
+                cur.execute('update releases set sortstring=? where id=?', (sortstring, releaseId))
+                cur.commit()
+
+        return sortstring
+
 
     def getSortedList(self, matchFmt=None):
-        relIds = self.formatMap[matchFmt] if matchFmt else self.getReleaseIds()
+        relIds = self.getReleaseIdsByFormat(matchFmt.__name__) if matchFmt else self.getReleaseIds()
             
         sortKeys = [(relId, self.formatDiscSortKey(relId)) for relId in relIds]
 
@@ -281,7 +406,6 @@ class Catalog(object):
         """
         Print release with context (neighbors) to assist in sorting and storage of releases.
         """
-        # This should be broken down since it writes to the console
 
         if matchFormat:
             try:
@@ -295,45 +419,146 @@ class Catalog(object):
             sortedList = self.getSortedList()
 
         index = sortedList.index((releaseId, self.formatDiscSortKey(releaseId)))
-        for i in range(max(0,index-neighborHood), min(len(sortedList), index+neighborHood)):
-            sortId, sortStr = sortedList[i]
-            print( ('\033[92m' if i == index else "") + "%4d" % i, \
-                    sortId, \
-                    sortStr, \
-                    ("[" + str(mbcat.formats.getReleaseFormat(self.getRelease(sortId))) + "]"), \
-                    (" <<<" if i == index else "") + \
-                    ('\033[0m' if i == index else "") )
-
+        neighborhoodIndexes = range(max(0,index-neighborHood), min(len(sortedList), index+neighborHood))
+        return (index, 
+                zip(neighborhoodIndexes, 
+                        [sortedList[i] for i in neighborhoodIndexes]))
 
     def search(self, query):
-        """
-        Print a list releases that match words in a query
-        """
+        # TODO this is a convenience function which uses print and should
+        # be moved to the shell 
+        """Print a list releases that match words in a query."""
         matches = self._search(query)
         for releaseId in matches:
             print(self.formatDiscInfo(releaseId))
 
-    def report(self):
-        """
-        Print statistics about the catalog
-        """
-        print("\n%d releases" % len(self))
-        print("%d words in search table" % len(self.wordMap))
+    def getWordCount(self):
+        """Fetch the number of words in the search word table."""
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select count(word) from words')
+            return cur.fetchone()[0]
 
-    def makeHtml(self, fileName=None):
+    def getComment(self, releaseId):
+        """Get the comment for a release (if any)."""
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select comment from releases where id=?',
+                (releaseId,))
+            return cur.fetchone()[0]
+
+    def setComment(self, releaseId, comment):
+        """Set the comment for a release."""
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set comment=? where id=?',
+                (comment, releaseId))
+            con.commit()
+
+    def getDigitalPaths(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select digital from releases where id=?', (releaseId,))
+            return cur.fetchall()[0][0]
+
+    def addDigitalPath(self, releaseId, path):
+        existingPaths = self.getDigitalPaths(releaseId)
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set digital=? where id=?', 
+                (existingPaths+[path],releaseId))
+            con.commit()
+
+    def getAddedDates(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select added from releases where id=?', (releaseId,))
+            return cur.fetchall()[0][0]
+
+    def addAddedDate(self, releaseId, date):
+        # input error checking
+        if (type(date) != float):
+            try:
+                date = float(date)
+            except ValueError as e:
+                raise ValueError('Date object must be a floating-point number')
+
+        existingDates = self.getAddedDates(releaseId)
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set added=? where id=?', 
+                (existingDates+[date],releaseId))
+            con.commit()
+
+    def getLendEvents(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select lent from releases where id=?', (releaseId,))
+            return cur.fetchall()[0][0]
+
+    def addLendEvent(self, releaseId, event):
+        # Some precursory error checking
+        if not isinstance(event, mbcat.extradata.CheckOutEvent) and \
+            not isinstance(event, mbcat.extradata.CheckInEvent):
+            raise ValueError ('Wrong type for lend event')
+        existingEvents = self.getLendEvents(releaseId)
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set lent=? where id=?', 
+                (existingEvents+[event],releaseId))
+            con.commit()
+
+    def getRating(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select rating from releases where id=?', (releaseId,))
+            return cur.fetchall()[0][0]
+
+    def setRating(self, releaseId, rating):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set rating=? where id=?', (rating, releaseId))
+            con.commit()
+
+    def getPurchases(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select purchases from releases where id=?', (releaseId,))
+            return cur.fetchall()[0][0]
+        
+    def addPurchase(self, releaseId, purchaseObj):
+        # Some precursory error checking
+        if not isinstance(purchaseObj, mbcat.extradata.PurchaseEvent):
+            raise ValueError ('Wrong type for purchase event')
+        existingEvents = self.getLendEvents(releaseId)
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set purchases=? where id=?', 
+                (existingEvents+[purchaseObj],releaseId))
+            con.commit()
+
+    def report(self):
+        """Print some statistics about the catalog as a sanity check."""
+
+        print("\n%d releases" % len(self))
+        print("%d words in search table" % self.getWordCount())
+
+    def makeHtml(self, fileName=None, pbar=None):
         """
         Write HTML representing the catalog to a file
         """
 
-        if not fileName:
-            fileName = os.path.join(self.prefs.htmlPubPath, "catalog.html")
-
         def fmt(s):
             return s.encode('ascii', 'xmlcharrefreplace').decode()
 
+        if not fileName:
+            fileName = os.path.join(self.prefs.htmlPubPath, "catalog.html")
+
+        _log.info('Writing HTML to \'%s\'' % fileName)
 
         htf = open(fileName, 'wt')
 
+        # TODO move all this HTML code to a template file
         htf.write("""<!DOCTYPE HTML>
 <html>
 <head>
@@ -459,7 +684,7 @@ tr.releaserow:hover{
 </head>
 <body>""")
 
-        formatsBySize = sorted(self.formatMap.keys(), key=lambda obj: obj())
+        formatsBySize = sorted(self.getFormats(), key=lambda s: mbcat.formats.getFormatObj(s))
 
         htf.write('<a name="top">\n')
         htf.write('<div id="toc">\n')
@@ -468,16 +693,16 @@ tr.releaserow:hover{
         htf.write('<span class="toctoggle">&nbsp;[<a href="#" class="internal" id="togglelink">hide</a>]&nbsp;</span>\n</div>\n')
         htf.write('<ul>\n')
         for releaseType in formatsBySize:
-            htf.write('\t<li><a href="#'+str(releaseType())+'">'+\
-                str(releaseType())+'</a></li>\n')
+            htf.write('\t<li><a href="#'+releaseType+'">'+\
+                releaseType+'</a></li>\n')
         htf.write('</ul>\n')
         htf.write('</div>\n')
 
         for releaseType in formatsBySize:
-            sortedList = self.getSortedList(releaseType)
+            sortedList = self.getSortedList(mbcat.formats.getFormatObj(releaseType).__class__)
             if len(sortedList) == 0:
                 continue
-            htf.write("<h2><a name=\""+str(releaseType())+"\">" + str(releaseType()) + (" (%d Releases)" %
+            htf.write("<h2><a name=\""+str(releaseType)+"\">" + str(releaseType) + (" (%d Releases)" %
             len(sortedList)) + " <a href=\"#top\">top</a></h2>\n")
 
             htf.write("<table class=\"formattable\">\n")
@@ -497,9 +722,12 @@ tr.releaserow:hover{
             for (releaseId, releaseSortStr) in sortedList:
                 rel = self.getRelease(releaseId)
 
+                if pbar:
+                    pbar.update(pbar.currval + 1)
+
                 #coverartUrl = mbcat.amazonservices.getAsinImageUrl(rel.asin, mbcat.amazonservices.AMAZON_SERVER["amazon.com"], 'S')
                 # Refer to local copy instead
-                imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
+                imgPath = self._getCoverArtPath(releaseId)
                 coverartUrl = imgPath if os.path.isfile(imgPath) else None
 
                 htf.write("<tr class=\"releaserow\">\n")
@@ -561,13 +789,13 @@ tr.releaserow:hover{
                 htf.write('<td>\n<table class="pathlist">'+\
                     ''.join([\
                         ('<tr><td><a href="'+fmt(path)+'">'+fmt(path)+'</a></td></tr>\n')\
-                        for path in self.extraIndex[releaseId].digitalPaths])+\
+                        for path in self.getDigitalPaths(releaseId)])+\
                     '</table>\n</td>\n')
                 htf.write(\
                     "<td>"+(datetime.fromtimestamp( \
-                        self.extraIndex[releaseId].addDates[0] \
+                        self.getAddedDates(releaseId)[0] \
                         ).strftime('%Y-%m-%d') if \
-                    len(self.extraIndex[releaseId].addDates) else '')+"</td>\n")
+                    len(self.getAddedDates(releaseId)) else '')+"</td>\n")
                 htf.write("<td>"+' + '.join([(medium['format'] if 'format' in medium else '(unknown)') for medium in rel['medium-list']])+"</td>\n")
 
                 htf.write('</tr>\n')
@@ -581,7 +809,7 @@ tr.releaserow:hover{
 </html>""")
         htf.close()
 
-    def getReleaseMetaXml(self, releaseId):
+    def fetchReleaseMetaXml(self, releaseId):
         """Fetch release metadata XML from musicbrainz"""
         # get_release_by_id() handles throttling on its own
         _log.info('Fetching metadata for ' + releaseId)
@@ -590,6 +818,7 @@ tr.releaserow:hover{
         mb.set_parser()
         return xml
 
+    @mbcat.utils.deprecated
     def writeXml(self, releaseId, metaData):
         global overWriteAll
 
@@ -614,12 +843,14 @@ tr.releaserow:hover{
 
         return 0
 
+    @mbcat.utils.deprecated
     def fixMeta(self, discId, releaseId):
-        results_meta = self.getReleaseMetaXml(releaseId)
+        results_meta = self.fetchReleaseMetaXml(releaseId)
 
         self.writeXml(discId, results_meta)
 
-    def getMetaData(self, releaseId):
+    @mbcat.utils.deprecated
+    def loadMetaData(self, releaseId):
         """Load metadata from disk"""
         xmlPath = self._get_xml_path(releaseId)
         if (not os.path.isfile(xmlPath)):
@@ -628,120 +859,160 @@ tr.releaserow:hover{
         with open(xmlPath, 'r') as xmlf:
             metaxml = xmlf.read()
 
-        try:
-            metadata = mbxml.parse_message(metaxml)
-        except UnicodeError as exc:
-            raise ResponseError(cause=exc)
-        except Exception as exc:
-            if isinstance(exc, ETREE_EXCEPTIONS):
-                _log.error("Got some bad XML for %s!", releaseId)
-                return 
-            else:
-                raise
+        return self.getReleaseDictFromXml(metaxml)['release']
 
-        return metadata
-
-    def digestMetaDict(self, releaseId, metadata):
-        # some dictionaries to improve performance
-        # these should all be tables in an SQL DB
-        try:
-            rel = metadata['release']
-            self.metaIndex[releaseId] = rel
-
-            # populate format map
-            self.formatMap[mbcat.formats.getReleaseFormat(rel).__class__].append(releaseId)
-
-            # populate DiscId map
-            for medium in rel['medium-list']:
-                for disc in medium['disc-list']:
-                    self.discIdMap[disc['id']].append(releaseId)
-                    
-            # populate barcode map
-            if 'barcode' in rel and rel['barcode']:
-                self.barCodeMap[rel['barcode']].append(releaseId)
-                    
-            # for searching later
-            try:
-                words = self.getReleaseWords(rel)
-                self.mapWordsToRelease(words, releaseId)
-            except KeyError as e:
-                _log.error("No artists included in XML for %s", releaseId)
-
-        except KeyError as e:
-            _log.error("Bad XML for " + releaseId + ": " + str(e))
-            return
-        except TypeError as e:
-            raise
-            _log.error(releaseId + ' ' + str(type(e)) + ": " + str(e) + ": " + str(dir(e)))
-            return
+    def digestReleaseXml(self, releaseId, metaXml):
+        """Update the appropriate data structes for a new release."""
+        relDict = self.getReleaseDictFromXml(metaXml)
         
-    def digestXml(self, releaseId, meta_xml):
-        self.digestMetaDict(releaseId, mbxml.parse_message(meta_xml))
+        exists = releaseId in self
+        now = time.time()
 
-    def searchDigitalPaths(self, releaseId=''):
+        with self._connect() as con:
+            cur = con.cursor()
+
+            if not exists:
+                # Update releases table
+                try:
+                    cur.execute('insert into releases(id, meta, sortstring, metatime, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        (
+                            releaseId, 
+                            buffer(zlib.compress(metaXml)), 
+                            self.getSortStringFromRelease(relDict['release']),
+                            now,
+                            [],
+                            [now],
+                            [],
+                            [],
+                            [],
+                            1, # set count to 1 for now 
+                            '',
+                            0
+                        )
+                    )
+                except sqlite3.IntegrityError as e:
+                    _log.error('Release already exists in catalog.')
+            else:
+                # Remove references to this release from the words, barcodes, etc. tables
+                self.unDigestRelease(releaseId, delete=False)
+                cur.execute('update releases set meta=?,sortstring=?,metatime=? where id=?',
+                        (buffer(zlib.compress(metaXml)),
+                        self.getSortStringFromRelease(relDict['release']),
+                        now,
+                        releaseId
+                        )
+                    )
+
+            # Update words table
+            rel_words = self.getReleaseWords(relDict['release'])
+            for word in rel_words:
+                sql_list_append(cur, 'words', 'word', word, releaseId)
+
+            # Update barcodes -> (barcode, releases)
+            if 'barcode' in relDict['release'] and relDict['release']['barcode']:
+                sql_list_append(cur, 'barcodes', 'barcode', relDict['release']['barcode'], releaseId)
+
+            # Update discids -> (discid, releases)
+            for medium in relDict['release']['medium-list']:
+                for disc in medium['disc-list']:
+                    sql_list_append(cur, 'discids', 'discid', disc['id'], releaseId)
+
+            # Update formats -> (format, releases)
+            fmt = mbcat.formats.getReleaseFormat(relDict['release']).__class__.__name__
+            sql_list_append(cur, 'formats', 'format', fmt, releaseId)
+
+            con.commit()
+
+    def unDigestRelease(self, releaseId, delete=True):
+        """Remove all references to a release from the data structures.
+        Optionally, leave the release in the releases table. """
+        relDict = self.getRelease(releaseId)
+        
+        with self._connect() as con:
+            cur = con.cursor()
+
+            if delete:
+                # Update releases table
+                cur.execute('delete from releases where id = ?', (releaseId,))
+
+            # Update words table
+            rel_words = self.getReleaseWords(relDict)
+            for word in rel_words:
+                sql_list_remove(cur, 'words', 'word', word, releaseId)
+
+            # Update barcodes -> (barcode, releases)
+            if 'barcode' in relDict and relDict['barcode']:
+                sql_list_remove(cur, 'barcodes', 'barcode', relDict['barcode'], releaseId)
+
+            # Update discids -> (discid, releases)
+            for medium in relDict['medium-list']:
+                for disc in medium['disc-list']:
+                    sql_list_remove(cur, 'discids', 'discid', disc['id'], releaseId)
+
+            # Update formats -> (format, releases)
+            fmt = mbcat.formats.getReleaseFormat(relDict).__class__.__name__
+            sql_list_remove(cur, 'formats', 'format', fmt, releaseId)
+
+            con.commit()
+
+    def searchDigitalPaths(self, releaseId='', pbar=None):
         releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
 
-        # TODO could use progressbar here
         # TODO need to be more flexible in capitalization and re-order of words
-        for relId in releaseIdList:
-            #print relId
-            for path in self.prefs.musicPaths:
-                #print path
+        for path in self.prefs.musicPaths:
+            _log.info("Searching '%s'"%path)
+            for relId in releaseIdList:
                 rel = self.getRelease(relId)
-                for artistName in [ rel['artist-credit-phrase'], rel['artist-credit'][0]['artist']['sort-name'] ]:
+                if pbar:
+                    pbar.update(pbar.currval + 1)
+
+                for artistName in set([ rel['artist-credit-phrase'], rel['artist-credit'][0]['artist']['sort-name'] ]):
                     artistPath = os.path.join(path, artistName)
                     if os.path.isdir(artistPath):
-                        #print 'Found ' + artistPath
                         for titleName in [rel['title']]:
                             titlePath = os.path.join(artistPath, titleName)
                             if os.path.isdir(titlePath):
                                 _log.info('Found ' + relId + ' at ' + titlePath)
-                                self.extraIndex[relId].addPath(titlePath)
-            self.extraIndex[relId].save()
+                                self.addDigitalPath(relId, titlePath)
 
         if releaseId and not self.extraIndex[relId].digitalPaths:
             _log.warning('No digital paths found for '+releaseId)
 
-    def addRelease(self, releaseId):
-        self.refreshMetaData(releaseId)
-        self.addExtraData(releaseId)
+    def getMetaTime(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select metatime from releases where id = ?',
+                (releaseId,))
+            return cur.fetchone()
 
-    def refreshMetaData(self, releaseId, olderThan=0):
-        """Should be renamed to "add release" or something
-        get metadata XML from MusicBrainz and save to disk"""
+    def addRelease(self, releaseId, olderThan=0):
+        """Get metadata XML from MusicBrainz and add to or refresh the catalog."""
 
-        releaseId = getReleaseId(releaseId)
-        xmlPath = self._get_xml_path(releaseId)
-        if (os.path.isfile(xmlPath) and (os.path.getmtime(xmlPath) > (time.time() - olderThan))):
+        releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
+        metaTime = self.getMetaTime(releaseId)
+        if (metaTime and (metaTime[0] > (time.time() - olderThan))):
             _log.info("Skipping fetch of metadata for %s because it is recent", releaseId)
             return 0
 
-        meta_xml = self.getReleaseMetaXml(releaseId)
-        if not os.path.isdir(os.path.dirname(xmlPath)):
-            os.mkdir(os.path.dirname(xmlPath))
-        with open(xmlPath, 'wb') as xmlf:
-            xmlf.write(meta_xml)
-        #self.writeXml(releaseId, meta_xml)
-        self.digestXml(releaseId, meta_xml)
+        metaXml = self.fetchReleaseMetaXml(releaseId)
+        self.digestReleaseXml(releaseId, metaXml)
 
     def deleteRelease(self, releaseId):
-        releaseId = getReleaseId(releaseId)
-        shutil.rmtree(os.path.join(self.rootPath, releaseId))
-        # also drop from memory
-        #del self.releaseIndex[releaseId] # TODO necessary?
-        self.load()
+        releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
+        self.unDigestRelease(releaseId)
 
     def refreshAllMetaData(self, olderThan=0):
         for releaseId in self.loadReleaseIds():
             _log.info("Refreshing %s", releaseId)
-            self.refreshMetaData(releaseId, olderThan)
+            self.addRelease(releaseId, olderThan)
 
     def checkReleases(self):
         """
         Check releases for ugliness such as no barcode, no release format, etc. 
         For now, this creates warnings in the log. 
         """
-        for releaseId, release in self.getReleases():
+        for releaseId in self.getReleaseIds():
+            release = self.getRelease(releaseId)
             if 'date' not in release or not release['date']:
                 _log.warning("No date for " + releaseId)
             if 'barcode' not in release or not release['barcode']:
@@ -750,9 +1021,12 @@ tr.releaserow:hover{
                 if 'format' not in medium or not medium['format']:
                     _log.warning("No format for a medium of " + releaseId)
 
+    def _getCoverArtPath(self, releaseId):
+        return os.path.join(self.cachePath, releaseId[0], releaseId[0:2], releaseId, 'cover.jpg')
+
     def getCoverArt(self, releaseId, maxage=60*60):
         release = self.getRelease(releaseId)
-        imgPath = os.path.join(self.rootPath, releaseId, 'cover.jpg')
+        imgPath = self._getCoverArtPath(releaseId)
         if os.path.isfile(imgPath) and os.path.getmtime(imgPath) > time.time() - maxage:
             _log.info("Already have cover art for " + releaseId + ", skipping")
             return
@@ -775,6 +1049,11 @@ tr.releaserow:hover{
             self.getCoverArt(releaseId, maxage=maxage)
 
     def checkLevenshteinDistances(self):
+        """
+        Compute the Levenshtein (edit) distance of each pair of releases.
+
+        Returns a sorted list of the most similar releases
+        """
         import Levenshtein
         dists = []
 
@@ -831,14 +1110,14 @@ tr.releaserow:hover{
         relIdsToAdd = list(set(self.getReleaseIds()) - set(colRelIds))
 
         print('Going to add %d releases to collection...' % len(relIdsToAdd))
-        for relIdChunk in chunks(relIdsToAdd, 100):
+        for relIdChunk in mbcat.utils.chunks(relIdsToAdd, 100):
             mb.add_releases_to_collection(colId, relIdChunk)
         print('DONE')
 
     def makeLabelTrack(self, releaseId, outPath='Label Track.txt'):
         """Useful for importing into Audacity."""
         rel = self.getRelease(releaseId)
-        with open(outPath, 'wt') as f:
+        with open(outPath, 'w') as f:
             pos = 0.0
             for medium in rel['medium-list']:
                 for track in medium['track-list']:
@@ -846,7 +1125,12 @@ tr.releaserow:hover{
                     if 'length' not in rec:
                         _log.warning('Track '+track['number']+' length is empty in '+releaseId)
                     length = float(rec['length'])/1000 if 'length' in rec else 2*60
-                    f.write('%.6f\t%.6f\t%s\n' % (pos, pos+length, rec['title']))
+                    line = '%.6f\t%.6f\t%s\n' % (pos, pos+length, rec['title'])
+                    try:
+                        f.write(line)
+                    except ValueError:
+                        # Python2 compatibility
+                        f.write(line.encode('utf8'))
                     pos += length
         _log.info('Wrote label track for '+releaseId+' to '+outPath)
 
@@ -872,6 +1156,7 @@ tr.releaserow:hover{
     def writeTrackList(self, stream, releaseId):
         """Write ASCII tracklist for releaseId to 'stream'. """
         stream.write('\n')
+        _log.info('Printing tracklist for \'%s\'' % releaseId)
         rel = self.getRelease(releaseId)
         for medium in rel['medium-list']:
             for track in medium['track-list']:

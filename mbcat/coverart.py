@@ -8,6 +8,7 @@ from musicbrainzngs import compat
 from musicbrainzngs import util
 import musicbrainzngs.musicbrainz as mb
 import json
+import os
 import logging
 _log = logging.getLogger("mbcat")
 try:
@@ -36,8 +37,12 @@ def getCoverArtUrl(meta, size='large'):
 
 @mb._rate_limit
 def saveCoverArt(meta, imgPath):
+    if not os.path.isdir(os.path.dirname(imgPath)):
+        os.makedirs(os.path.dirname(imgPath))
     imgUrl = getCoverArtUrl(meta)
     response = urlopen( imgUrl )
+    if not os.path.isdir(os.path.dirname(imgPath)):
+        os.makedirs(os.path.dirname(imgPath))
     with open(imgPath, 'w') as imgf:
         imgf.write(response.read())
         _log.info("Wrote %d bytes to %s" %(imgf.tell(), imgPath))
