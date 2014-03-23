@@ -192,7 +192,9 @@ class Catalog(object):
 
         return metadata
     
-    def getRelease(self, releaseId):
+    def getReleaseXml(self, releaseId):
+        """Return a release's musicbrainz XML metadata"""
+
         with self._connect() as con:
             cur = con.cursor()
             cur.execute('select meta from releases where id = ?', (releaseId,))
@@ -200,12 +202,17 @@ class Catalog(object):
                 releaseXml = zlib.decompress(cur.fetchone()[0])
             except TypeError:
                 raise KeyError ('release %s not found' % releaseId)
+        return releaseXml
 
-            # maybe it would be better to store the release as a serialized dict in the table
-            # then, we could skip this parsing step
+    def getRelease(self, releaseId):
+        """Return a release's musicbrainz-ngs dictionary"""
 
-            #_log.info('Building sort string for %s' % releaseId)
-            metadata = self.getReleaseDictFromXml(releaseXml)
+        releaseXml = self.getReleaseXml(releaseId)
+        # maybe it would be better to store the release as a serialized dict in the table
+        # then, we could skip this parsing step
+
+        #_log.info('Building sort string for %s' % releaseId)
+        metadata = self.getReleaseDictFromXml(releaseXml)
 
         return metadata['release']
 
