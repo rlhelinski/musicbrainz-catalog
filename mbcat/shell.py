@@ -384,8 +384,11 @@ class Shell:
                     self.s.write(('\t'*level) + cmdname + " :\n")
                     cmdSummary (cmdfun, level+1)
                 else:
-                    self.s.write(('\t'*level) + cmdname + " : " + 
-                            cmdStruct[cmdname].__doc__.strip() + "\n")
+                    try:
+                        self.s.write(('\t'*level) + cmdname + " : " + 
+                                cmdStruct[cmdname].__doc__.strip() + "\n")
+                    except AttributeError as e:
+                        raise Exception('No docstring for \'%s\'' % cmdname)
         
         def cmdParse(cmdStruct, input):
             if type(cmdStruct[input]) == dict:
