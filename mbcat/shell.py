@@ -393,7 +393,10 @@ class Shell:
                 cmdParse(cmdStruct[input], self.s.nextWord().lower())
             else: 
                 # Remind the user what this command does
-                self.s.write(cmdStruct[input].__doc__.strip() + '\n')
+                try:
+                    self.s.write(cmdStruct[input].__doc__.strip() + '\n')
+                except AttributeError as e:
+                    raise Exception('No docstring for \'%s\'' % input)
                 # Call the function
                 try:
                     (cmdStruct[input])(self)
