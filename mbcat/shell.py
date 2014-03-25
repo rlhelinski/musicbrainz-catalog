@@ -6,8 +6,11 @@ from mbcat.barcode import UPC
 import os
 import sys
 from mbcat.inputsplitter import InputSplitter
+import musicbrainzngs
 
 class Shell:
+    searchResultsLimit = 20
+
     def __init__(self, stdin=sys.stdin, stdout=sys.stdout, catalog=None):
         self.c = catalog if catalog else Catalog()
         self.c.report()
@@ -302,6 +305,34 @@ class Shell:
                 self.c.formatDiscInfo(lds[i][1]) + ' <-> ' + \
                 self.c.formatDiscInfo(lds[i][2]) + '\n')
 
+    def MBReleaseBarcode(self):
+        """Search for release on musicbrainz by barcode"""
+        barcode = self.s.nextLine('Enter barcode: ')
+        results = musicbrainzngs.search_releases(barcode=barcode,
+                limit=self.searchResultsLimit)
+        #print results
+        if results:
+            self.s.write('Results:\n')
+        for release in results['release-list']:
+            self.s.write(release['id']+' '+\
+                    ', '.join(['"'+cred['artist']['name']+'"' \
+                            for cred in release['artist-credit']])+\
+                    ' "'+release['title']+'"\n')
+
+    def MBReleaseCatno(self):
+        """Search for release on musicbrainz by barcode"""
+        barcode = self.s.nextLine('Enter barcode: ')
+        results = musicbrainzngs.search_releases(barcode=barcode,
+                limit=self.searchResultsLimit)
+        #print results
+        for release in results['release-list']:
+            print (release['id']+' "'+release['title']+'"')
+
+    def MBReleaseTitle(self):
+        """Search for release on musicbrainz by barcode"""
+        barcode = self.s.nextLine('Enter barcode: ')
+        print (musicbrainzngs.search_releases(barcode=barcode,
+                limit=self.searchResultsLimit))
 
     def Quit(self):
         """quit (or press enter)"""
@@ -335,6 +366,13 @@ class Shell:
         'comment' : AddComment,
         'rate' : SetRating,
         'similar' : GetSimilar,
+        'mb' : {
+            'release' : {
+                'barcode' : MBReleaseBarcode,
+                'catno' : MBReleaseCatno,
+                'title' : MBReleaseTitle,
+                },
+            },
         }
 
     def main(self):
