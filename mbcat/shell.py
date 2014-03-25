@@ -305,6 +305,16 @@ class Shell:
                 self.c.formatDiscInfo(lds[i][1]) + ' <-> ' + \
                 self.c.formatDiscInfo(lds[i][2]) + '\n')
 
+    def ZipExport(self):
+        """Export the catalog to a zip file containing XML."""
+        defaultPath = 'mbcat-catalog.zip'
+        path = self.s.nextLine('Enter path for file [empty for \'%s\']: '\
+                %defaultPath)
+        if not path:
+            path = defaultPath
+        
+        self.c.saveZip()
+
     def MBReleaseBarcode(self):
         """Search for release on musicbrainz by barcode"""
         barcode = self.s.nextLine('Enter barcode: ')
@@ -366,6 +376,9 @@ class Shell:
         'comment' : AddComment,
         'rate' : SetRating,
         'similar' : GetSimilar,
+        'export' : {
+            'zip' : ZipExport,
+            },
         'mb' : {
             'release' : {
                 'barcode' : MBReleaseBarcode,

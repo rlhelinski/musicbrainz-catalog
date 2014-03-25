@@ -95,6 +95,8 @@ class Catalog(object):
     labelUrl = mbUrl+'label/'
     releaseUrl = mbUrl+'release/'
 
+    zipReleaseRoot = 'release-id'
+
     def __init__(self, dbPath=None, cachePath=None):
         """Open or create a new catalog"""
 
@@ -282,22 +284,28 @@ class Catalog(object):
         """Exports the database as a ZIP archive"""
         import zipfile, StringIO
 
+        _log.info('Saving ZIP file for catalog to \'%s\'' % zipName)
+
+        # TODO make this list of widgets common, or better yet, remove this info to the next level up
+        widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Percentage() ]
+        pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(self)).start()
         with zipfile.ZipFile(zipName, 'w', zipfile.ZIP_DEFLATED) as zf:
-            xml_writer = wsxml.MbXmlWriter()
             for releaseId in self.getReleaseIds():
-                xmlPath = self._get_xml_path(releaseId)
-                XmlParser = wsxml.MbXmlParser()
-                with open(xmlPath, 'r') as xmlf:
-                    metadata = XmlParser.parse(xmlf)
+                pbar.update(pbar.currval + 1)
+                zipReleasePath = self.zipReleaseRoot+'/'+releaseId
+                zf.writestr(zipReleasePath+'/'+'metadata.xml', self.getReleaseXml(releaseId))
 
-                memXmlF = StringIO.StringIO()
-                xml_writer.write(memXmlF, metadata)
-                memXmlF.seek(0)
-                zf.writestr(xmlPath, memXmlF.read())
+                # add coverart if is cached
+                # use store method because JPEG is already compressed
+                coverArtPath = self._getCoverArtPath(releaseId)
+                if os.path.isfile(coverArtPath):
+                    zf.write(coverArtPath, 
+                            zipReleasePath+'/cover.jpg', 
+                            zipfile.ZIP_STORED)
 
-                # TODO write a function to produce these paths
-                zf.writestr(self._get_xml_path('extra.xml'), \
-                    self.extraIndex[releaseId].toString())
+                #zf.writestr('extra.xml', \
+                #    self.extraIndex[releaseId].toString())
+            pbar.finish()
 
     def loadZip(self, zipName='catalog.zip'):
         import zipfile, StringIO
