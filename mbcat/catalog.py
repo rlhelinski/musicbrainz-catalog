@@ -559,6 +559,23 @@ class Catalog(object):
                 (existingEvents+[purchaseObj],releaseId))
             con.commit()
 
+    def getListenDates(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select listened from releases where id=?', (releaseId,))
+            return cur.fetchall()[0][0]
+
+    def addListenDate(self, releaseId, date):
+        # Some precursory error checking
+        if not isinstance(date, float):
+            raise ValueError ('Wrong type for date argument')
+        existingDates = self.getListenDates(releaseId)
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set listened=? where id=?', 
+                (existingDates+[date],releaseId))
+            con.commit()
+
     def getExtraData(self, releaseId):
         """Put together all of the metadata added by mbcat. This might be removed in a later release."""
         with self._connect() as con:

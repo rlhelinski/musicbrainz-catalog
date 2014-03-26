@@ -81,6 +81,18 @@ class Shell:
         pe = PurchaseEvent(dateStr, priceStr, vendorStr)
         self.c.addPurchase(releaseId, pe)
 
+    def AddListenDate(self):
+        """Add a listen date."""
+        releaseId = self.Search()
+        
+        listenDates = self.c.getListenDates(releaseId)
+        for listenDate in listenDates:
+            self.s.write(time.strftime(dateFmtStr, time.localtime(listenDate))+'\n')
+        dateStr = self.s.nextLine('Enter listen date ('+dateFmtUsr+') [enter for now]: ')
+        date = time.strptime(dateStr,dateFmtStr) if dateStr else time.time()
+
+        self.c.addListenDate(releaseId, date)
+
     # TODO also need a delete comment function
     def AddComment(self):
         """Add a comment."""
@@ -399,6 +411,7 @@ class Shell:
             },
         'coverart' : CoverArt,
         'purchase' : AddPurchaseEvent,
+        'listen' : AddListenDate,
         'comment' : AddComment,
         'rate' : SetRating,
         'similar' : GetSimilar,
