@@ -291,7 +291,6 @@ class Catalog(object):
         pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(self)).start()
         with zipfile.ZipFile(zipName, 'w', zipfile.ZIP_DEFLATED) as zf:
             for releaseId in self.getReleaseIds():
-                pbar.update(pbar.currval + 1)
                 zipReleasePath = self.zipReleaseRoot+'/'+releaseId
                 zf.writestr(zipReleasePath+'/'+'metadata.xml', self.getReleaseXml(releaseId))
 
@@ -305,6 +304,11 @@ class Catalog(object):
 
                 #zf.writestr('extra.xml', \
                 #    self.extraIndex[releaseId].toString())
+                ed = self.getExtraData(releaseId)
+                zf.writestr(zipReleasePath+'/extra.xml',
+                        ed.toString())
+
+                pbar.update(pbar.currval + 1)
             pbar.finish()
 
     def loadZip(self, zipName='catalog.zip'):
@@ -554,6 +558,25 @@ class Catalog(object):
             cur.execute('update releases set purchases=? where id=?', 
                 (existingEvents+[purchaseObj],releaseId))
             con.commit()
+
+    def getExtraData(self, releaseId):
+        """Put together all of the metadata added by mbcat. This might be removed in a later release."""
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select purchases,added,lent,listened,digital,count,comment,rating from releases where id=?', (releaseId,))
+            purchases,added,lent,listened,digital,count,comment,rating = cur.fetchall()[0]
+
+        ed = mbcat.extradata.ExtraData(releaseId)
+        ed.purchases = purchases
+        ed.addDates = added
+        ed.lendEvents = lent
+        ed.listenEvents = listened
+        ed.digitalPaths = digital
+        # TODO no place for count yet in extradata
+        ed.comment = comment
+        ed.rating = rating
+
+        return ed
 
     def report(self):
         """Print some statistics about the catalog as a sanity check."""
