@@ -9,7 +9,7 @@ from mbcat.inputsplitter import InputSplitter
 import musicbrainzngs
 
 class Shell:
-    searchResultsLimit = 20
+    """An interactive shell that prompts the user for inputs and renders output for the catalog."""
 
     def __init__(self, stdin=sys.stdin, stdout=sys.stdout, catalog=None):
         self.c = catalog if catalog else Catalog()
@@ -315,34 +315,60 @@ class Shell:
         
         self.c.saveZip()
 
-    def MBReleaseBarcode(self):
-        """Search for release on musicbrainz by barcode"""
-        barcode = self.s.nextLine('Enter barcode: ')
-        results = musicbrainzngs.search_releases(barcode=barcode,
-                limit=self.searchResultsLimit)
-        #print results
-        if results:
-            self.s.write('Results:\n')
+    def printQueryResults(self, results):
+        self.s.write('Release Results:\n')
         for release in results['release-list']:
             self.s.write(release['id']+' '+\
                     ', '.join(['"'+cred['artist']['name']+'"' \
                             for cred in release['artist-credit']])+\
                     ' "'+release['title']+'"\n')
 
-    def MBReleaseCatno(self):
+    def printGroupQueryResults(self, results):
+        self.s.write('Release Group Results:\n')
+        for group in results['release-group-list']:
+            self.s.write(group['id']+' '+\
+                    ', '.join(['"'+cred['artist']['name']+'"' \
+                            for cred in group['artist-credit']])+\
+                    ' "'+group['title']+'" (%d releases)\n' % len(group['release-list']))
+
+    searchResultsLimit = 20
+
+    def MBReleaseBarcode(self):
         """Search for release on musicbrainz by barcode"""
         barcode = self.s.nextLine('Enter barcode: ')
         results = musicbrainzngs.search_releases(barcode=barcode,
                 limit=self.searchResultsLimit)
-        #print results
-        for release in results['release-list']:
-            print (release['id']+' "'+release['title']+'"')
+
+        if results:
+            self.printQueryResults(results)
+
+    def MBReleaseCatno(self):
+        """Search for release on musicbrainz by catalog number"""
+        catno = self.s.nextLine('Enter catalog number: ')
+        results = musicbrainzngs.search_releases(catno=catno,
+                limit=self.searchResultsLimit)
+
+        if results:
+            self.printQueryResults(results)
 
     def MBReleaseTitle(self):
-        """Search for release on musicbrainz by barcode"""
-        barcode = self.s.nextLine('Enter barcode: ')
-        print (musicbrainzngs.search_releases(barcode=barcode,
-                limit=self.searchResultsLimit))
+        """Search for release on musicbrainz by title"""
+        title = self.s.nextLine('Enter title: ')
+        results = musicbrainzngs.search_releases(release=title,
+                limit=self.searchResultsLimit)
+
+        if results:
+            self.printQueryResults(results)
+
+    def MBRelGroupTitle(self):
+        """Search for release groups on musicbrainz by title"""
+
+        title = self.s.nextLine('Enter title: ')
+        results = musicbrainzngs.search_release_groups(releasegroup=title,
+                limit=self.searchResultsLimit)
+
+        if results:
+            self.printGroupQueryResults(results)
 
     def Quit(self):
         """quit (or press enter)"""
@@ -384,6 +410,9 @@ class Shell:
                 'barcode' : MBReleaseBarcode,
                 'catno' : MBReleaseCatno,
                 'title' : MBReleaseTitle,
+                },
+            'group' : {
+                'title' : MBRelGroupTitle,
                 },
             },
         }
