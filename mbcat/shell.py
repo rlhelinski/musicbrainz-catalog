@@ -382,10 +382,25 @@ class Shell:
         if results:
             self.printGroupQueryResults(results)
 
+    def CopyCount(self):
+        """Check and set the on-hand copy count for a release"""
+
+        releaseId = self.Search("Enter search terms or release ID: ")
+        if not releaseId:
+            raise ValueError('no release specified')
+        self.s.write('Current copy count: %d\n' % self.c.getCopyCount(releaseId))
+        newCount = self.s.nextLine('New copy count [empty for no change]: ')
+        if newCount:
+            try:
+                self.c.setCopyCount(releaseId, int(newCount))
+            except ValueError as e:
+                raise ValueError('copy count must be an integer')
+
     def Quit(self):
         """quit (or press enter)"""
         sys.exit(0)
 
+    # The master list of shell commands
     shellCommands = {
         'q' : Quit,
         'search' : SearchSort, 
@@ -428,6 +443,7 @@ class Shell:
                 'title' : MBRelGroupTitle,
                 },
             },
+        'count' : CopyCount,
         }
 
     def main(self):
