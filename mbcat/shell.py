@@ -7,6 +7,7 @@ import os
 import sys
 from mbcat.inputsplitter import InputSplitter
 import musicbrainzngs
+import webbrowser
 
 class Shell:
     """An interactive shell that prompts the user for inputs and renders output for the catalog."""
@@ -396,6 +397,14 @@ class Shell:
             except ValueError as e:
                 raise ValueError('copy count must be an integer')
 
+    def OpenBrowser(self):
+        """Open a web browser for a musicbrainz release page"""
+        releaseId = self.Search("Enter search terms or release ID: ")
+        if not releaseId:
+            raise ValueError('no release specified')
+
+        webbrowser.open(self.c.releaseUrl+releaseId)
+
     def Quit(self):
         """quit (or press enter)"""
         sys.exit(0)
@@ -444,6 +453,7 @@ class Shell:
                 },
             },
         'count' : CopyCount,
+        'browser' : OpenBrowser,
         }
 
     def main(self):
