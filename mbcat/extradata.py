@@ -99,8 +99,14 @@ class ExtraData:
         self.rating = 0
 
     def load(self):
-        tree = ET.parse(self.path)
-        root = tree.getroot()
+        tree = ET.parse(self.path).getroot()
+        return self.parseTree(tree)
+
+    def loads(self, string):
+        tree = ET.fromstring(string)
+        return self.parseTree(tree)
+
+    def parseTree(self, root):
         for purchase in root.findall('./purchase'):
             self.purchases.append(PurchaseEvent( \
                     purchase.attrib['date'], \
