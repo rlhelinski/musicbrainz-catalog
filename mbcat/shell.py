@@ -13,7 +13,7 @@ class Shell:
     """An interactive shell that prompts the user for inputs and renders output for the catalog."""
 
     def __init__(self, stdin=sys.stdin, stdout=sys.stdout, catalog=None):
-        self.c = catalog if catalog else Catalog()
+        self.c = catalog if catalog!=None else Catalog()
         self.c.report()
         self.s = InputSplitter(stdin=stdin, stdout=stdout)
 
