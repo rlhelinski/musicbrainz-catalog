@@ -415,6 +415,10 @@ class Shell:
 
         webbrowser.open(self.c.releaseUrl+releaseId)
 
+    def Report(self):
+        """Display high-level information about catalog"""
+        self.c.report()
+
     def Quit(self):
         """quit (or press enter)"""
         sys.exit(0)
@@ -467,6 +471,7 @@ class Shell:
             },
         'count' : CopyCount,
         'browser' : OpenBrowser,
+        'report' : Report,
         }
 
     def main(self):
