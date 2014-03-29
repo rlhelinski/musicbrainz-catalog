@@ -319,14 +319,14 @@ class Shell:
                 self.c.formatDiscInfo(lds[i][2]) + '\n')
 
     def ZipExport(self):
-        """Export the catalog to a zip file containing XML."""
+        """Export the catalog to a zip file containing release XML files."""
         defaultPath = 'mbcat-catalog.zip'
         path = self.s.nextLine('Enter path for file [empty for \'%s\']: '\
                 %defaultPath)
         if not path:
             path = defaultPath
         
-        self.c.saveZip()
+        self.c.saveZip(path)
 
     def printQueryResults(self, results):
         self.s.write('Release Results:\n')
