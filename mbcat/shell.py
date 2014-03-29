@@ -328,6 +328,16 @@ class Shell:
         
         self.c.saveZip(path)
 
+    def ZipImport(self):
+        """Import a zip file containing XML files into the catalog."""
+        defaultPath = 'mbcat-catalog.zip'
+        path = self.s.nextLine('Enter path for file [empty for \'%s\']: '\
+                %defaultPath)
+        if not path:
+            path = defaultPath
+        
+        self.c.loadZip(path)
+
     def printQueryResults(self, results):
         self.s.write('Release Results:\n')
         for release in results['release-list']:
@@ -441,6 +451,9 @@ class Shell:
         'similar' : GetSimilar,
         'export' : {
             'zip' : ZipExport,
+            },
+        'import' : {
+            'zip' : ZipImport,
             },
         'mb' : {
             'release' : {
