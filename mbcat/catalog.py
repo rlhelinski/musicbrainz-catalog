@@ -14,6 +14,7 @@ import mbcat.userprefs
 import mbcat.utils
 import mbcat.extradata
 import shutil
+import zipfile
 from datetime import datetime
 from collections import defaultdict
 import progressbar
@@ -282,7 +283,6 @@ class Catalog(object):
 
     def saveZip(self, zipName='catalog.zip'):
         """Exports the database as a ZIP archive"""
-        import zipfile, StringIO
 
         _log.info('Saving ZIP file for catalog to \'%s\'' % zipName)
 
@@ -312,21 +312,46 @@ class Catalog(object):
             pbar.finish()
 
     def loadZip(self, zipName='catalog.zip'):
-        import zipfile, StringIO
+        """Imports the data from a ZIP archive into the database"""
 
-        zf = zipfile.ZipFile(zipName, 'r')
-        XmlParser = wsxml.MbXmlParser()
-        for fInfo in zf.infolist():
-            if not fInfo.filename.startswith('release-id') or not fInfo.filename.endswith('metadata.xml'):
-                continue
+        _log.info('Loading ZIP file into catalog from \'%s\'' % zipName)
 
-            rootPath, releaseId, fileName = fInfo.filename.split('/')
-            memXmlF = StringIO.StringIO()
-            memXmlF.write(zf.read(fInfo))
-            memXmlF.seek(0)
-            metadata = XmlParser.parse(memXmlF)
-            self.metaIndex[releaseId] = metadata
-        zf.close()
+        widgets = ["Releases: ", \
+                progressbar.Bar(marker="=", left="[", right="]"), \
+                " ", progressbar.Percentage() ]
+        with zipfile.ZipFile(zipName, 'r') as zf:
+            pbar = progressbar.ProgressBar(widgets=widgets,
+                    maxval=len(zf.infolist())).start()
+            for fInfo in zf.infolist():
+                try:
+                    rootPath, releaseId, fileName = fInfo.filename.split('/')
+                except ValueError:
+                    # this must not be a file that is part of a release
+                    continue
+
+                if rootPath!= self.zipReleaseRoot:
+                    # must not be part of a release, do nothing for now
+                    continue
+
+                if len(releaseId) != 36:
+                    _log.error('Release ID in path \'%s\' not expected length (36)' % releaseId)
+                    continue
+                
+                if fileName == 'metadata.xml':
+                    self.digestReleaseXml(releaseId, zf.read(fInfo))
+
+                if fileName == 'extra.xml':
+                    ed = mbcat.extradata.ExtraData(releaseId)
+                    ed.loads(zf.read(fInfo))
+                    self.digestExtraData(releaseId, ed)
+
+                if fileName == 'cover.jpg':
+                    coverArtPath = self._getCoverArtPath(releaseId)
+                    with file(coverArtPath, 'w') as f:
+                        f.write(zf.read(fInfo))
+
+                pbar.update(pbar.currval + 1)
+            pbar.finish()
 
     @staticmethod
     def getReleaseWords(rel):
@@ -594,6 +619,26 @@ class Catalog(object):
         ed.rating = rating
 
         return ed
+
+    def digestExtraData(self, releaseId, ed):
+        """Take an ExtraData object and update the metadata in the catalog for a release"""
+        # TODO there is no attempt to merge information that already exists in the database
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('update releases set '+\
+                    'purchases=?, added=?, lent=?, listened=?, digital=?, '+\
+                    'comment=?, rating=? where id=?',
+                    (ed.purchases,
+                    ed.addDates,
+                    ed.lendEvents,
+                    ed.listenEvents,
+                    ed.digitalPaths,
+                    # TODO no place for count yet in extradata
+                    ed.comment,
+                    ed.rating,
+                    # don't forget the 'where' clause
+                    releaseId))
+            con.commit()
 
     def report(self):
         """Print some statistics about the catalog as a sanity check."""
