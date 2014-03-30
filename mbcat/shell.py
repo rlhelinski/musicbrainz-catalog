@@ -344,7 +344,10 @@ class Shell:
             self.s.write(release['id']+' '+\
                     ', '.join(['"'+cred['artist']['name']+'"' \
                             for cred in release['artist-credit']])+\
-                    ' "'+release['title']+'"\n')
+                    ' "'+release['title']+'"'+\
+                    (' ('+' + '.join([medium['format'] if medium and 'format' in medium else '' \
+                            for medium in release['medium-list']])+')')+\
+                    '\n')
 
     def printGroupQueryResults(self, results):
         self.s.write('Release Group Results:\n')
