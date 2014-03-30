@@ -163,10 +163,17 @@ class Shell:
 
     def Html(self):
         """Write HTML file."""
+        fileName = self.s.nextLine('Path for HTML file [empty for catalog.html]: ')
+        if not fileName:
+            fileName='catalog.html'
         widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Percentage() ]
         pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(self.c)).start()
-        self.c.makeHtml(pbar=pbar)
+        self.c.makeHtml(fileName=fileName,pbar=pbar)
         pbar.finish()
+
+        answer = self.s.nextLine('Open browser to view HTML? [y/N]')
+        if answer and answer[0].lower() == 'y':
+            webbrowser.open(fileName)
 
     def Add(self):
         """Add a release."""
