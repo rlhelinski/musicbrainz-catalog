@@ -344,7 +344,7 @@ class Shell:
                 %defaultPath)
         if not path:
             path = defaultPath
-        
+
         self.c.loadZip(path)
 
     def printQueryResults(self, results):
@@ -356,6 +356,11 @@ class Shell:
                     ' "'+release['title']+'"'+\
                     (' ('+' + '.join([medium['format'] if medium and 'format' in medium else '' \
                             for medium in release['medium-list']])+')')+\
+                    (' ' +', '.join([('label: '+info['label']['name'] if 'label' in info else '') +\
+                            ' catno.: '+info['catalog-number'] \
+                            for info in release['label-info-list']]))+\
+                    (', barcode: '+release['barcode'] if 'barcode' in release
+else '')+\
                     '\n')
 
     def printGroupQueryResults(self, results):
