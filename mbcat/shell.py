@@ -193,6 +193,8 @@ class Shell:
 
         self.s.write("Added '%s'.\n" % self.c.getRelease(releaseId)['title'])
 
+        self.c.getCoverArt(releaseId)
+
     def BarcodeSearch(self):
         """Search for a release by barcode."""
         barCodeEntered = self.s.nextWord("Enter barcode: ")
