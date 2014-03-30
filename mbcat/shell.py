@@ -475,16 +475,20 @@ class Shell:
         }
 
     def main(self):
-        def cmdSummary(cmdStruct, level=0):
+        def cmdSummary(cmdStruct, level=0, parentLeader=''):
             """Print a summary of commands."""
-            for cmdname in sorted(cmdStruct.keys()):
+            #import pdb; pdb.set_trace()
+            for i, cmdname in enumerate(sorted(cmdStruct.keys())):
                 cmdfun = cmdStruct[cmdname]
+                more = i < len(cmdStruct)-1
+                thisLeader = (('\u251c' if more else '\u2514')+'\u2500'*3 if level>0 else '')
                 if type(cmdfun) == dict:
-                    self.s.write(('\t'*level) + cmdname + " :\n")
-                    cmdSummary (cmdfun, level+1)
+                    childLeader = (('\u2502' if more else ' ')+' '*3 if level>0 else '')
+                    self.s.write(parentLeader + thisLeader + cmdname + " :\n")
+                    cmdSummary (cmdfun, level+1, parentLeader+childLeader)
                 else:
                     try:
-                        self.s.write(('\t'*level) + cmdname + " : " + 
+                        self.s.write(parentLeader + thisLeader + cmdname + " : " + 
                                 cmdStruct[cmdname].__doc__.strip() + "\n")
                     except AttributeError as e:
                         raise Exception('No docstring for \'%s\'' % cmdname)
