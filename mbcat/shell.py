@@ -497,22 +497,25 @@ class Shell:
                         raise Exception('No docstring for \'%s\'' % cmdname)
         
         def cmdParse(cmdStruct, input):
-            if type(cmdStruct[input]) == dict:
-                # Use the next input word and recur into the structure
-                cmdParse(cmdStruct[input], self.s.nextWord().lower())
-            else: 
-                # Remind the user what this command does
-                try:
-                    self.s.write(cmdStruct[input].__doc__.strip() + '\n')
-                except AttributeError as e:
-                    raise Exception('No docstring for \'%s\'' % input)
-                # Call the function
-                try:
-                    (cmdStruct[input])(self)
-                except ValueError as e:
-                    self.s.write(str(e) + " Command failed.\n")
-                except KeyError as e:
-                    self.s.write(str(e) + " Command failed.\n")
+            try:
+                if type(cmdStruct[input]) == dict:
+                    # Use the next input word and recur into the structure
+                    cmdParse(cmdStruct[input], self.s.nextWord().lower())
+                else: 
+                    # Remind the user what this command does
+                    try:
+                        self.s.write(cmdStruct[input].__doc__.strip() + '\n')
+                    except AttributeError as e:
+                        raise Exception('No docstring for \'%s\'' % input)
+                    # Call the function
+                    try:
+                        (cmdStruct[input])(self)
+                    except ValueError as e:
+                        self.s.write(str(e) + " Command failed.\n")
+                    except KeyError as e:
+                        self.s.write(str(e) + " Command failed.\n")
+            except KeyError as e:
+                self.s.write(str(e) + " Invalid command.\n")
 
         while (True):
             input = self.s.nextWord("Enter command ('h' for help): ").lower()
