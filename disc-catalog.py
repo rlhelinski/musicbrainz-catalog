@@ -1,7 +1,7 @@
 #!/opt/local/bin/python2.7
 """
 Read a CD in the disc drive, compute the MusicBrainz DiscID,
-find a MusicBrainz release, and add that to your catalog. 
+find a MusicBrainz release, and add that to your catalog.
 This is offered as a separate script in case libdiscid is
 not available.
 
@@ -27,7 +27,6 @@ mb.set_useragent(
 )
 
 c = Catalog()
-c.load()
 
 io = InputSplitter()
 
@@ -44,7 +43,6 @@ while not io.nextLine('Press enter to read the disc or \'q\' to quit... ').start
         print ("DiscID calculation failed: " + str(e))
         continue
 
-    # This should be replaced with a log output 
     if (not os.path.isdir('disc-id')):
         os.mkdir('disc-id')
     if (not os.path.isdir(os.path.join('disc-id', disc.id))):
@@ -66,7 +64,7 @@ while not io.nextLine('Press enter to read the disc or \'q\' to quit... ').start
         print ('Submit via:', disc.submission_url)
 
     print ('DiscID:', disc.id)
-    
+
     try:
         io.write ("Querying MusicBrainz...")
         result = mb.get_releases_by_discid(disc.id,
@@ -137,14 +135,6 @@ while not io.nextLine('Press enter to read the disc or \'q\' to quit... ').start
         print ("It looks like MusicBrainz only has a CD stub for this TOC.")
         sys.exit(1)
 
-    c.refreshMetaData(releaseId)
-
-    ed = ExtraData(releaseId)
-    try:
-        ed.load()
-    except IOError as e:
-        pass
-    ed.addDate()
-    ed.save()
+    c.addRelease(releaseId)
 
 # EOF
