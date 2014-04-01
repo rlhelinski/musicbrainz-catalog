@@ -172,7 +172,8 @@ class Shell:
         pbar.finish()
 
         answer = self.s.nextLine('Open browser to view HTML? [y/N]')
-        if answer and answer[0].lower() == 'y':
+        if answer and answer.lower().startswith('y'):
+            print ('opening...')
             webbrowser.open(fileName)
 
     def Add(self):
