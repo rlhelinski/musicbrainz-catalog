@@ -65,7 +65,7 @@ class Shell:
     def AddPurchaseEvent(self):
         """Add a purchase date."""
         releaseId = self.Search()
-        
+
         purchases = self.c.getPurchases(releaseId)
         for purchase in purchases:
             self.s.write(str(purchase)+'\n')
@@ -85,7 +85,7 @@ class Shell:
     def AddListenDate(self):
         """Add a listen date."""
         releaseId = self.Search()
-        
+
         listenDates = self.c.getListenDates(releaseId)
         for listenDate in listenDates:
             self.s.write(time.strftime(dateFmtStr, time.localtime(listenDate))+'\n')
@@ -258,7 +258,7 @@ class Shell:
         if not date:
             date = time.time()
         self.c.addLendEvent(releaseId, CheckInEvent(date))
-        
+
     def DigitalPath(self):
         """Add a path to a digital copy of a release."""
         releaseId = self.Search()
@@ -299,7 +299,7 @@ class Shell:
 
         result = mb.get_collections()
         for i, collection in enumerate(result['collection-list']):
-            self.s.write('%d: "%s" by %s (%s)\n' % (i, collection['name'], 
+            self.s.write('%d: "%s" by %s (%s)\n' % (i, collection['name'],
                 collection['editor'], collection['id']))
 
         col_i = int(self.s.nextLine('Enter collection index: '))
@@ -335,7 +335,7 @@ class Shell:
                 %defaultPath)
         if not path:
             path = defaultPath
-        
+
         self.c.saveZip(path)
 
     def ZipImport(self):
@@ -437,6 +437,91 @@ else '')+\
         """Display high-level information about catalog"""
         self.c.report()
 
+
+
+    def ReadDiscTOC(self):
+        """Read table of contents from a CD-ROM, search for a release, and add
+to the catalog"""
+        try:
+            import discid
+        except ImportError as e:
+            raise Exception('Could not import discid')
+        default_device = discid.get_default_device()
+        spec_device = self.s.nextLine('Device to read [empty for \'%s\']: ' %\
+                default_device)
+        if not spec_device:
+            spec_device = default_device
+
+        try:
+            disc = discid.read(spec_device)
+        except discid.DiscError as e:
+            raise Exception ("DiscID calculation failed: " + str(e))
+        self.s.write ('DiscID: %s\n' % disc.id)
+
+        try:
+            self.s.write ("Querying MusicBrainz...")
+            result = mb.get_releases_by_discid(disc.id,
+                    includes=["artists"])
+            self.s.write ('OK\n')
+        except mb.ResponseError:
+            raise Exception("Disc not found or bad MusicBrainz response.")
+        else:
+            if result.get("disc"):
+                for i, rel in enumerate(result['disc']['release-list']):
+                    print ("\nResult : %d" % i)
+                    #if rel.score:
+                        #print " Score   : %d" % rel.score
+                    print ("Release  :", rel['id'])
+                    print ("Artist   :", rel['artist-credit-phrase'])
+                    print ("Title    :", rel['title'])
+                    print ("Date    :", rel['date'] if 'date' in rel else '')
+                    print ("Country    :", rel['country'] if 'country' in rel else '')
+                    if 'barcode' in rel:
+                        print ("Barcode    :", rel['barcode'])
+                    if 'label-info-list' in rel:
+                        for label_info in rel['label-info-list']:
+                            for label, field in [ \
+                                            ("Label:", rel['label']['name']), \
+                                            ("Catalog #:", rel['catalog-number']), \
+                                            ("Barcode :", releaseEvent.barcode) ]:
+                                if field:
+                                    print (label, field, ",\t")
+                                else:
+                                    print (label, "\t,\t")
+                    print ()
+
+            elif result.get("cdstub"):
+                _log.info('We found only a stub')
+                print("artist:\t" % result["cdstub"]["artist"])
+                print("title:\t" % result["cdstub"]["title"])
+                raise
+
+        if len(result['disc']['release-list']) == 0:
+            raise Exception("There were no matches for disc ID: %s" % disc.id)
+        elif len(result['disc']['release-list']) == 1:
+            print ("There was one match.")
+            choice = 0
+        else:
+            print ("There were %d matches." % len(result['disc']['release-list']))
+            print ("Choose one: ")
+            choice = self.s.nextLine()
+            if not choice.isdigit():
+                raise Exception('Input was not a number')
+            choice = int(choice)
+            if choice < 0 or choice >= len(result['disc']['release-list']):
+                raise Exception('Input was out of range')
+
+
+        print ("Adding '%s' to the catalog..." % result['disc']['release-list'][choice]['title'])
+
+        releaseId = mbcat.utils.extractUuid(result['disc']['release-list'][choice]['id'])
+
+        if not releaseId:
+            print ("It looks like MusicBrainz only has a CD stub for this TOC.")
+            sys.exit(1)
+
+        self.c.addRelease(releaseId)
+
     def Quit(self):
         """quit (or press enter)"""
         sys.exit(0)
@@ -444,25 +529,25 @@ else '')+\
     # The master list of shell commands
     shellCommands = {
         'q' : Quit,
-        'search' : SearchSort, 
-        'refresh' : Refresh, 
-        'html' : Html, 
-        'switch' : Switch, 
-        'add' : Add, 
-        'barcode' : BarcodeSearch, 
-        'delete' : Delete, 
-        'check' : Check, 
-        'checkout' : CheckOut, 
+        'search' : SearchSort,
+        'refresh' : Refresh,
+        'html' : Html,
+        'switch' : Switch,
+        'add' : Add,
+        'barcode' : BarcodeSearch,
+        'delete' : Delete,
+        'check' : Check,
+        'checkout' : CheckOut,
         'checkin' : CheckIn,
         'digital' : {
-            'path' : DigitalPath, 
-            'search' : DigitalSearch, 
+            'path' : DigitalPath,
+            'search' : DigitalSearch,
             #'list' : DigitalList,
             },
-        'sync' : SyncCollection, 
-        'tracklist' : TrackList, 
+        'sync' : SyncCollection,
+        'tracklist' : TrackList,
         'audacity' : {
-            'labeltrack' : LabelTrack, 
+            'labeltrack' : LabelTrack,
             'metatags' : MetaTags,
             },
         'coverart' : CoverArt,
@@ -490,6 +575,7 @@ else '')+\
         'count' : CopyCount,
         'browser' : OpenBrowser,
         'report' : Report,
+        'disc' : ReadDiscTOC,
         }
 
     def main(self):
@@ -506,17 +592,17 @@ else '')+\
                     cmdSummary (cmdfun, level+1, parentLeader+childLeader)
                 else:
                     try:
-                        self.s.write(parentLeader + thisLeader + cmdname + " : " + 
+                        self.s.write(parentLeader + thisLeader + cmdname + " : " +
                                 cmdStruct[cmdname].__doc__.strip() + "\n")
                     except AttributeError as e:
                         raise Exception('No docstring for \'%s\'' % cmdname)
-        
+
         def cmdParse(cmdStruct, input):
             try:
                 if type(cmdStruct[input]) == dict:
                     # Use the next input word and recur into the structure
                     cmdParse(cmdStruct[input], self.s.nextWord().lower())
-                else: 
+                else:
                     # Remind the user what this command does
                     try:
                         self.s.write(cmdStruct[input].__doc__.strip() + '\n')
@@ -528,6 +614,8 @@ else '')+\
                     except ValueError as e:
                         self.s.write(str(e) + " Command failed.\n")
                     except KeyError as e:
+                        self.s.write(str(e) + " Command failed.\n")
+                    except Exception as e:
                         self.s.write(str(e) + " Command failed.\n")
             except KeyError as e:
                 self.s.write(str(e) + " Invalid command.\n")
