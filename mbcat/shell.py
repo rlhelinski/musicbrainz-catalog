@@ -1,4 +1,3 @@
-from __future__ import print_function
 from __future__ import unicode_literals
 from mbcat.catalog import *
 from mbcat.extradata import *
@@ -173,7 +172,7 @@ class Shell:
 
         answer = self.s.nextLine('Open browser to view HTML? [y/N]')
         if answer and answer.lower().startswith('y'):
-            print ('opening...')
+            _log.info('Opening web browser.')
             webbrowser.open(fileName)
 
     def Add(self):
@@ -235,7 +234,7 @@ class Shell:
 
         lendEvents = self.c.getLendEvents(releaseId)
         for event in lendEvents:
-            print (event)
+            self.s.write (str(event)+'\n')
 
         borrower = self.s.nextLine("Borrower (leave empty to return): ")
         if not borrower:
@@ -364,6 +363,28 @@ class Shell:
 else '')+\
                     '\n')
 
+    def printDiscQueryResults(self, results):
+        for i, rel in enumerate(results['disc']['release-list']):
+            self.s.write("\nResult : %d\n" % i)
+            self.s.write("Release  : %s\n" % rel['id'])
+            self.s.write("Artist   : %s\n" % rel['artist-credit-phrase'])
+            self.s.write("Title    : %s\n" % (rel['title']))
+            self.s.write("Date    : %s\n" % (rel['date'] if 'date' in rel else ''))
+            self.s.write("Country    : %s\n" % (rel['country'] if 'country' in rel else ''))
+            if 'barcode' in rel:
+                self.s.write("Barcode    : %s\n" % rel['barcode'])
+            if 'label-info-list' in rel:
+                for label_info in rel['label-info-list']:
+                    for label, field in [ \
+                                    ("Label:", rel['label']['name']), \
+                                    ("Catalog #:", rel['catalog-number']), \
+                                    ("Barcode :", releaseEvent.barcode) ]:
+                        if field:
+                            self.s.write(label+' '+field+',\t')
+                        else:
+                            self.s.write(label+'\t,\t')
+            self.s.write('\n')
+
     def printGroupQueryResults(self, results):
         self.s.write('Release Group Results:\n')
         for group in results['release-group-list']:
@@ -467,44 +488,21 @@ to the catalog"""
             raise Exception("Disc not found or bad MusicBrainz response.")
         else:
             if result.get("disc"):
-                for i, rel in enumerate(result['disc']['release-list']):
-                    print ("\nResult : %d" % i)
-                    #if rel.score:
-                        #print " Score   : %d" % rel.score
-                    print ("Release  :", rel['id'])
-                    print ("Artist   :", rel['artist-credit-phrase'])
-                    print ("Title    :", rel['title'])
-                    print ("Date    :", rel['date'] if 'date' in rel else '')
-                    print ("Country    :", rel['country'] if 'country' in rel else '')
-                    if 'barcode' in rel:
-                        print ("Barcode    :", rel['barcode'])
-                    if 'label-info-list' in rel:
-                        for label_info in rel['label-info-list']:
-                            for label, field in [ \
-                                            ("Label:", rel['label']['name']), \
-                                            ("Catalog #:", rel['catalog-number']), \
-                                            ("Barcode :", releaseEvent.barcode) ]:
-                                if field:
-                                    print (label, field, ",\t")
-                                else:
-                                    print (label, "\t,\t")
-                    print ()
-
+                self.printDiscQueryResults(result)
             elif result.get("cdstub"):
-                _log.info('We found only a stub')
-                print("artist:\t" % result["cdstub"]["artist"])
-                print("title:\t" % result["cdstub"]["title"])
+                self.s.write('We found only a stub.\n')
+                self.s.write("Artist:\t" % result["cdstub"]["artist"])
+                self.s.write("Title:\t" % result["cdstub"]["title"])
                 raise
 
         if len(result['disc']['release-list']) == 0:
             raise Exception("There were no matches for disc ID: %s" % disc.id)
         elif len(result['disc']['release-list']) == 1:
-            print ("There was one match.")
+            self.s.write("There was one match.")
             choice = 0
         else:
-            print ("There were %d matches." % len(result['disc']['release-list']))
-            print ("Choose one: ")
-            choice = self.s.nextLine()
+            self.s.write("There were %d matches.\n" % len(result['disc']['release-list']))
+            choice = self.s.nextLine('Choose one result: ')
             if not choice.isdigit():
                 raise Exception('Input was not a number')
             choice = int(choice)
@@ -512,12 +510,12 @@ to the catalog"""
                 raise Exception('Input was out of range')
 
 
-        print ("Adding '%s' to the catalog..." % result['disc']['release-list'][choice]['title'])
+        self.s.write("Adding '%s' to the catalog.\n" % result['disc']['release-list'][choice]['title'])
 
         releaseId = mbcat.utils.extractUuid(result['disc']['release-list'][choice]['id'])
 
         if not releaseId:
-            print ("It looks like MusicBrainz only has a CD stub for this TOC.")
+            self.s.write("It looks like MusicBrainz only has a CD stub for this TOC.")
             sys.exit(1)
 
         self.c.addRelease(releaseId)
