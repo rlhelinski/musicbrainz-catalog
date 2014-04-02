@@ -1,3 +1,7 @@
+"""
+This is a utility script for upgrading a catalog made with version 0.1 of the 
+application to one that will work with version 0.2.
+"""
 from __future__ import print_function
 import sqlite3
 import cPickle as pickle
