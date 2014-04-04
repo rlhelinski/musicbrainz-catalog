@@ -633,10 +633,3 @@ to the catalog"""
             else:
                 self.s.write("Invalid command\n")
 
-if __name__ == "__main__":
-    # Self-test code for the shell class
-    import logging
-    logging.basicConfig(level=logging.INFO)
-    import StringIO
-
-    s = Shell()
