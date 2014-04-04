@@ -1,4 +1,4 @@
-from mbcatalog.catalog import Catalog
+from mbcat.catalog import Catalog
 import timeit
 
 c = Catalog()
