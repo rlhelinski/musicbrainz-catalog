@@ -355,8 +355,9 @@ class Shell:
                     ', '.join(['"'+cred['artist']['name']+'"' \
                             for cred in release['artist-credit']])+\
                     ' "'+release['title']+'"'+\
-                    (' ('+' + '.join([medium['format'] if medium and 'format' in medium else '' \
-                            for medium in release['medium-list']])+')')+\
+                    (' ('+' + '.join(set(itertools.chain.from_iterable(
+                            [[medium['format']] if medium and 'format' in medium else [] \
+                            for medium in release['medium-list']])))+')')+\
                     (' ' +', '.join([('label: '+info['label']['name'] if 'label' in info else '') +\
                             ' catno.: '+info['catalog-number'] \
                             for info in release['label-info-list']]))+\
