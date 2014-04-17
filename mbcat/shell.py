@@ -498,7 +498,7 @@ to the catalog"""
         if len(result['disc']['release-list']) == 0:
             raise Exception("There were no matches for disc ID: %s" % disc.id)
         elif len(result['disc']['release-list']) == 1:
-            self.s.write("There was one match.")
+            self.s.write("There was one match. ")
             choice = 0
         else:
             self.s.write("There were %d matches.\n" % len(result['disc']['release-list']))
