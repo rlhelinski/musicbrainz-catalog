@@ -7,6 +7,7 @@ import sys
 from mbcat.inputsplitter import InputSplitter
 import musicbrainzngs
 import webbrowser
+import itertools
 
 class Shell:
     """An interactive shell that prompts the user for inputs and renders output for the catalog."""
@@ -359,6 +360,11 @@ class Shell:
                     (' ' +', '.join([('label: '+info['label']['name'] if 'label' in info else '') +\
                             ' catno.: '+info['catalog-number'] \
                             for info in release['label-info-list']]))+\
+                    (' ('+', '.join(set(itertools.chain.from_iterable(
+                            [[code for code in release_event['area']['iso-3166-1-code-list']]\
+                            if release_event and 'area' in release_event \
+                            and 'iso-3166-1-code-list' in release_event['area'] else [] \
+                            for release_event in release['release-event-list']])))+')')+\
                     (', barcode: '+release['barcode'] if 'barcode' in release
 else '')+\
                     '\n')
