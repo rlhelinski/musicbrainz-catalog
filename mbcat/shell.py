@@ -359,7 +359,7 @@ class Shell:
                             [[medium['format']] if medium and 'format' in medium else [] \
                             for medium in release['medium-list']])))+')')+\
                     (' ' +', '.join([('label: '+info['label']['name'] if 'label' in info else '') +\
-                            ' catno.: '+info['catalog-number'] \
+                            (' catno.: '+info['catalog-number'] if 'catalog-number' in info else '') \
                             for info in release['label-info-list']]))+\
                     (' ('+', '.join(set(itertools.chain.from_iterable(
                             [[code for code in release_event['area']['iso-3166-1-code-list']]\
