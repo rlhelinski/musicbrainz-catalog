@@ -1092,6 +1092,8 @@ tr.releaserow:hover{
         """Get metadata XML from MusicBrainz and add to or refresh the catalog."""
 
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
+        if releaseId in self:
+            _log.info("Release %s is already in catalog." % releaseId)
         metaTime = self.getMetaTime(releaseId)
         if (metaTime and (metaTime[0] > (time.time() - olderThan))):
             _log.info("Skipping fetch of metadata for %s because it is recent", releaseId)
