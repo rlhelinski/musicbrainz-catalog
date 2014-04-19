@@ -491,6 +491,7 @@ to the catalog"""
         except discid.DiscError as e:
             raise Exception ("DiscID calculation failed: " + str(e))
         self.s.write ('DiscID: %s\n' % disc.id)
+        self.s.write ('Submisson URL: %s\n' % disc.submission_url)
 
         try:
             self.s.write ("Querying MusicBrainz...")
