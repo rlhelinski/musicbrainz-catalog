@@ -8,6 +8,7 @@ from mbcat.inputsplitter import InputSplitter
 import musicbrainzngs
 import webbrowser
 import itertools
+_log = logging.getLogger("mbcat")
 
 class Shell:
     """An interactive shell that prompts the user for inputs and renders output for the catalog."""
@@ -371,9 +372,13 @@ else '')+\
                     '\n')
 
     def printDiscQueryResults(self, results):
+        oneInCatalog = False
         for i, rel in enumerate(results['disc']['release-list']):
             self.s.write("\nResult : %d\n" % i)
-            self.s.write("Release  : %s\n" % rel['id'])
+            inCatalog = rel['id'] in self.c
+            oneInCatalog |= inCatalog
+            self.s.write("Release  : %s%s\n" % (rel['id'],
+                    ' (in catalog)' if inCatalog else ''))
             self.s.write("Artist   : %s\n" % rel['artist-credit-phrase'])
             self.s.write("Title    : %s\n" % (rel['title']))
             self.s.write("Date    : %s\n" % (rel['date'] if 'date' in rel else ''))
@@ -391,6 +396,7 @@ else '')+\
                         else:
                             self.s.write(label+'\t,\t')
             self.s.write('\n')
+        return oneInCatalog
 
     def printGroupQueryResults(self, results):
         self.s.write('Release Group Results:\n')
@@ -495,37 +501,44 @@ to the catalog"""
             raise Exception("Disc not found or bad MusicBrainz response.")
         else:
             if result.get("disc"):
-                self.printDiscQueryResults(result)
+                oneInCatalog = self.printDiscQueryResults(result)
             elif result.get("cdstub"):
-                self.s.write('We found only a stub.\n')
-                self.s.write("Artist:\t" % result["cdstub"]["artist"])
-                self.s.write("Title:\t" % result["cdstub"]["title"])
-                raise
+                self.s.write('CD Stub %s:\n' % result['cdstub']['id'])
+                self.s.write("Artist:\t%s\n" % result["cdstub"]["artist"])
+                self.s.write("Title:\t%s\n" % result["cdstub"]["title"])
+                self.s.write("Barcode:\t%s\n" % result["cdstub"]["barcode"])
+                answer = self.s.nextLine('Open browser to Submission URL? [y/N]')
+                if answer and answer.lower().startswith('y'):
+                    _log.info('Opening web browser.')
+                    webbrowser.open(disc.submission_url)
+
+                raise Exception('There was only a CD stub.')
+
+        def addResultToCatalog(choice):
+            self.s.write("Adding '%s' to the catalog.\n" % result['disc']['release-list'][choice]['title'])
+
+            releaseId = mbcat.utils.extractUuid(result['disc']['release-list'][choice]['id'])
+
+            self.c.addRelease(releaseId)
+
 
         if len(result['disc']['release-list']) == 0:
             raise Exception("There were no matches for disc ID: %s" % disc.id)
         elif len(result['disc']['release-list']) == 1:
-            self.s.write("There was one match. ")
-            choice = 0
+            self.s.write("There was one match. " + \
+                ('It is already in the catalog. ' if oneInCatalog else ''))
+            if oneInCatalog:
+                addResultToCatalog(0)
         else:
             self.s.write("There were %d matches.\n" % len(result['disc']['release-list']))
-            choice = self.s.nextLine('Choose one result: ')
+            choice = self.s.nextLine('Choose one result to add (empty for none): ')
             if not choice.isdigit():
                 raise Exception('Input was not a number')
             choice = int(choice)
             if choice < 0 or choice >= len(result['disc']['release-list']):
                 raise Exception('Input was out of range')
+            addResultToCatalog(choice)
 
-
-        self.s.write("Adding '%s' to the catalog.\n" % result['disc']['release-list'][choice]['title'])
-
-        releaseId = mbcat.utils.extractUuid(result['disc']['release-list'][choice]['id'])
-
-        if not releaseId:
-            self.s.write("It looks like MusicBrainz only has a CD stub for this TOC.")
-            sys.exit(1)
-
-        self.c.addRelease(releaseId)
 
     def Quit(self):
         """quit (or press enter)"""
