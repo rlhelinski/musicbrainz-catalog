@@ -504,10 +504,13 @@ to the catalog"""
             if result.get("disc"):
                 oneInCatalog = self.printDiscQueryResults(result)
             elif result.get("cdstub"):
-                self.s.write('CD Stub %s:\n' % result['cdstub']['id'])
-                self.s.write("Artist:\t%s\n" % result["cdstub"]["artist"])
-                self.s.write("Title:\t%s\n" % result["cdstub"]["title"])
-                self.s.write("Barcode:\t%s\n" % result["cdstub"]["barcode"])
+                for label, key in [
+                    ('CD Stub', 'id'),
+                    ('Artist', 'artist'),
+                    ('Title', 'title'),
+                    ('Barcode', 'barcode')]:
+                    if key in result['cdstub']:
+                        self.s.write('%10s: %s\n' % (label, result['cdstub'][key]))
                 answer = self.s.nextLine('Open browser to Submission URL? [y/N]')
                 if answer and answer.lower().startswith('y'):
                     _log.info('Opening web browser.')
