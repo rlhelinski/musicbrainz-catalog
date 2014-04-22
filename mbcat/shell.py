@@ -530,8 +530,9 @@ to the catalog"""
             raise Exception("There were no matches for disc ID: %s" % disc.id)
         elif len(result['disc']['release-list']) == 1:
             self.s.write("There was one match. " + \
-                ('It is already in the catalog. ' if oneInCatalog else ''))
-            if oneInCatalog:
+                ('It is already in the catalog. ' if oneInCatalog else '') + \
+                '\n')
+            if not oneInCatalog:
                 addResultToCatalog(0)
         else:
             self.s.write("There were %d matches.\n" % len(result['disc']['release-list']))
