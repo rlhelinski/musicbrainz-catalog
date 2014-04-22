@@ -390,7 +390,7 @@ else '')+\
                     for label, field in [ \
                                     ("Label:", rel['label']['name']), \
                                     ("Catalog #:", rel['catalog-number']), \
-                                    ("Barcode :", releaseEvent.barcode) ]:
+                                    ("Barcode :", rel['barcode']) ]:
                         if field:
                             self.s.write(label+' '+field+',\t')
                         else:
