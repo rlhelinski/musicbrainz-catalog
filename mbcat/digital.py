@@ -1,5 +1,7 @@
 # Several classes which inherit the same base class and contain a reference to
 # a release dictionary for making callbacks and resolving the symbolic names. 
+from __future__ import print_function
+from __future__ import unicode_literals
 import mbcat
 import re
 import collections
@@ -19,7 +21,7 @@ class PathTitle(object):
 class PathYear(object):
     symbol = '{year}'
     def eval(self, release):
-        return release['date'].split('-')[0] if 'date' in release else '', \
+        return release['date'].split('-')[0] if 'date' in release else ''
 
 class PathDate(object):
     symbol = '{date}'
@@ -42,7 +44,7 @@ class DigitalPath(list):
         'date' : PathDate,
         }
     symbolre = re.compile('\{([^\}]+)\}')
-    literalre = re.compile('[^\{]+')
+    literalre = re.compile('[^\{\[]+')
 
     def __init__(self, s):
         self.digestString(s)
@@ -51,15 +53,21 @@ class DigitalPath(list):
         while s:
             m = self.literalre.match(s)
             if m:
-                print m.group(0)
+                print (m.group(0))
                 self.append(m.group(0))
                 s = s[m.end():]
                 continue
             m = self.symbolre.match(s)
             if m:
-                print m.group(1)
-                self.append(self.symbolMap[m.group(1)])
+                print (m.group(1))
+                self.append(self.symbolMap[m.group(1).lower()]())
                 s = s[m.end():]
                 continue
 
-        
+    def toString(self, release):
+        return ''.join([
+                elem if isinstance(elem, unicode) or \
+                isinstance(elem, str) else \
+                elem.eval(release) for elem in self
+            ])
+
