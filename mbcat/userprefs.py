@@ -5,6 +5,7 @@ import logging
 _log = logging.getLogger("mbcat")
 import os
 import xml.etree.ElementTree as etree
+import mbcat.digital
 
 # http://stackoverflow.com/questions/749796/pretty-printing-xml-in-python/4590052#4590052
 def xml_indent(elem, level=0):
@@ -32,6 +33,7 @@ class PrefManager:
         self.musicPaths = []
         self.username = ''
         self.htmlPubPath = ''
+        self.pathFmts = dict()
 
         if (os.path.isfile(self.prefFile)):
             self.load()
@@ -48,6 +50,10 @@ class PrefManager:
             if (child.tag == 'musicpaths'):
                 for path in child:
                     self.musicPaths.append(path.text)
+                    print (path.attrib)
+                    self.pathFmts[path.text] = path.attrib['fmt'] \
+                            if 'fmt' in path.attrib else \
+                                mbcat.digital.defaultFmt
             elif (child.tag == 'account'):
                 if 'username' in child.attrib:
                     self.username = child.attrib['username']
