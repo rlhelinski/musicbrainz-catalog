@@ -6,31 +6,57 @@ import mbcat
 import re
 import collections
 
-class PathArtist(object):
-    symbol = '{artist}'
+class DigitalPathSymbol(object):
+    def __init__(self):
+        self.subset = list()
     def eval(self, release):
+        val = self._eval(release)
+        if not self.subset:
+            return val
+        elif len(self.subset)==1:
+            return val.lower()[self.subset[0]]
+        else:
+            return val.lower()[self.subset[0]:self.subset[1]]
+
+class PathArtist(DigitalPathSymbol):
+    symbol = '{artist}'
+    def _eval(self, release):
         return mbcat.utils.formatSortCredit(release)
 
-class PathTitle(object):
+class PathTitle(DigitalPathSymbol):
     symbol = '{title}'
-    def eval(self, release):
+    def _eval(self, release):
         return release['title'] + \
                 (' ('+release['disambiguation']+')'
                     if 'disambiguation' in release else '')
 
-class PathYear(object):
+class PathYear(DigitalPathSymbol):
     symbol = '{year}'
-    def eval(self, release):
+    def _eval(self, release):
         return release['date'].split('-')[0] if 'date' in release else ''
 
-class PathDate(object):
+class PathDate(DigitalPathSymbol):
     symbol = '{date}'
-    def eval(self, release):
+    def _eval(self, release):
         return release['date'] if 'date' in release else '', \
 
 class DigitalPath(list):
     """A list of digital path parts that can be resolved to a specific path for
-    a specific release"""
+    a specific release.
+    
+    Examples:
+    >>> import mbcat.digital
+    >>> rel = s.c.getRelease('4867ceba-ffe7-40c0-a093-45be6c03c655')
+
+    >>> dp = mbcat.digital.DigitalPath('{Artist}/{Year} - {Title}')
+    >>> dp.toString(rel)
+    u'Daft Punk/2013 - Random Access Memories'
+
+    >>> dp = mbcat.digital.DigitalPath('{Artist}[0]/{Artist}/{Year} - {Title}')
+    >>> dp.toString(rel)
+    u'd/Daft Punk/2013 - Random Access Memories'
+
+    """
     patterns = [
             PathArtist,
             PathTitle,
@@ -45,6 +71,7 @@ class DigitalPath(list):
         }
     symbolre = re.compile('\{([^\}]+)\}')
     literalre = re.compile('[^\{\[]+')
+    subsetre = re.compile('\[([^\]]+)\]')
 
     def __init__(self, s):
         self.digestString(s)
@@ -53,16 +80,28 @@ class DigitalPath(list):
         while s:
             m = self.literalre.match(s)
             if m:
-                print (m.group(0))
+                print ('literal '+m.group(0))
                 self.append(m.group(0))
                 s = s[m.end():]
                 continue
             m = self.symbolre.match(s)
             if m:
-                print (m.group(1))
+                print ('symbol '+m.group(1))
                 self.append(self.symbolMap[m.group(1).lower()]())
                 s = s[m.end():]
                 continue
+            m = self.subsetre.match(s)
+            if m:
+                print ('subset '+m.group(1))
+                # check that the subset was applied to a symbol that has been
+                # processed
+                if len(self) < 1 or (not isinstance(self[-1], PathArtist)):
+                    raise Exception('subset "%s" not applied to a symbol' % \
+                            m.group(0))
+                self[-1].subset = [int(m.group(1))]
+                s = s[m.end():]
+                continue
+            raise Exception('Expression not supported "%s"' % s)
 
     def toString(self, release):
         return ''.join([
