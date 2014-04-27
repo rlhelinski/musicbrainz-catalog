@@ -1059,6 +1059,8 @@ tr.releaserow:hover{
             con.commit()
 
     def searchDigitalPaths(self, releaseId='', pbar=None):
+        """Search for files for a release in all locations and with variations
+        """
         releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
 
         # TODO need to be more flexible in capitalization and re-order of words
@@ -1080,6 +1082,14 @@ tr.releaserow:hover{
 
         if releaseId and not self.extraIndex[relId].digitalPaths:
             _log.warning('No digital paths found for '+releaseId)
+
+    def getDigitalPath(self, releaseId, pathSpec=None):
+        """Returns the file path for a release given a specific release ID and
+        a path specification string (mbcat.digital)."""
+        if not pathSpec:
+            pathSpec = self.prefs.defaultPathSpec
+        return mbcat.digital.DigitalPath(pathSpec).\
+                toString(self.getRelease(releaseId))
 
     def getMetaTime(self, releaseId):
         with self._connect() as con:
