@@ -34,6 +34,7 @@ class PrefManager:
         self.username = ''
         self.htmlPubPath = ''
         self.pathFmts = dict()
+        self.defaultPathSpec = mbcat.digital.defaultPathSpec
 
         if (os.path.isfile(self.prefFile)):
             self.load()
@@ -52,10 +53,13 @@ class PrefManager:
                     if path.tag != 'path':
                         raise Exception('Tags under musicpaths must be <path> tags.')
                     self.musicPaths.append(path.text)
-                    print (path.attrib)
-                    self.pathFmts[path.text] = path.attrib['fmt'] \
-                            if 'fmt' in path.attrib else \
-                                mbcat.digital.defaultFmt
+                    self.pathFmts[path.text] = path.attrib['pathspec'] \
+                            if 'pathspec' in path.attrib else \
+                                mbcat.digital.defaultPathSpec
+            elif (child.tag == 'default'):
+                if 'pathspec' in child.attrib:
+                    self.defaultPathSpec = child.attrib['pathspec']
+                # can add other generic defaults here
             elif (child.tag == 'account'):
                 if 'username' in child.attrib:
                     self.username = child.attrib['username']
@@ -73,6 +77,8 @@ class PrefManager:
         for path in self.musicPaths:
             pathTag = etree.SubElement(pathsTag, 'path')
             pathTag.text = path
+        defaultPathSpec = etree.SubElement(myxml, 'default', 
+                attrib={'pathspec':self.defaultPathSpec})
         accountTag = etree.SubElement(myxml, 'account', attrib={'username':self.username})
         # could also load password
         htmlPathTag = etree.SubElement(myxml, 'htmlpub', attrib={'path':self.htmlPubPath})
