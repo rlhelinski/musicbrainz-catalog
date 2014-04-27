@@ -49,6 +49,8 @@ class PrefManager:
         for child in myroot:
             if (child.tag == 'musicpaths'):
                 for path in child:
+                    if path.tag != 'path':
+                        raise Exception('Tags under musicpaths must be <path> tags.')
                     self.musicPaths.append(path.text)
                     print (path.attrib)
                     self.pathFmts[path.text] = path.attrib['fmt'] \
@@ -69,7 +71,7 @@ class PrefManager:
 
         pathsTag = etree.SubElement(myxml, 'musicpaths')
         for path in self.musicPaths:
-            pathTag = etree.SubElement(pathsTag, 'pref')
+            pathTag = etree.SubElement(pathsTag, 'path')
             pathTag.text = path
         accountTag = etree.SubElement(myxml, 'account', attrib={'username':self.username})
         # could also load password
