@@ -40,7 +40,7 @@ class PathDate(DigitalPathSymbol):
     def _eval(self, release):
         return release['date'] if 'date' in release else '', \
 
-defaultFmt = '{Artist}/{Title}'
+defaultPathSpec = '{Artist}/{Title}'
 
 class DigitalPath(list):
     """A list of digital path parts that can be resolved to a specific path for
