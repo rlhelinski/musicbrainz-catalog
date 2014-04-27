@@ -1064,7 +1064,7 @@ tr.releaserow:hover{
         releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
 
         # TODO need to be more flexible in capitalization and re-order of words
-        for path in self.prefs.musicPaths:
+        for path in self.prefs.pathRoots:
             _log.info("Searching '%s'"%path)
             for relId in releaseIdList:
                 rel = self.getRelease(relId)

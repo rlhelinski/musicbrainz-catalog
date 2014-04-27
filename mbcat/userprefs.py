@@ -30,7 +30,7 @@ def xml_indent(elem, level=0):
 class PrefManager:
     def __init__(self):
         self.prefFile = os.path.expanduser(os.path.join('~', '.mbcat', 'userprefs.xml'))
-        self.musicPaths = []
+        self.pathRoots = []
         self.username = ''
         self.htmlPubPath = ''
         self.pathFmts = dict()
@@ -39,7 +39,7 @@ class PrefManager:
         if (os.path.isfile(self.prefFile)):
             self.load()
         else:
-            self.musicPaths = [os.path.expanduser(os.path.join('~', 'Music'))]
+            self.pathRoots = [os.path.expanduser(os.path.join('~', 'Music'))]
             self.htmlPubPath = '.'
             self.save()
 
@@ -48,11 +48,11 @@ class PrefManager:
         myroot = mytree.getroot()
 
         for child in myroot:
-            if (child.tag == 'musicpaths'):
+            if (child.tag == 'pathroots'):
                 for path in child:
                     if path.tag != 'path':
-                        raise Exception('Tags under musicpaths must be <path> tags.')
-                    self.musicPaths.append(path.text)
+                        raise Exception('Tags under pathroots must be <path> tags.')
+                    self.pathRoots.append(path.text)
                     self.pathFmts[path.text] = path.attrib['pathspec'] \
                             if 'pathspec' in path.attrib else \
                                 mbcat.digital.defaultPathSpec
@@ -73,8 +73,8 @@ class PrefManager:
     def save(self):
         myxml = etree.Element('xml', attrib={'version':'1.0', 'encoding':'UTF-8'})
 
-        pathsTag = etree.SubElement(myxml, 'musicpaths')
-        for path in self.musicPaths:
+        pathsTag = etree.SubElement(myxml, 'pathroots')
+        for path in self.pathRoots:
             pathTag = etree.SubElement(pathsTag, 'path')
             pathTag.text = path
         defaultPathSpec = etree.SubElement(myxml, 'default', 
