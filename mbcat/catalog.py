@@ -1058,6 +1058,13 @@ tr.releaserow:hover{
 
             con.commit()
 
+    def getArtistSortPhrase(self, release):
+        """Join artist sort names together"""
+        return ''.join([
+                credit if type(credit)==str else \
+                credit['artist']['sort-name'] for credit in release['artist-credit']
+                ])
+
     def searchDigitalPaths(self, releaseId='', pbar=None):
         """Search for files for a release in all locations and with variations
         """
@@ -1071,7 +1078,9 @@ tr.releaserow:hover{
                 if pbar:
                     pbar.update(pbar.currval + 1)
 
-                for artistName in set([ rel['artist-credit-phrase'], rel['artist-credit'][0]['artist']['sort-name'] ]):
+                for artistName in set([ rel['artist-credit-phrase'],
+                        rel['artist-credit'][0]['artist']['sort-name'],
+                        self.getArtistSortPhrase(rel) ]):
                     artistPath = os.path.join(path, artistName)
                     if os.path.isdir(artistPath):
                         for titleName in [rel['title']]:
