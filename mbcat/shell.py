@@ -272,9 +272,10 @@ class Shell:
     def DigitalSearch(self):
         """Search for digital copies of releases."""
         widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Percentage() ]
-        pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(self.c)*len(self.c.prefs.musicPaths)).start()
+        pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(self.c)*len(self.c.prefs.pathRoots))
         try:
             releaseId = self.Search("Enter search terms or release ID [enter for all]: ")
+            pbar.start()
         except ValueError as e:
             self.c.searchDigitalPaths(pbar=pbar)
         else:
