@@ -1065,6 +1065,47 @@ tr.releaserow:hover{
                 credit['artist']['sort-name'] for credit in release['artist-credit']
                 ])
 
+    def getArtistPathVariations(self, release):
+        return set([
+                # the non-sorting-friendly string
+                release['artist-credit-phrase'],
+                # if just the first artist is used
+                release['artist-credit'][0]['artist']['sort-name'],
+                # if just the first artist is used, sort-friendly
+                release['artist-credit'][0]['artist']['name'],
+                # the sort-friendly string with all artists credited
+                self.getArtistSortPhrase(release)
+                ])
+
+    @staticmethod
+    def getTitlePathVariations(release):
+        s = set()
+        s.add(release['title'])
+        if 'disambiguation' in release:
+            s.add(release['disambiguation'])
+            s.add(release['title']+' ('+release['disambiguation']+')')
+        return s
+
+    def getDigitalPathVariations(self, root, release):
+        # prefixes sometimes used for directory balancing
+        alnum = set()
+        for path in self.getArtistPathVariations(release):
+            alnum = alnum.union([\
+                '', # in case nothing is used
+                path[0].lower(), # most basic implementation
+                path[0:1].lower(), # have never seen this
+                (path[0]+'/'+path[0:2]).lower(), # used by Wikimedia
+                ])
+
+        for prefix in alnum:
+            for artistName in self.getArtistPathVariations(release):
+                artistPath = os.path.join(root, prefix, artistName)
+                if os.path.isdir(artistPath):
+                    for titleName in self.getTitlePathVariations(release):
+                        yield os.path.join(artistPath, titleName)
+                else:
+                    _log.debug(artistPath+' does not exist')
+
     def searchDigitalPaths(self, releaseId='', pbar=None):
         """Search for files for a release in all locations and with variations
         """
@@ -1078,16 +1119,13 @@ tr.releaserow:hover{
                 if pbar:
                     pbar.update(pbar.currval + 1)
 
-                for artistName in set([ rel['artist-credit-phrase'],
-                        rel['artist-credit'][0]['artist']['sort-name'],
-                        self.getArtistSortPhrase(rel) ]):
-                    artistPath = os.path.join(path, artistName)
-                    if os.path.isdir(artistPath):
-                        for titleName in [rel['title']]:
-                            titlePath = os.path.join(artistPath, titleName)
-                            if os.path.isdir(titlePath):
-                                _log.info('Found ' + relId + ' at ' + titlePath)
-                                self.addDigitalPath(relId, titlePath)
+                # Try to guess the sub-directory path
+                for titlePath in self.getDigitalPathVariations(path, rel):
+                    if os.path.isdir(titlePath):
+                        _log.info('Found '+relId+' at '+titlePath)
+                        self.addDigitalPath(relId, titlePath)
+                    else:
+                        _log.debug('Did not find '+relId+' at '+titlePath)
 
         if releaseId and not self.extraIndex[relId].digitalPaths:
             _log.warning('No digital paths found for '+releaseId)
