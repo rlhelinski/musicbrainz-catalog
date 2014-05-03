@@ -40,7 +40,8 @@ sqlite3.register_converter(str("list"), listConverter)
 
 def sql_list_append(cursor, table_name, field_name, key, value):
     """Append to a list in an SQL table."""
-    cursor.execute('select * from '+table_name+' where '+field_name+' = ?', (key,))
+    cursor.execute('select * from '+table_name+\
+            ' where '+field_name+' = ?', (key,))
     row = cursor.fetchall()
     if not row:
         relList = [value]
@@ -55,17 +56,20 @@ def sql_list_append(cursor, table_name, field_name, key, value):
 
 def sql_list_remove(cursor, table_name, field_name, key, value):
     """Remove an item from a list in an SQL table."""
-    cursor.execute('select * from '+table_name+' where '+field_name+' = ?', (key,))
+    cursor.execute('select * from '+table_name+\
+            ' where '+field_name+' = ?', (key,))
     row = cursor.fetchall()
     if row:
         relList = row[0][1]
         relList.remove(value)
 
         if relList:
-            cursor.execute('replace into %s (%s, releases) values (?, ?)' % (table_name, field_name),
-                (key, relList))
+            cursor.execute('replace into %s (%s, releases) values (?, ?)' % \
+                    (table_name, field_name),
+                    (key, relList))
         else:
-            cursor.execute('delete from %s where %s=?' % (table_name, field_name),
+            cursor.execute('delete from %s where %s=?' % \
+                    (table_name, field_name),
                     (key,))
 
 # For remembering user decision to overwrite existing data
@@ -103,7 +107,8 @@ class Catalog(object):
 
         prefPath = os.path.join(os.path.expanduser('~'), '.mbcat')
         self.dbPath = dbPath if dbPath else os.path.join(prefPath, 'mbcat.db')
-        self.cachePath = cachePath if cachePath else os.path.join(prefPath, 'cache')
+        self.cachePath = cachePath if cachePath else \
+                os.path.join(prefPath, 'cache')
 
         if not os.path.isdir(prefPath):
             os.mkdir(prefPath)
@@ -122,7 +127,8 @@ class Catalog(object):
         # Let's try here for now, just need to make sure we disconnect when this
         # object is deleted.
         self.conn = sqlite3.connect(self.dbPath)
-        return sqlite3.connect(self.dbPath, detect_types=sqlite3.PARSE_DECLTYPES)
+        return sqlite3.connect(self.dbPath,
+                detect_types=sqlite3.PARSE_DECLTYPES)
 
     def _createTables(self):
         """Create the SQL tables for the catalog. Database is assumed empty."""
@@ -131,7 +137,8 @@ class Catalog(object):
 
             cur.execute("CREATE TABLE releases("+\
                 "id TEXT PRIMARY KEY, "+\
-                # metadata from musicbrainz, maybe store a dict instead of the XML?
+                # metadata from musicbrainz
+                # TODO maybe store a dict instead of the XML?
                 "meta BLOB, "+\
                 "sortstring TEXT, "+\
                 "metatime FLOAT, "+\
@@ -154,7 +161,8 @@ class Catalog(object):
                     ]:
 
                 cur.execute('CREATE TABLE '+columnName+'s('+\
-                        columnName+' '+('INT' if columnName is 'barcode' else 'TEXT')+' PRIMARY KEY, '+\
+                        columnName+' '+('INT' if columnName is 'barcode' else \
+                        'TEXT')+' PRIMARY KEY, '+\
                         'releases list)')
 
             con.commit()
@@ -211,10 +219,9 @@ class Catalog(object):
         """Return a release's musicbrainz-ngs dictionary"""
 
         releaseXml = self.getReleaseXml(releaseId)
-        # maybe it would be better to store the release as a serialized dict in the table
-        # then, we could skip this parsing step
+        # maybe it would be better to store the release as a serialized dict in
+        # the table. Then, we would not need this parsing step
 
-        #_log.info('Building sort string for %s' % releaseId)
         metadata = self.getReleaseDictFromXml(releaseXml)
 
         return metadata['release']
@@ -222,7 +229,8 @@ class Catalog(object):
     def getReleaseIdsByFormat(self, fmt):
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('select releases from formats where format = ?', (fmt,))
+            cur.execute('select releases from formats where format = ?',
+                    (fmt,))
             return cur.fetchall()[0][0]
 
     def getFormats(self):
@@ -234,7 +242,8 @@ class Catalog(object):
     def barCodeLookup(self, barcode):
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('select releases from barcodes where barcode = ?', (barcode,))
+            cur.execute('select releases from barcodes where barcode = ?',
+                    (barcode,))
             result = cur.fetchall()
             if not result:
                 raise KeyError('Barcode not found')
@@ -250,33 +259,40 @@ class Catalog(object):
     def __contains__(self, releaseId):
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('select count(id) from releases where id=?', (releaseId,))
+            cur.execute('select count(id) from releases where id=?',
+                    (releaseId,))
             count = cur.fetchone()[0]
         return count > 0
 
     def getCopyCount(self, releaseId):
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('select count from releases where id=?', (releaseId,))
+            cur.execute('select count from releases where id=?',
+                    (releaseId,))
             return cur.fetchone()[0]
 
     def setCopyCount(self, releaseId, count):
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('update releases set count=? where id=?', (count, releaseId))
+            cur.execute('update releases set count=? where id=?',
+                    (count, releaseId))
             con.commit()
 
     def loadReleaseIds(self):
         fileList = os.listdir(self.rootPath)
 
         # There's no Fraction() provided in progressbar-python3
-        widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Percentage() ]
+        widgets = ["Releases: ", progressbar.Bar(
+                    marker="=", left="[", right="]"), 
+                " ", progressbar.Percentage() ]
         if len(fileList) > 0:
-            pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(fileList)).start()
+            pbar = progressbar.ProgressBar(widgets=widgets,
+                    maxval=len(fileList)).start()
 
             for releaseId in fileList:
                 if len(releaseId) == 36:
-                    #pbar.increment() # progressbar-python3 does not have increment()
+                    #pbar.increment() 
+                    # progressbar-python3 does not have increment()
                     pbar.update(pbar.currval + 1)
                     yield releaseId
             pbar.finish()
@@ -287,12 +303,16 @@ class Catalog(object):
         _log.info('Saving ZIP file for catalog to \'%s\'' % zipName)
 
         # TODO make this list of widgets common, or better yet, remove this info to the next level up
-        widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Percentage() ]
-        pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(self)).start()
+        widgets = ["Releases: ", progressbar.Bar(
+                    marker="=", left="[", right="]"),
+                " ", progressbar.Percentage() ]
+        pbar = progressbar.ProgressBar(widgets=widgets,
+                maxval=len(self)).start()
         with zipfile.ZipFile(zipName, 'w', zipfile.ZIP_DEFLATED) as zf:
             for releaseId in self.getReleaseIds():
                 zipReleasePath = self.zipReleaseRoot+'/'+releaseId
-                zf.writestr(zipReleasePath+'/'+'metadata.xml', self.getReleaseXml(releaseId))
+                zf.writestr(zipReleasePath+'/'+'metadata.xml',
+                        self.getReleaseXml(releaseId))
 
                 # add coverart if is cached
                 # use store method because JPEG is already compressed
@@ -334,7 +354,8 @@ class Catalog(object):
                     continue
 
                 if len(releaseId) != 36:
-                    _log.error('Release ID in path \'%s\' not expected length (36)' % releaseId)
+                    _log.error('Release ID in path \'%s\' not expected length '
+                            '(36)' % releaseId)
                     continue
                 
                 if fileName == 'metadata.xml':
@@ -386,7 +407,8 @@ class Catalog(object):
         with self._connect() as con:
             cur = con.cursor()
             for word in query_words:
-                cur.execute('select releases from words where word = ?', (word,))
+                cur.execute('select releases from words where word = ?',
+                        (word,))
                 fetched = cur.fetchone()
                 # if the word is in the table
                 if fetched:
@@ -395,7 +417,8 @@ class Catalog(object):
                         # use the whole set of releases that have this word
                         matches = set(fetched[0])
                     else:
-                        # intersect the releases that have this word with the current release set 
+                        # intersect the releases that have this word with the
+                        # current release set 
                         matches = matches & set(fetched[0])
                 else:
                     # this word is not contained in any releases and therefore
@@ -412,7 +435,8 @@ class Catalog(object):
                 mbcat.utils.formatSortCredit(release), '-', \
                 (release['date'] if 'date' in release else ''), '-', \
                 release['title'], \
-                '('+release['disambiguation']+')' if 'disambiguation' in release else '', \
+                '('+release['disambiguation']+')' if 'disambiguation' in \
+                    release else '', \
                 '['+str(mbcat.formats.getReleaseFormat(release))+']', \
                 ] )
 
@@ -422,7 +446,8 @@ class Catalog(object):
                 mbcat.utils.formatSortCredit(release), \
                 release['date'] if 'date' in release else '', \
                 release['title'] + \
-                (' ('+release['disambiguation']+')' if 'disambiguation' in release else ''), \
+                (' ('+release['disambiguation']+')' if 'disambiguation' in \
+                    release else ''), \
                 ] )
 
     def formatDiscSortKey(self, releaseId):
@@ -430,20 +455,24 @@ class Catalog(object):
         
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('select sortstring from releases where id = ?', (releaseId,))
+            cur.execute('select sortstring from releases where id = ?',
+                    (releaseId,))
             sortstring = cur.fetchone()[0]
 
             if not sortstring:
                 # cache it for next time
-                sortstring = self.getSortStringFromRelease(self.getRelease(releaseId))
-                cur.execute('update releases set sortstring=? where id=?', (sortstring, releaseId))
+                sortstring = self.getSortStringFromRelease(
+                        self.getRelease(releaseId))
+                cur.execute('update releases set sortstring=? where id=?',
+                        (sortstring, releaseId))
                 cur.commit()
 
         return sortstring
 
 
     def getSortedList(self, matchFmt=None):
-        relIds = self.getReleaseIdsByFormat(matchFmt.__name__) if matchFmt else self.getReleaseIds()
+        relIds = self.getReleaseIdsByFormat(matchFmt.__name__) if matchFmt \
+                else self.getReleaseIds()
             
         sortKeys = [(relId, self.formatDiscSortKey(relId)) for relId in relIds]
 
@@ -451,7 +480,8 @@ class Catalog(object):
 
     def getSortNeighbors(self, releaseId, neighborHood=5, matchFormat=False):
         """
-        Print release with context (neighbors) to assist in sorting and storage of releases.
+        Print release with context (neighbors) to assist in sorting and storage
+        of releases.
         """
 
         if matchFormat:
@@ -460,13 +490,16 @@ class Catalog(object):
                     mbcat.formats.getReleaseFormat(\
                         self.getRelease(releaseId)).__class__)
             except KeyError as e:
-                _log.warning("Sorting release " + releaseId + " with no format into a list of all releases.")
+                _log.warning("Sorting release " + releaseId + " with no format"
+                        " into a list of all releases.")
                 sortedList = self.getSortedList()
         else:
             sortedList = self.getSortedList()
 
-        index = sortedList.index((releaseId, self.formatDiscSortKey(releaseId)))
-        neighborhoodIndexes = range(max(0,index-neighborHood), min(len(sortedList), index+neighborHood))
+        index = sortedList.index((releaseId,
+                self.formatDiscSortKey(releaseId)))
+        neighborhoodIndexes = range(max(0,index-neighborHood),
+                min(len(sortedList), index+neighborHood))
         return (index, 
                 zip(neighborhoodIndexes, 
                         [sortedList[i] for i in neighborhoodIndexes]))
@@ -505,7 +538,8 @@ class Catalog(object):
     def getDigitalPaths(self, releaseId):
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('select digital from releases where id=?', (releaseId,))
+            cur.execute('select digital from releases where id=?',
+                    (releaseId,))
             return cur.fetchall()[0][0]
 
     def addDigitalPath(self, releaseId, path):
@@ -513,7 +547,7 @@ class Catalog(object):
         with self._connect() as con:
             cur = con.cursor()
             cur.execute('update releases set digital=? where id=?', 
-                (existingPaths+[path],releaseId))
+                    (existingPaths+[path],releaseId))
             con.commit()
 
     def getAddedDates(self, releaseId):
@@ -564,13 +598,15 @@ class Catalog(object):
     def setRating(self, releaseId, rating):
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('update releases set rating=? where id=?', (rating, releaseId))
+            cur.execute('update releases set rating=? where id=?',
+                    (rating, releaseId))
             con.commit()
 
     def getPurchases(self, releaseId):
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('select purchases from releases where id=?', (releaseId,))
+            cur.execute('select purchases from releases where id=?',
+                    (releaseId,))
             return cur.fetchall()[0][0]
         
     def addPurchase(self, releaseId, purchaseObj):
@@ -587,7 +623,8 @@ class Catalog(object):
     def getListenDates(self, releaseId):
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('select listened from releases where id=?', (releaseId,))
+            cur.execute('select listened from releases where id=?',
+                    (releaseId,))
             return cur.fetchall()[0][0]
 
     def addListenDate(self, releaseId, date):
@@ -602,11 +639,14 @@ class Catalog(object):
             con.commit()
 
     def getExtraData(self, releaseId):
-        """Put together all of the metadata added by mbcat. This might be removed in a later release."""
+        """Put together all of the metadata added by mbcat. This might be
+        removed in a later release, only need it when upgrading from 0.1."""
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('select purchases,added,lent,listened,digital,count,comment,rating from releases where id=?', (releaseId,))
-            purchases,added,lent,listened,digital,count,comment,rating = cur.fetchall()[0]
+            cur.execute('select purchases,added,lent,listened,digital,count,'
+                    'comment,rating from releases where id=?', (releaseId,))
+            purchases,added,lent,listened,digital,count,comment,rating = \
+                    cur.fetchall()[0]
 
         ed = mbcat.extradata.ExtraData(releaseId)
         ed.purchases = purchases
@@ -621,8 +661,10 @@ class Catalog(object):
         return ed
 
     def digestExtraData(self, releaseId, ed):
-        """Take an ExtraData object and update the metadata in the catalog for a release"""
-        # TODO there is no attempt to merge information that already exists in the database
+        """Take an ExtraData object and update the metadata in the catalog for
+        a release"""
+        # TODO there is no attempt to merge information that already exists in
+        # the database
         with self._connect() as con:
             cur = con.cursor()
             cur.execute('update releases set '+\
@@ -661,139 +703,20 @@ class Catalog(object):
 
         htf = open(fileName, 'wt')
 
-        # TODO move all this HTML code to a template file
-        htf.write("""<!DOCTYPE HTML>
-<html>
-<head>
-<title>Music Catalog</title>
-<script type="text/javascript" src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
-<script type="text/javascript">
-$(document).ready(function(){
-  $("#toc ul").show();
-  $("#togglelink").click(function(e){
-    $("#toc ul").slideToggle();
-    var isShow = $(this).text() == 'Show';
-    $(this).text(isShow ? 'Hide' : 'Show');
-  });
-  $(".releaserow").click(function(e){
-    if(! $(e.target).is("a")) {
-        $(this).toggleClass("active");
-        $(this).next("tr").slideToggle();
-        $(this).next("tr").children("td").children(".togglediv").stop('true','true').slideToggle();
-    }
-  });
-  $(".detailrow").click(function(e){
-    if(! $(e.target).is("a")) {
-        $(this).prev("tr").toggleClass("active");
-        $(this).slideToggle();
-        $(this).children("td").children(".togglediv").slideToggle();
-    }
-  });
-});
-</script>
-<style type="text/css">
-.hasTooltip {
-    position:relative;
-}
+        # TODO need a more extensible solution for replacing symbols in this 
+        # template file 
+        with open ('mbcat/catalog_html.template') as template_file:
+            htf.write(template_file.read())
 
-.hasTooltip span {
-    display:none;
-}
-
-.hasTooltip:hover span {
-    display:block;
-    position:absolute;
-    z-index:15;
-    background-color:black;
-    border-radius:5px;
-    color:white;
-    box-shadow:1px 1px 3px gray;
-    padding:5px;
-    top:1.3em;
-    left:0px;
-    white-space: nowrap;
-}
-
-#toc, .toc {
-    float: right;
-    display: table;
-    padding: 7px;
-}
-
-#toc, .toc, .mw-warning {
-    border: 1px solid rgb(170, 170, 170);
-    background-color: rgb(249, 249, 249);
-    padding: 5px;
-    font-size: 95%;
-}
-
-#toc h2, .toc h2 {
-    display: inline;
-    border: medium none;
-    padding: 0px;
-    font-size: 100%;
-    font-weight: bold;
-}
-
-h2 {
-    clear: both;
-}
-
-.toctoggle{
-  display:inline-block;
-}
-
-#toc .toctitle, .toc .toctitle {
-    text-align: center;
-}
-
-.formattable {
-    width: 100%;
-}
-
-tr.releaserow:hover{
-  background-color:beige;
-}
-
-.active{
-  background-color:beige;
-}
-
-.detailrow {
-  display:none;
-}
-
-.detailrow td{
-  vertical-align:top;
-  background-color:lightgray;
-}
-
-.togglediv {
-  display:none;
-  }
-
-.time {
-  align:right;
-}
-
-.coverart {
-  max-width:320px; max-height:320px;
-  border-radius:5px;
-  background-color:black;
-  padding:5px;
-}
-
-</style>
-</head>
-<body>""")
-
-        formatsBySize = sorted(self.getFormats(), key=lambda s: mbcat.formats.getFormatObj(s))
+        formatsBySize = sorted(self.getFormats(),
+                key=lambda s: mbcat.formats.getFormatObj(s))
 
         htf.write('<a name="top">\n')
         htf.write('<div id="toc">\n')
         htf.write('<div id="toctitle">\n')
         htf.write('<h2>Contents</h2>\n')
-        htf.write('<span class="toctoggle">&nbsp;[<a href="#" class="internal" id="togglelink">hide</a>]&nbsp;</span>\n</div>\n')
+        htf.write('<span class="toctoggle">&nbsp;[<a href="#" class="internal"'
+                ' id="togglelink">hide</a>]&nbsp;</span>\n</div>\n')
         htf.write('<ul>\n')
         for releaseType in formatsBySize:
             htf.write('\t<li><a href="#'+releaseType+'">'+\
@@ -802,10 +725,12 @@ tr.releaserow:hover{
         htf.write('</div>\n')
 
         for releaseType in formatsBySize:
-            sortedList = self.getSortedList(mbcat.formats.getFormatObj(releaseType).__class__)
+            sortedList = self.getSortedList(
+                    mbcat.formats.getFormatObj(releaseType).__class__)
             if len(sortedList) == 0:
                 continue
-            htf.write("<h2><a name=\""+str(releaseType)+"\">" + str(releaseType) + (" (%d Releases)" %
+            htf.write("<h2><a name=\""+str(releaseType)+"\">" + \
+                    str(releaseType) + (" (%d Releases)" %
             len(sortedList)) + " <a href=\"#top\">top</a></h2>\n")
 
             htf.write("<table class=\"formattable\">\n")
@@ -828,7 +753,8 @@ tr.releaserow:hover{
                 if pbar:
                     pbar.update(pbar.currval + 1)
 
-                #coverartUrl = mbcat.amazonservices.getAsinImageUrl(rel.asin, mbcat.amazonservices.AMAZON_SERVER["amazon.com"], 'S')
+                #coverartUrl = mbcat.amazonservices.getAsinImageUrl(rel.asin,
+                #        mbcat.amazonservices.AMAZON_SERVER["amazon.com"], 'S')
                 # Refer to local copy instead
                 imgPath = self._getCoverArtPath(releaseId)
                 coverartUrl = imgPath if os.path.isfile(imgPath) else None
@@ -841,26 +767,33 @@ tr.releaserow:hover{
                     "</a>" for credit in rel['artist-credit'] ] ) + "</td>\n")
                 htf.write("<td><a href=\""+self.releaseUrl+rel['id']+"\"" + \
                     ">"+fmt(rel['title'])\
-                    +(' (%s)' % fmt(rel['disambiguation']) if 'disambiguation' in rel and rel['disambiguation'] else '')\
+                    +(' (%s)' % fmt(rel['disambiguation']) \
+                        if 'disambiguation' in rel and rel['disambiguation'] \
+                        else '')\
                     + "</a></td>\n")
-                htf.write("<td>"+(fmt(rel['date']) if 'date' in rel else '')+"</td>\n")
+                htf.write("<td>"+(fmt(rel['date']) if 'date' in rel else '') +\
+                        "</td>\n")
                 htf.write("<td>"+(fmt(rel['country']) \
                     if 'country' in rel else '')+"</td>\n")
                 htf.write("<td>"+', '.join([\
                     "<a href=\""+self.labelUrl+info['label']['id']+"\">"+\
                     fmt(info['label']['name'])+\
-                    "</a>" if 'label' in info else '' for info in rel['label-info-list']])+"</td>\n")
-                # TODO handle empty strings here (remove from this list before joining)
+                    "</a>" if 'label' in info else '' \
+                    for info in rel['label-info-list']])+"</td>\n")
+                # TODO handle empty strings here (remove from this list before
+                # joining)
                 htf.write("<td>"+', '.join([\
                     fmt(info['catalog-number']) if \
-                    'catalog-number' in info else '' for info in rel['label-info-list']])+"</td>\n")
+                    'catalog-number' in info else '' \
+                    for info in rel['label-info-list']])+"</td>\n")
                 htf.write("<td>"+\
                     ('' if 'barcode' not in rel else \
                     rel['barcode'] if rel['barcode'] else
                     '[none]')+"</td>\n")
                 htf.write("<td>"+("<a href=\"" + \
                     mbcat.amazonservices.getAsinProductUrl(rel['asin']) + \
-                    "\">" + rel['asin'] + "</a>" if 'asin' in rel else '')+"</td>\n")
+                    "\">" + rel['asin'] + "</a>" if 'asin' in rel else '') + \
+                    "</td>\n")
                 htf.write("</tr>\n")
                 htf.write("<tr class=\"detailrow\">\n")
                 htf.write("<td colspan=\""+str(len(mainCols))+"\">\n")
@@ -877,21 +810,25 @@ tr.releaserow:hover{
                 for name in detailCols:
                     htf.write('<th>'+fmt(name)+'</th>\n')
                 htf.write('</tr>\n<tr>\n')
-                htf.write('<td>'+('<img class="coverart" src="'+ coverartUrl +'">' if coverartUrl else '')+'</td>\n')
+                htf.write('<td>'+('<img class="coverart" src="'+ coverartUrl +\
+                        '">' if coverartUrl else '')+'</td>\n')
                 htf.write('<td>\n')
                 htf.write('<table class="tracklist">\n')
                 for medium in rel['medium-list']:
                     for track in medium['track-list']:
                         rec = track['recording']
-                        length = float(rec['length'])/1000 if 'length' in rec else None
+                        length = float(rec['length'])/1000 if 'length' in rec \
+                            else None
                         htf.write('<tr><td class="time">'+
                             fmt(rec['title']) + '</td><td>' + 
-                            (('%d:%02d' % (length/60, length%60)) if length else '?:??') + 
+                            (('%d:%02d' % (length/60, length%60)) if length \
+                                else '?:??') + 
                             '</td></tr>\n')
                 htf.write('</table>\n</td>\n')
                 htf.write('<td>\n<table class="pathlist">'+\
                     ''.join([\
-                        ('<tr><td><a href="'+fmt(path)+'">'+fmt(path)+'</a></td></tr>\n')\
+                        ('<tr><td><a href="'+fmt(path)+'">'+fmt(path)+\
+                            '</a></td></tr>\n')\
                         for path in self.getDigitalPaths(releaseId)])+\
                     '</table>\n</td>\n')
                 htf.write(\
@@ -899,7 +836,9 @@ tr.releaserow:hover{
                         self.getAddedDates(releaseId)[0] \
                         ).strftime('%Y-%m-%d') if \
                     len(self.getAddedDates(releaseId)) else '')+"</td>\n")
-                htf.write("<td>"+' + '.join([(medium['format'] if 'format' in medium else '(unknown)') for medium in rel['medium-list']])+"</td>\n")
+                htf.write("<td>"+' + '.join([(medium['format'] \
+                        if 'format' in medium else '(unknown)') \
+                        for medium in rel['medium-list']])+"</td>\n")
 
                 htf.write('</tr>\n')
                 htf.write("</table>\n</div>\n</td>\n</tr>\n")
@@ -908,6 +847,7 @@ tr.releaserow:hover{
 
         htf.write("<p>%d releases</p>" % len(self))
 
+        # TODO this will become part of the template
         htf.write("""</body>
 </html>""")
         htf.close()
@@ -917,7 +857,8 @@ tr.releaserow:hover{
         # get_release_by_id() handles throttling on its own
         _log.info('Fetching metadata for ' + releaseId)
         mb.set_parser(mb.mb_parser_null)
-        xml = mb.get_release_by_id(releaseId, includes=['artists', 'discids', 'media', 'labels', 'recordings'])
+        xml = mb.get_release_by_id(releaseId, includes=['artists', 'discids',
+                'media', 'labels', 'recordings'])
         mb.set_parser()
         return xml
 
@@ -971,14 +912,31 @@ tr.releaserow:hover{
         exists = releaseId in self
         now = time.time()
 
+        releaseColumns = [
+                'id',
+                'meta',
+                'sortstring',
+                'metatime',
+                'purchases',
+                'added',
+                'lent',
+                'listened',
+                'digital',
+                'count',
+                'comment',
+                'rating'
+                ]
+
         with self._connect() as con:
             cur = con.cursor()
 
             if not exists:
                 # Update releases table
                 try:
-                    cur.execute('insert into releases(id, meta, sortstring, metatime, purchases, added, lent, listened, digital, count, comment, rating) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                        (
+                    cur.execute('insert into releases(' + \
+                            ','.join(releaseColumns) + \
+                            ' values (' + ','.join(['?']*len(releaseColumns)),
+                            (
                             releaseId, 
                             buffer(zlib.compress(metaXml)), 
                             self.getSortStringFromRelease(relDict['release']),
@@ -991,14 +949,16 @@ tr.releaserow:hover{
                             1, # set count to 1 for now 
                             '',
                             0
-                        )
+                            )
                     )
                 except sqlite3.IntegrityError as e:
                     _log.error('Release already exists in catalog.')
             else:
-                # Remove references to this release from the words, barcodes, etc. tables
+                # Remove references to this release from the words, barcodes,
+                # etc. tables
                 self.unDigestRelease(releaseId, delete=False)
-                cur.execute('update releases set meta=?,sortstring=?,metatime=? where id=?',
+                cur.execute('update releases set meta=?,sortstring=?,'
+                        'metatime=? where id=?',
                         (buffer(zlib.compress(metaXml)),
                         self.getSortStringFromRelease(relDict['release']),
                         now,
@@ -1012,16 +972,20 @@ tr.releaserow:hover{
                 sql_list_append(cur, 'words', 'word', word, releaseId)
 
             # Update barcodes -> (barcode, releases)
-            if 'barcode' in relDict['release'] and relDict['release']['barcode']:
-                sql_list_append(cur, 'barcodes', 'barcode', relDict['release']['barcode'], releaseId)
+            if 'barcode' in relDict['release'] and \
+                    relDict['release']['barcode']:
+                sql_list_append(cur, 'barcodes', 'barcode',
+                        relDict['release']['barcode'], releaseId)
 
             # Update discids -> (discid, releases)
             for medium in relDict['release']['medium-list']:
                 for disc in medium['disc-list']:
-                    sql_list_append(cur, 'discids', 'discid', disc['id'], releaseId)
+                    sql_list_append(cur, 'discids', 'discid', disc['id'],
+                            releaseId)
 
             # Update formats -> (format, releases)
-            fmt = mbcat.formats.getReleaseFormat(relDict['release']).__class__.__name__
+            fmt = mbcat.formats.getReleaseFormat(relDict['release'])\
+                .__class__.__name__
             sql_list_append(cur, 'formats', 'format', fmt, releaseId)
 
             con.commit()
@@ -1045,12 +1009,14 @@ tr.releaserow:hover{
 
             # Update barcodes -> (barcode, releases)
             if 'barcode' in relDict and relDict['barcode']:
-                sql_list_remove(cur, 'barcodes', 'barcode', relDict['barcode'], releaseId)
+                sql_list_remove(cur, 'barcodes', 'barcode', relDict['barcode'],
+                        releaseId)
 
             # Update discids -> (discid, releases)
             for medium in relDict['medium-list']:
                 for disc in medium['disc-list']:
-                    sql_list_remove(cur, 'discids', 'discid', disc['id'], releaseId)
+                    sql_list_remove(cur, 'discids', 'discid', disc['id'],
+                            releaseId)
 
             # Update formats -> (format, releases)
             fmt = mbcat.formats.getReleaseFormat(relDict).__class__.__name__
@@ -1062,7 +1028,8 @@ tr.releaserow:hover{
         """Join artist sort names together"""
         return ''.join([
                 credit if type(credit)==str else \
-                credit['artist']['sort-name'] for credit in release['artist-credit']
+                credit['artist']['sort-name'] \
+                for credit in release['artist-credit']
                 ])
 
     def getArtistPathVariations(self, release):
@@ -1145,14 +1112,17 @@ tr.releaserow:hover{
             return cur.fetchone()
 
     def addRelease(self, releaseId, olderThan=0):
-        """Get metadata XML from MusicBrainz and add to or refresh the catalog."""
+        """
+        Get metadata XML from MusicBrainz and add to or refresh the catalog.
+        """
 
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
         if releaseId in self:
             _log.info("Release %s is already in catalog." % releaseId)
         metaTime = self.getMetaTime(releaseId)
         if (metaTime and (metaTime[0] > (time.time() - olderThan))):
-            _log.info("Skipping fetch of metadata for %s because it is recent", releaseId)
+            _log.info("Skipping fetch of metadata for %s because it is recent",
+                    releaseId)
             return 0
 
         metaXml = self.fetchReleaseMetaXml(releaseId)
@@ -1183,12 +1153,14 @@ tr.releaserow:hover{
                     _log.warning("No format for a medium of " + releaseId)
 
     def _getCoverArtPath(self, releaseId):
-        return os.path.join(self.cachePath, releaseId[0], releaseId[0:2], releaseId, 'cover.jpg')
+        return os.path.join(self.cachePath, releaseId[0], releaseId[0:2],
+                releaseId, 'cover.jpg')
 
     def getCoverArt(self, releaseId, maxage=60*60):
         release = self.getRelease(releaseId)
         imgPath = self._getCoverArtPath(releaseId)
-        if os.path.isfile(imgPath) and os.path.getmtime(imgPath) > time.time() - maxage:
+        if os.path.isfile(imgPath) and os.path.getmtime(imgPath) > \
+                time.time() - maxage:
             _log.info("Already have cover art for " + releaseId + ", skipping")
             return
 
@@ -1197,13 +1169,17 @@ tr.releaserow:hover{
             mbcat.coverart.saveCoverArt(meta, imgPath)
 
         except mb.ResponseError as e:
-            _log.warning('No cover art for ' + releaseId + ' available from Cover Art Archive')
+            _log.warning('No cover art for ' + releaseId + 
+                    ' available from Cover Art Archive')
                 
             if 'asin' in release:
                 _log.info('Trying to fetch cover art from Amazon instead')
-                mbcat.amazonservices.saveImage(release['asin'], mbcat.amazonservices.AMAZON_SERVER["amazon.com"], imgPath)
+                mbcat.amazonservices.saveImage(release['asin'],
+                        mbcat.amazonservices.AMAZON_SERVER["amazon.com"],
+                        imgPath)
             else:
-                _log.warning('No ASIN for ' + releaseId + ', cannot fetch from Amazon.')
+                _log.warning('No ASIN for '+releaseId+
+                        ', cannot fetch from Amazon.')
 
     def refreshAllCoverArt(self, maxage=60*60*24):
         for releaseId in self.getReleaseIds():
@@ -1218,7 +1194,10 @@ tr.releaserow:hover{
         import Levenshtein
         dists = []
 
-        widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Percentage() ]
+        # TODO move this out to mbcat.shell
+        widgets = ["Releases: ", progressbar.Bar(
+                    marker="=", left="[", right="]"),
+                " ", progressbar.Percentage() ]
         maxval = (float(len(self)**2) - float(len(self)))/2
         pbar = progressbar.ProgressBar(widgets=widgets, maxval=maxval).start()
         for leftIdx in range(len(self)):
@@ -1253,7 +1232,8 @@ tr.releaserow:hover{
         count = 0
         colRelIds = []
         while True:
-            result = mb.get_releases_in_collection(colId, limit=25, offset=count)
+            result = mb.get_releases_in_collection(colId, limit=25,
+                    offset=count)
             col = result['collection']
             relList = col['release-list']
             if len(relList) == 0:
@@ -1284,8 +1264,10 @@ tr.releaserow:hover{
                 for track in medium['track-list']:
                     rec = track['recording']
                     if 'length' not in rec:
-                        _log.warning('Track '+track['number']+' length is empty in '+releaseId)
-                    length = float(rec['length'])/1000 if 'length' in rec else 2*60
+                        _log.warning('Track '+track['number']+
+                                ' length is empty in '+releaseId)
+                    length = float(rec['length'])/1000 \
+                            if 'length' in rec else 2*60
                     line = '%.6f\t%.6f\t%s\n' % (pos, pos+length, rec['title'])
                     try:
                         f.write(line)
@@ -1301,7 +1283,8 @@ tr.releaserow:hover{
         rel = self.getRelease(releaseId)
 
         for name, value in [
-                ('ALBUM', rel['title'] + (' ('+rel['disambiguation']+')' if 'disambiguation' in rel else '')),
+                ('ALBUM', rel['title'] + (' ('+rel['disambiguation']+')' \
+                        if 'disambiguation' in rel else '')),
                 ('YEAR', rel['date'] if 'date' in rel else ''),
                 ('ARTIST', rel['artist-credit-phrase']),
                 ('COMMENTS', self.releaseUrl+releaseId),
@@ -1312,7 +1295,8 @@ tr.releaserow:hover{
         with open(outPath, 'wb') as xmlfile:
             xmlfile.write(etree.tostring(myxml))
 
-        _log.info('Saved Audacity tags XML for '+releaseId+' to \'%s\'' % outPath)
+        _log.info('Saved Audacity tags XML for '+releaseId+' to \'%s\'' % \
+                outPath)
 
     def writeTrackList(self, stream, releaseId):
         """Write ASCII tracklist for releaseId to 'stream'. """
@@ -1326,7 +1310,7 @@ tr.releaserow:hover{
                 stream.write(
                     rec['title'] + 
                     ' '*(60-len(rec['title'])) + 
-                    (('%3d:%02d' % (length/60, length%60)) if length else '  ?:??') + 
-                    '\n')
+                    (('%3d:%02d' % (length/60, length%60)) \
+                        if length else '  ?:??') + '\n')
 
 

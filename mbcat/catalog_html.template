@@ -1,0 +1,125 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>Music Catalog</title>
+<script type="text/javascript"
+    src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+  $("#toc ul").show();
+  $("#togglelink").click(function(e){
+    $("#toc ul").slideToggle();
+    var isShow = $(this).text() == 'Show';
+    $(this).text(isShow ? 'Hide' : 'Show');
+  });
+  $(".releaserow").click(function(e){
+    if(! $(e.target).is("a")) {
+        $(this).toggleClass("active");
+        $(this).next("tr").slideToggle();
+        $(this).next("tr").children("td").children(".togglediv").stop('true','true').slideToggle();
+    }
+  });
+  $(".detailrow").click(function(e){
+    if(! $(e.target).is("a")) {
+        $(this).prev("tr").toggleClass("active");
+        $(this).slideToggle();
+        $(this).children("td").children(".togglediv").slideToggle();
+    }
+  });
+});
+</script>
+<style type="text/css">
+.hasTooltip {
+    position:relative;
+}
+
+.hasTooltip span {
+    display:none;
+}
+
+.hasTooltip:hover span {
+    display:block;
+    position:absolute;
+    z-index:15;
+    background-color:black;
+    border-radius:5px;
+    color:white;
+    box-shadow:1px 1px 3px gray;
+    padding:5px;
+    top:1.3em;
+    left:0px;
+    white-space: nowrap;
+}
+
+#toc, .toc {
+    float: right;
+    display: table;
+    padding: 7px;
+}
+
+#toc, .toc, .mw-warning {
+    border: 1px solid rgb(170, 170, 170);
+    background-color: rgb(249, 249, 249);
+    padding: 5px;
+    font-size: 95%;
+}
+
+#toc h2, .toc h2 {
+    display: inline;
+    border: medium none;
+    padding: 0px;
+    font-size: 100%;
+    font-weight: bold;
+}
+
+h2 {
+    clear: both;
+}
+
+.toctoggle{
+  display:inline-block;
+}
+
+#toc .toctitle, .toc .toctitle {
+    text-align: center;
+}
+
+.formattable {
+    width: 100%;
+}
+
+tr.releaserow:hover{
+  background-color:beige;
+}
+
+.active{
+  background-color:beige;
+}
+
+.detailrow {
+  display:none;
+}
+
+.detailrow td{
+  vertical-align:top;
+  background-color:lightgray;
+}
+
+.togglediv {
+  display:none;
+  }
+
+.time {
+  align:right;
+}
+
+.coverart {
+  max-width:320px; max-height:320px;
+  border-radius:5px;
+  background-color:black;
+  padding:5px;
+}
+
+</style>
+</head>
+<body>
