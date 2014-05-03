@@ -278,36 +278,28 @@ class Catalog(object):
                     (count, releaseId))
             con.commit()
 
-    def loadReleaseIds(self):
+    def loadReleaseIds(self, pbar=None):
         fileList = os.listdir(self.rootPath)
 
-        # There's no Fraction() provided in progressbar-python3
-        widgets = ["Releases: ", progressbar.Bar(
-                    marker="=", left="[", right="]"), 
-                " ", progressbar.Percentage() ]
+        if pbar:
+            pbar.start()
         if len(fileList) > 0:
-            pbar = progressbar.ProgressBar(widgets=widgets,
-                    maxval=len(fileList)).start()
-
             for releaseId in fileList:
                 if len(releaseId) == 36:
-                    #pbar.increment() 
-                    # progressbar-python3 does not have increment()
-                    pbar.update(pbar.currval + 1)
+                    if pbar:
+                        pbar.update(pbar.currval + 1)
                     yield releaseId
-            pbar.finish()
+            if pbar:
+                pbar.finish()
 
-    def saveZip(self, zipName='catalog.zip'):
+    def saveZip(self, zipName='catalog.zip', pbar=None):
         """Exports the database as a ZIP archive"""
 
         _log.info('Saving ZIP file for catalog to \'%s\'' % zipName)
 
-        # TODO make this list of widgets common, or better yet, remove this info to the next level up
-        widgets = ["Releases: ", progressbar.Bar(
-                    marker="=", left="[", right="]"),
-                " ", progressbar.Percentage() ]
-        pbar = progressbar.ProgressBar(widgets=widgets,
-                maxval=len(self)).start()
+        if pbar:
+            pbar.maxval=len(self)
+            pbar.start()
         with zipfile.ZipFile(zipName, 'w', zipfile.ZIP_DEFLATED) as zf:
             for releaseId in self.getReleaseIds():
                 zipReleasePath = self.zipReleaseRoot+'/'+releaseId
@@ -328,20 +320,20 @@ class Catalog(object):
                 zf.writestr(zipReleasePath+'/extra.xml',
                         ed.toString())
 
-                pbar.update(pbar.currval + 1)
-            pbar.finish()
+                if pbar:
+                    pbar.update(pbar.currval + 1)
+            if pbar:
+                pbar.finish()
 
-    def loadZip(self, zipName='catalog.zip'):
+    def loadZip(self, zipName='catalog.zip', pbar=None):
         """Imports the data from a ZIP archive into the database"""
 
         _log.info('Loading ZIP file into catalog from \'%s\'' % zipName)
 
-        widgets = ["Releases: ", \
-                progressbar.Bar(marker="=", left="[", right="]"), \
-                " ", progressbar.Percentage() ]
+        if pbar:
+            pbar.maxval=len(self)
+            pbar.start()
         with zipfile.ZipFile(zipName, 'r') as zf:
-            pbar = progressbar.ProgressBar(widgets=widgets,
-                    maxval=len(zf.infolist())).start()
             for fInfo in zf.infolist():
                 try:
                     rootPath, releaseId, fileName = fInfo.filename.split('/')
@@ -371,8 +363,10 @@ class Catalog(object):
                     with file(coverArtPath, 'w') as f:
                         f.write(zf.read(fInfo))
 
-                pbar.update(pbar.currval + 1)
-            pbar.finish()
+                if pbar:
+                    pbar.update(pbar.currval + 1)
+            if pbar:
+                pbar.finish()
 
     @staticmethod
     def getReleaseWords(rel):
@@ -701,6 +695,10 @@ class Catalog(object):
 
         _log.info('Writing HTML to \'%s\'' % fileName)
 
+        if pbar:
+            pbar.maxval=len(self)
+            pbar.start()
+
         htf = open(fileName, 'wt')
 
         # TODO need a more extensible solution for replacing symbols in this 
@@ -851,6 +849,9 @@ class Catalog(object):
         htf.write("""</body>
 </html>""")
         htf.close()
+
+        if pbar:
+            pbar.finish()
 
     def fetchReleaseMetaXml(self, releaseId):
         """Fetch release metadata XML from musicbrainz"""
@@ -1077,6 +1078,9 @@ class Catalog(object):
         """
         releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
 
+        if pbar:
+            pbar.maxval = len(self)*len(self.prefs.pathRoots)
+            pbar.start()
         # TODO need to be more flexible in capitalization and re-order of words
         for path in self.prefs.pathRoots:
             _log.info("Searching '%s'"%path)
@@ -1092,6 +1096,8 @@ class Catalog(object):
                         self.addDigitalPath(relId, titlePath)
                     else:
                         _log.debug('Did not find '+relId+' at '+titlePath)
+        if pbar:
+            pbar.finish()
 
         if releaseId and not self.extraIndex[relId].digitalPaths:
             _log.warning('No digital paths found for '+releaseId)
@@ -1132,8 +1138,8 @@ class Catalog(object):
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
         self.unDigestRelease(releaseId)
 
-    def refreshAllMetaData(self, olderThan=0):
-        for releaseId in self.loadReleaseIds():
+    def refreshAllMetaData(self, olderThan=0, pbar=None):
+        for releaseId in self.loadReleaseIds(pbar):
             _log.info("Refreshing %s", releaseId)
             self.addRelease(releaseId, olderThan)
 
@@ -1185,7 +1191,7 @@ class Catalog(object):
         for releaseId in self.getReleaseIds():
             self.getCoverArt(releaseId, maxage=maxage)
 
-    def checkLevenshteinDistances(self):
+    def checkLevenshteinDistances(self, pbar=None):
         """
         Compute the Levenshtein (edit) distance of each pair of releases.
 
@@ -1194,12 +1200,9 @@ class Catalog(object):
         import Levenshtein
         dists = []
 
-        # TODO move this out to mbcat.shell
-        widgets = ["Releases: ", progressbar.Bar(
-                    marker="=", left="[", right="]"),
-                " ", progressbar.Percentage() ]
-        maxval = (float(len(self)**2) - float(len(self)))/2
-        pbar = progressbar.ProgressBar(widgets=widgets, maxval=maxval).start()
+        if pbar:
+            pbar.maxval = (float(len(self)**2) - float(len(self)))/2
+            pbar.start()
         for leftIdx in range(len(self)):
             for rightIdx in range(leftIdx, len(self)):
                 if  leftIdx == rightIdx :
@@ -1210,8 +1213,10 @@ class Catalog(object):
                         self.formatDiscSortKey(rightId))
 
                 dists.append((dist,leftId, rightId))
-                pbar.update(pbar.currval + 1)
-        pbar.finish()
+                if pbar:
+                    pbar.update(pbar.currval + 1)
+        if pbar:
+            pbar.finish()
 
         return sorted(dists, key=lambda sortKey: sortKey[0])
 

@@ -12,6 +12,9 @@ _log = logging.getLogger("mbcat")
 
 class Shell:
     """An interactive shell that prompts the user for inputs and renders output for the catalog."""
+    widgets = ["Releases: ", progressbar.Bar(
+                marker="=", left="[", right="]"), 
+            " ", progressbar.Percentage() ]
 
     def __init__(self, stdin=sys.stdin, stdout=sys.stdout, catalog=None):
         self.c = catalog if catalog!=None else Catalog()
@@ -132,8 +135,9 @@ class Shell:
         maxAge = self.s.nextLine("Enter maximum cache age in minutes [leave empty for one minute]: ")
         maxAge = int(maxAge)*60 if maxAge else 60
 
+        pbar = progressbar.ProgressBar(widgets=self.widgets)
         if not releaseId:
-            self.c.refreshAllMetaData(maxAge)
+            self.c.refreshAllMetaData(maxAge, pbar)
         elif releaseId not in self.c:
             self.s.write("Release not found\n")
             return
@@ -168,9 +172,8 @@ class Shell:
         if not fileName:
             fileName='catalog.html'
         widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Percentage() ]
-        pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(self.c)).start()
+        pbar = progressbar.ProgressBar(widgets=self.widgets)
         self.c.makeHtml(fileName=fileName,pbar=pbar)
-        pbar.finish()
 
         answer = self.s.nextLine('Open browser to view HTML? [y/N]')
         if answer and answer.lower().startswith('y'):
@@ -271,16 +274,13 @@ class Shell:
 
     def DigitalSearch(self):
         """Search for digital copies of releases."""
-        widgets = ["Releases: ", progressbar.Bar(marker="=", left="[", right="]"), " ", progressbar.Percentage() ]
-        pbar = progressbar.ProgressBar(widgets=widgets, maxval=len(self.c)*len(self.c.prefs.pathRoots))
+        pbar = progressbar.ProgressBar(widgets=self.widgets)
         try:
             releaseId = self.Search("Enter search terms or release ID [enter for all]: ")
-            pbar.start()
         except ValueError as e:
             self.c.searchDigitalPaths(pbar=pbar)
         else:
             self.c.searchDigitalPaths(releaseId=releaseId, pbar=pbar)
-        pbar.finish()
 
     def SyncCollection(self):
         """Synchronize with a musicbrainz collection (currently only pushes releases)."""
@@ -324,7 +324,8 @@ class Shell:
     def GetSimilar(self):
         """Helps the user identify similar, possibly duplicate, releases."""
         number=20
-        lds = self.c.checkLevenshteinDistances()
+        pbar = progressbar.ProgressBar(widgets=self.widgets)
+        lds = self.c.checkLevenshteinDistances(pbar)
         for i in range (number):
             self.s.write(str(lds[i][0]) + '\t' + \
                 self.c.formatDiscInfo(lds[i][1]) + ' <-> ' + \
@@ -338,7 +339,8 @@ class Shell:
         if not path:
             path = defaultPath
 
-        self.c.saveZip(path)
+        pbar = progressbar.ProgressBar(widgets=self.widgets)
+        self.c.saveZip(path, pbar)
 
     def ZipImport(self):
         """Import a zip file containing XML files into the catalog."""
@@ -348,7 +350,8 @@ class Shell:
         if not path:
             path = defaultPath
 
-        self.c.loadZip(path)
+        pbar = progressbar.ProgressBar(widgets=self.widgets)
+        self.c.loadZip(path, pbar)
 
     @staticmethod
     def mergeList(l):
