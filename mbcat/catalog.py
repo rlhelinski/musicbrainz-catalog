@@ -1086,19 +1086,18 @@ tr.releaserow:hover{
             s.add(release['title']+' ('+release['disambiguation']+')')
         return s
 
-    def getDigitalPathVariations(self, root, release):
-        # prefixes sometimes used for directory balancing
-        alnum = set()
-        for path in self.getArtistPathVariations(release):
-            alnum = alnum.union([\
+    def getPathAlNumPrefixes(self, path):
+        """Returns a set of prefixes used for directory balancing"""
+        return set([
                 '', # in case nothing is used
                 path[0].lower(), # most basic implementation
                 path[0:1].lower(), # have never seen this
                 (path[0]+'/'+path[0:2]).lower(), # used by Wikimedia
                 ])
 
-        for prefix in alnum:
-            for artistName in self.getArtistPathVariations(release):
+    def getDigitalPathVariations(self, root, release):
+        for artistName in self.getArtistPathVariations(release):
+            for prefix in self.getPathAlNumPrefixes(artistName):
                 artistPath = os.path.join(root, prefix, artistName)
                 if os.path.isdir(artistPath):
                     for titleName in self.getTitlePathVariations(release):
