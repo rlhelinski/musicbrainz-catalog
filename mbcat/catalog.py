@@ -491,20 +491,12 @@ class Catalog(object):
             sortedList = self.getSortedList()
 
         index = sortedList.index((releaseId,
-                self.formatDiscSortKey(releaseId)))
+                self.getReleaseSortStr(releaseId)))
         neighborhoodIndexes = range(max(0,index-neighborHood),
                 min(len(sortedList), index+neighborHood))
         return (index, 
                 zip(neighborhoodIndexes, 
                         [sortedList[i] for i in neighborhoodIndexes]))
-
-    def search(self, query):
-        # TODO this is a convenience function which uses print and should
-        # be moved to the shell 
-        """Print a list releases that match words in a query."""
-        matches = self._search(query)
-        for releaseId in matches:
-            print(self.formatDiscInfo(releaseId))
 
     def getWordCount(self):
         """Fetch the number of words in the search word table."""
