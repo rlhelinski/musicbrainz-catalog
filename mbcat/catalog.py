@@ -444,8 +444,8 @@ class Catalog(object):
                     release else ''), \
                 ] )
 
-    def formatDiscSortKey(self, releaseId):
-        # TODO rename to something like getReleaseSortStr
+    def getReleaseSortStr(self, releaseId):
+        """Return a string by which a release can be sorted."""
         
         with self._connect() as con:
             cur = con.cursor()
@@ -468,7 +468,7 @@ class Catalog(object):
         relIds = self.getReleaseIdsByFormat(matchFmt.__name__) if matchFmt \
                 else self.getReleaseIds()
             
-        sortKeys = [(relId, self.formatDiscSortKey(relId)) for relId in relIds]
+        sortKeys = [(relId, self.getReleaseSortStr(relId)) for relId in relIds]
 
         return sorted(sortKeys, key=lambda sortKey: sortKey[1].lower())
 
@@ -1201,8 +1201,8 @@ class Catalog(object):
                     continue
                 leftId = self.getReleaseIds()[leftIdx]
                 rightId = self.getReleaseIds()[rightIdx]
-                dist = Levenshtein.distance(self.formatDiscSortKey(leftId),
-                        self.formatDiscSortKey(rightId))
+                dist = Levenshtein.distance(self.getReleaseSortStr(leftId),
+                        self.getReleaseSortStr(rightId))
 
                 dists.append((dist,leftId, rightId))
                 if pbar:
