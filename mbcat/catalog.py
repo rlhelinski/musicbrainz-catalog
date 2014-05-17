@@ -928,7 +928,9 @@ class Catalog(object):
                 try:
                     cur.execute('insert into releases(' + \
                             ','.join(releaseColumns) + \
-                            ' values (' + ','.join(['?']*len(releaseColumns)),
+                            ') values (' + \
+                            ','.join(['?']*len(releaseColumns)) + \
+                            ')',
                             (
                             releaseId, 
                             buffer(zlib.compress(metaXml)), 
