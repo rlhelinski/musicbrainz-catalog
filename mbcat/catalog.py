@@ -387,6 +387,7 @@ class Catalog(object):
 
         return words
 
+    @mbcat.utils.deprecated
     def mapWordsToRelease(self, words, releaseId):
         word_set = set(words)
         for word in word_set:
