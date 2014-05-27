@@ -155,6 +155,8 @@ class Catalog(object):
             # tables that map specific things to a list of releases
             for columnName in [
                     'word',
+                    'trackword',
+                    'recording',
                     'discid',
                     'barcode',
                     'format'
@@ -172,7 +174,8 @@ class Catalog(object):
         """Drop the derived tables in the database and rebuild them"""
         with self._connect() as con:
             cur = con.cursor()
-            for tab in ['words', 'discids', 'barcodes', 'formats']:
+            for tab in ['words', 'trackwords', 'recordings', 'discids',
+                    'barcodes', 'formats']:
                 cur.execute('delete * from ?', tab)
         self._createTables()
             
@@ -388,6 +391,34 @@ class Catalog(object):
                     processWords(field, credit['artist'])
 
         return words
+
+    @staticmethod
+    def getReleaseTracks(rel):
+        # Format of track (recording) title list
+        # r['medium-list'][0]['track-list'][0]['recording']['title']
+        for medium in rel['medium-list']:
+            for track in medium['track-list']:
+                yield track
+
+    def digestTrackWords(self, rel, actionFun=sql_list_append):
+        releaseTrackWords = set()
+        relId = rel['id']
+        with self._connect() as con:
+            cur = con.cursor()
+            for track in mbcat.Catalog.getReleaseTracks(rel):
+                if 'recording' in track and 'title' in track['recording']:
+                    trackWords = set()
+                    mbcat.Catalog.processWords(trackWords, 'title', 
+                        track['recording'])
+                    for word in trackWords:
+                        actionFun(cur, 'trackwords', 'trackword', 
+                            word, track['recording']['id'])
+                    releaseTrackWords = releaseTrackWords.union(trackWords)
+                    actionFun(cur, 'recordings', 'recording', 
+                        track['recording']['id'], relId)
+
+    def unDigestTrackWords(rel):
+        self.digestTrackWords(rel, actionFun=sql_list_remove)
 
     @mbcat.utils.deprecated
     def mapWordsToRelease(self, words, releaseId):
@@ -969,6 +1000,10 @@ class Catalog(object):
             for word in rel_words:
                 sql_list_append(cur, 'words', 'word', word, releaseId)
 
+            # Update words -> (word, recordings) and 
+            # recordings -> (recording, releases)
+            self.digestTrackWords(relDict['release'])
+
             # Update barcodes -> (barcode, releases)
             if 'barcode' in relDict['release'] and \
                     relDict['release']['barcode']:
@@ -1004,6 +1039,10 @@ class Catalog(object):
             rel_words = self.getReleaseWords(relDict)
             for word in rel_words:
                 sql_list_remove(cur, 'words', 'word', word, releaseId)
+
+            # Update words -> (word, recordings) and 
+            # recordings -> (recording, releases)
+            self.unDigestTrackWords(relDict['release'])
 
             # Update barcodes -> (barcode, releases)
             if 'barcode' in relDict and relDict['barcode']:
@@ -1106,6 +1145,24 @@ class Catalog(object):
             pathSpec = self.prefs.defaultPathSpec
         return mbcat.digital.DigitalPath(pathSpec).\
                 toString(self.getRelease(releaseId))
+
+    def fixDigitalPath(self, releaseId, digitalPathRoot=None):
+        """This function moves a digital path to the correct location, which is
+        specified by a path root string"""
+        pathSpec = self.prefs.pathFmts[digitalPathRoot] \
+            if digitalPathRoot else \
+            self.prefs.defaultPathSpec
+        if not digitalPathRoot:
+            raise NotImplemented('You need to specify a digital path root')
+
+        assert digitalPathRoot in self.prefs.pathRoots
+        pathFmt = self.prefs.pathFmts[digitalPathRoot]
+        correctPath = self.getDigitalPath(releaseId, pathFmt)
+        for path in self.getDigitalPaths(releaseId):
+            path = os.path.join(digitalPathRoot, DigitalPath(pathFmt))
+            if path != correctPath:
+                _log.info('Moving "%s" to "%s"' % (path, correctPath))
+                shutil.move(path, correctPath)
 
     def getMetaTime(self, releaseId):
         with self._connect() as con:
