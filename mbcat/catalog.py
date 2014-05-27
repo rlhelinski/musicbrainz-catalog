@@ -953,7 +953,7 @@ class Catalog(object):
                     _log.error('Release already exists in catalog.')
             else:
                 # Remove references to this release from the words, barcodes,
-                # etc. tables
+                # etc. tables so we can add the correct ones later
                 self.unDigestRelease(releaseId, delete=False)
                 cur.execute('update releases set meta=?,sortstring=?,'
                         'metatime=? where id=?',
