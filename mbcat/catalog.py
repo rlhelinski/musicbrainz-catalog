@@ -369,17 +369,19 @@ class Catalog(object):
                 pbar.finish()
 
     @staticmethod
+    def processWords(words, field, d):
+        if field in d:
+            words.update(re.findall(r"[\w'.]+", d[field].lower(), re.UNICODE))
+        elif field != 'disambiguation':
+            _log.warning('Missing field from release '+relId+': '+field)
+
+    @staticmethod
     def getReleaseWords(rel):
         words = set()
         relId = rel['id']
-        def processWords(field, d):
-            if field in d:
-                words.update(re.findall(r"\w+", d[field].lower(), re.UNICODE))
-            elif field != 'disambiguation':
-                _log.warning('Missing field from release '+relId+': '+field)
 
         for field in ['title', 'artist-credit-phrase', 'disambiguation']:
-            processWords(field, rel)
+            mbcat.Catalog.processWords(words, field, rel)
         for credit in rel['artist-credit']:
             for field in ['sort-name', 'disambiguation', 'name']:
                 if field in credit:
