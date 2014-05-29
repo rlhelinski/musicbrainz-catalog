@@ -429,14 +429,16 @@ class Catalog(object):
             else:
                 self.wordMap[word] = [releaseId]
 
-    def _search(self, query):
+    def _search(self, query, table='words', keycolumn='word'):
         query_words = query.lower().split(' ')
         matches = set()
         with self._connect() as con:
             cur = con.cursor()
             for word in query_words:
-                cur.execute('select releases from words where word = ?',
+                cur.execute('select releases from %s where %s = ?' % \
+                        (table, keycolumn),
                         (word,))
+                # get the record, there should be one or none
                 fetched = cur.fetchone()
                 # if the word is in the table
                 if fetched:
@@ -455,6 +457,19 @@ class Catalog(object):
                     break
 
         return matches
+
+    def searchTrackWords(self, query):
+        return self._search(query, table='trackwords', keycolumn='trackword')
+
+    def recordingGetRelease(self, recordingId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select releases from recordings where recording = ?',
+                    (recordingId,))
+            # get the record, there should be one or none
+            fetched = cur.fetchone()
+
+        return fetched[0]
 
     def formatDiscInfo(self, releaseId):
         release = self.getRelease(releaseId)
