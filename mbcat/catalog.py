@@ -168,6 +168,7 @@ class Catalog(object):
             cur.execute('CREATE TABLE recordings ('
                 'recording TEXT PRIMARY KEY, '
                 'title TEXT, '
+                'length INTEGER, '
                 'releases list)')
 
             con.commit()
@@ -419,8 +420,10 @@ class Catalog(object):
                     releaseTrackWords = releaseTrackWords.union(trackWords)
                     actionFun(cur, 'recordings', 'recording', 
                         track['recording']['id'], relId)
-                    cur.execute('update recordings set title=? '
+                    cur.execute('update recordings set title=?,length=? '
                         'where recording=?', (track['recording']['title'], 
+                            track['recording']['length'] if
+                                'length' in track['recording'] else -1,
                             track['recording']['id']))
             con.commit()
 
@@ -489,6 +492,22 @@ class Catalog(object):
                     release else '', \
                 '['+str(mbcat.formats.getReleaseFormat(release))+']', \
                 ] )
+
+    @staticmethod
+    def formatRecordingLength(length):
+        seconds = float(length)/1000 if length else None
+        return (('%d:%02d' % (seconds/60, seconds%60)) \
+            if seconds else '?:??')
+
+    def formatRecordingInfo(self, recordingId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select title,length from recordings '
+                'where recording=?', (recordingId,))
+            recordingRow = cur.fetchall()[0]
+
+        return '%s: %s (%s)' % (recordingId, recordingRow[0], 
+            mbcat.Catalog.formatRecordingLength(recordingRow[1]))
 
     @staticmethod
     def getSortStringFromRelease(release):
@@ -863,12 +882,10 @@ class Catalog(object):
                 for medium in rel['medium-list']:
                     for track in medium['track-list']:
                         rec = track['recording']
-                        length = float(rec['length'])/1000 if 'length' in rec \
-                            else None
+                        length = mbcat.Catalog.formatRecordingLength(
+                            rec['length'] if 'length' in rec else None)
                         htf.write('<tr><td class="time">'+
-                            fmt(rec['title']) + '</td><td>' + 
-                            (('%d:%02d' % (length/60, length%60)) if length \
-                                else '?:??') + 
+                            fmt(rec['title']) + '</td><td>' + length + \
                             '</td></tr>\n')
                 htf.write('</table>\n</td>\n')
                 htf.write('<td>\n<table class="pathlist">'+\
