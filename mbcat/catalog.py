@@ -38,21 +38,21 @@ def listConverter(s):
 sqlite3.register_adapter(list, listAdapter)
 sqlite3.register_converter(str("list"), listConverter)
 
-def sql_list_append(cursor, table_name, field_name, key, value):
+def sql_list_append(cursor, table_name, key_column, key, value, list_column='releases'):
     """Append to a list in an SQL table."""
-    cursor.execute('select * from '+table_name+\
-            ' where '+field_name+' = ?', (key,))
+    cursor.execute('select '+list_column+' from '+table_name+\
+            ' where '+key_column+' = ?', (key,))
     row = cursor.fetchall()
     if not row:
         relList = [value]
     else:
-        relList = row[0][1]
+        relList = row[0][0]
         if value not in relList:
             relList.append(value)
 
     cursor.execute(('replace' if row else 'insert')+
-            ' into '+table_name+'('+field_name+', releases) values (?, ?)',
-            (key, relList))
+            ' into '+table_name+'('+key_column+', '+list_column+') '
+            'values (?, ?)', (key, relList))
 
 def sql_list_remove(cursor, table_name, field_name, key, value):
     """Remove an item from a list in an SQL table."""
