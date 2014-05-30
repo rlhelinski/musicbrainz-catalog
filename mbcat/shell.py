@@ -77,16 +77,18 @@ class Shell:
             input = self.s.nextLine(prompt)
             if input:
                 if len(mbcat.utils.getReleaseIdFromInput(input)) == 36:
-                    releaseId = mbcat.utils.getReleaseIdFromInput(input)
-                    return releaseId
-                matches = list(self.c._search(input, table='trackwords',
-                    keycolumn='trackword'))
+                    matches = [mbcat.utils.getReleaseIdFromInput(input)]
+                else:
+                    matches = list(self.c._search(input, table='trackwords',
+                        keycolumn='trackword'))
+
+                self.s.write("%d %s found:\n" % (len(matches), 
+                    'matches' if len(matches)>1 else 'match'))
+                for i, match in enumerate(matches):
+                    self.s.write(
+                        str(i) + " " + \
+                        self.c.formatRecordingInfo(match) + "\n")
                 if len(matches) > 1:
-                    self.s.write("%d matches found:\n" % len(matches))
-                    for i, match in enumerate(matches):
-                        self.s.write(
-                            str(i) + " " + \
-                            self.c.formatRecordingInfo(match) + "\n")
                     while (True):
                         try:
                             index = int(self.s.nextWord("Select a match: "))
