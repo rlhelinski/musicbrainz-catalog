@@ -71,6 +71,54 @@ class Shell:
             else:
                 raise ValueError('No release specified.')
 
+    def SearchTrack(self, prompt="Enter search terms (or recording ID): "):
+        """Search for a recording and return recording ID."""
+        while(True):
+            input = self.s.nextLine(prompt)
+            if input:
+                if len(mbcat.utils.getReleaseIdFromInput(input)) == 36:
+                    releaseId = mbcat.utils.getReleaseIdFromInput(input)
+                    return releaseId
+                matches = list(self.c._search(input, table='trackwords',
+                    keycolumn='trackword'))
+                if len(matches) > 1:
+                    self.s.write("%d matches found:\n" % len(matches))
+                    for i, match in enumerate(matches):
+                        self.s.write(
+                            str(i) + " " + \
+                            self.c.formatRecordingInfo(match) + "\n")
+                    while (True):
+                        try:
+                            index = int(self.s.nextWord("Select a match: "))
+                            return matches[index]
+                        except ValueError as e:
+                            self.s.write(str(e) + " try again\n")
+                        except IndexError as e:
+                            self.s.write(str(e) + " try again\n")
+
+                elif len(matches) == 1:
+                    return matches[0]
+                else:
+                    raise ValueError("No matches for \"%s\"." % input)
+            else:
+                raise ValueError('No release specified.')
+
+    def SearchTrackShowReleases(self, 
+        prompt="Enter search terms (or recording ID): "):
+        """Search for a track (recording) by words and show the releases on which it appears."""
+        recordingId = self.SearchTrack(prompt)
+        if not recordingId:
+            return
+
+        releases = self.c.recordingGetReleases(recordingId)
+        if not releases:
+            return
+
+        self.s.write('\nAppears on:\n')
+        for i, releaseId in enumerate(releases):
+            self.s.write(
+                str(i)+' '+self.c.formatDiscInfo(releaseId)+'\n')
+
     def AddPurchaseEvent(self):
         """Add a purchase date."""
         releaseId = self.Search()
@@ -584,6 +632,9 @@ to the catalog"""
     shellCommands = {
         'q': Quit,
         'search': SearchSort,
+        'track': {
+            'search': SearchTrackShowReleases,
+            },
         'refresh': Refresh,
         'html': Html,
         'switch': Switch,
