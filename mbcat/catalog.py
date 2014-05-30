@@ -471,7 +471,7 @@ class Catalog(object):
     def searchTrackWords(self, query):
         return self._search(query, table='trackwords', keycolumn='trackword')
 
-    def recordingGetRelease(self, recordingId):
+    def recordingGetReleases(self, recordingId):
         with self._connect() as con:
             cur = con.cursor()
             cur.execute('select releases from recordings where recording = ?',
