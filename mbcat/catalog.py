@@ -1024,6 +1024,7 @@ class Catalog(object):
 
             # We have to commit here to unlock the database for 
             # digestTrackWords()
+            # TODO think of a way to do this so there's only one commit()
             con.commit()
             # Update words -> (word, recordings) and 
             # recordings -> (recording, releases)
