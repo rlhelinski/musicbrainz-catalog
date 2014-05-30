@@ -126,7 +126,6 @@ class Catalog(object):
     def _connect(self):
         # Let's try here for now, just need to make sure we disconnect when this
         # object is deleted.
-        self.conn = sqlite3.connect(self.dbPath)
         return sqlite3.connect(self.dbPath,
                 detect_types=sqlite3.PARSE_DECLTYPES)
 
