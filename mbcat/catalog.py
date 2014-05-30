@@ -155,16 +155,20 @@ class Catalog(object):
             for columnName in [
                     'word',
                     'trackword',
-                    'recording',
                     'discid',
                     'barcode',
                     'format'
                     ]:
 
                 cur.execute('CREATE TABLE '+columnName+'s('+\
-                        columnName+' '+('INT' if columnName is 'barcode' else \
-                        'TEXT')+' PRIMARY KEY, '+\
-                        'releases list)')
+                        columnName+' '+
+                        ('INT' if columnName is 'barcode' else 'TEXT')+\
+                        ' PRIMARY KEY, releases list)')
+
+            cur.execute('CREATE TABLE recordings ('
+                'recording TEXT PRIMARY KEY, '
+                'title TEXT, '
+                'releases list)')
 
             con.commit()
 
@@ -415,6 +419,10 @@ class Catalog(object):
                     releaseTrackWords = releaseTrackWords.union(trackWords)
                     actionFun(cur, 'recordings', 'recording', 
                         track['recording']['id'], relId)
+                    cur.execute('update recordings set title=? '
+                        'where recording=?', (track['recording']['title'], 
+                            track['recording']['id']))
+            con.commit()
 
     def unDigestTrackWords(rel):
         self.digestTrackWords(rel, actionFun=sql_list_remove)
