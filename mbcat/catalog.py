@@ -427,7 +427,7 @@ class Catalog(object):
                             track['recording']['id']))
             con.commit()
 
-    def unDigestTrackWords(rel):
+    def unDigestTrackWords(self, rel):
         self.digestTrackWords(rel, actionFun=sql_list_remove)
 
     @mbcat.utils.deprecated
@@ -1085,7 +1085,7 @@ class Catalog(object):
 
             # Update words -> (word, recordings) and 
             # recordings -> (recording, releases)
-            self.unDigestTrackWords(relDict['release'])
+            self.unDigestTrackWords(relDict)
 
             # Update barcodes -> (barcode, releases)
             if 'barcode' in relDict and relDict['barcode']:
