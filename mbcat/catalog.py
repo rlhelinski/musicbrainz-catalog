@@ -754,7 +754,8 @@ class Catalog(object):
         """Print some statistics about the catalog as a sanity check."""
 
         print("\n%d releases" % len(self))
-        print("%d words in search table" % self.getWordCount())
+        print("%d words in release search table" % self.getWordCount())
+        print("%d words in track search table" % self.getTrackWordCount())
 
     def makeHtml(self, fileName=None, pbar=None):
         """
