@@ -173,16 +173,30 @@ class Catalog(object):
 
             con.commit()
 
+    def updateCacheTables(self, rebuild, pbar=None):
+        """Use the releases table to populate the derived (cache) tables"""
+        if pbar:
+            pbar.maxval=len(self)
+            pbar.start()
+        for releaseId in self.getReleaseIds():
+            metaXml = self.getReleaseXml(releaseId)
+            self.digestReleaseXml(releaseId, metaXml, rebuild=rebuild)
+            if pbar:
+                pbar.update(pbar.currval + 1)
+        if pbar:
+            pbar.finish()
 
-    def _resetTables(self):
+    def rebuildCacheTables(self, pbar=None):
         """Drop the derived tables in the database and rebuild them"""
+        # This doesn't actually drop, but empties
         with self._connect() as con:
             cur = con.cursor()
             for tab in ['words', 'trackwords', 'recordings', 'discids',
                     'barcodes', 'formats']:
-                cur.execute('delete * from ?', tab)
-        self._createTables()
-            
+                cur.execute('delete from '+tab)
+        # Rebuild
+        self.updateCacheTables(rebuild=True, pbar=pbar)
+
     def renameRelease(self, releaseId, newReleaseId):
         self.deleteRelease(releaseId)
         self.addRelease(newReleaseId, olderThan=60)
