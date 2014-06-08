@@ -574,10 +574,17 @@ class Catalog(object):
                         [sortedList[i] for i in neighborhoodIndexes]))
 
     def getWordCount(self):
-        """Fetch the number of words in the search word table."""
+        """Fetch the number of words in the release search word table."""
         with self._connect() as con:
             cur = con.cursor()
             cur.execute('select count(word) from words')
+            return cur.fetchone()[0]
+
+    def getTrackWordCount(self):
+        """Fetch the number of words in the track search word table."""
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select count(trackword) from trackwords')
             return cur.fetchone()[0]
 
     def getComment(self, releaseId):
