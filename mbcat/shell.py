@@ -550,6 +550,11 @@ class Shell:
         """Display high-level information about catalog"""
         self.c.report()
 
+    def RebuildCache(self):
+        """Rebuild cache DB tables"""
+        pbar = progressbar.ProgressBar(widgets=self.widgets)
+        self.c.rebuildCacheTables(pbar=pbar)
+
     def ReadDiscTOC(self):
         """Read table of contents from a CD-ROM, search for a release, and add
 to the catalog"""
@@ -683,6 +688,9 @@ to the catalog"""
         'browser': OpenBrowser,
         'report': Report,
         'disc': ReadDiscTOC,
+        'mbcat': {
+            'rebuild': RebuildCache,
+            },
     }
 
     def main(self):
