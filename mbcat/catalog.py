@@ -392,7 +392,7 @@ class Catalog(object):
         for credit in rel['artist-credit']:
             for field in ['sort-name', 'disambiguation', 'name']:
                 if field in credit:
-                    processWords(field, credit['artist'])
+                    mbcat.Catalog.processWords(words, field, credit)
 
         return words
 
