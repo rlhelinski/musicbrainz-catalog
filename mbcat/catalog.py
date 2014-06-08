@@ -993,7 +993,7 @@ class Catalog(object):
 
         return self.getReleaseDictFromXml(metaxml)['release']
 
-    def digestReleaseXml(self, releaseId, metaXml):
+    def digestReleaseXml(self, releaseId, metaXml, rebuild=False):
         """Update the appropriate data structes for a new release."""
         relDict = self.getReleaseDictFromXml(metaXml)
         
@@ -1043,7 +1043,7 @@ class Catalog(object):
                     )
                 except sqlite3.IntegrityError as e:
                     _log.error('Release already exists in catalog.')
-            else:
+            elif not rebuild:
                 # Remove references to this release from the words, barcodes,
                 # etc. tables so we can add the correct ones later
                 self.unDigestRelease(releaseId, delete=False)
