@@ -1105,6 +1105,8 @@ class Catalog(object):
             for word in rel_words:
                 sql_list_remove(cur, 'words', 'word', word, releaseId)
 
+            # TODO think of a way to do this so there's only one commit()
+            con.commit()
             # Update words -> (word, recordings) and 
             # recordings -> (recording, releases)
             self.unDigestTrackWords(relDict)
