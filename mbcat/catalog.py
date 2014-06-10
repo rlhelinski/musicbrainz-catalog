@@ -197,7 +197,8 @@ class Catalog(object):
             cur = con.cursor()
             for tab in ['words', 'trackwords', 'recordings', 'discids',
                     'barcodes', 'formats']:
-                cur.execute('delete from '+tab)
+                cur.execute('drop table '+tab)
+            self._createCacheTables(cur)
         # Rebuild
         self.updateCacheTables(rebuild=True, pbar=pbar)
 
