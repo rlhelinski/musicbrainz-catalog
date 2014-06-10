@@ -116,7 +116,7 @@ class Catalog(object):
         self.prefs = mbcat.userprefs.PrefManager()
 
         # should we connect here, once and for all, or should we make temporary
-        # connections to sqlite3? 
+        # connections to sqlite3?
         if not os.path.isfile(self.dbPath):
             self._createTables()
 
@@ -150,7 +150,7 @@ class Catalog(object):
                 "count INT, "+\
                 "comment TEXT, "+\
                 "rating INT)")
-            
+
             self._createCacheTables(cur)
 
             con.commit()
@@ -223,12 +223,12 @@ class Catalog(object):
         except Exception as exc:
             if isinstance(exc, ETREE_EXCEPTIONS):
                 _log.error("Got some bad XML for %s!", releaseId)
-                return 
+                return
             else:
                 raise
 
         return metadata
-    
+
     def getReleaseXml(self, releaseId):
         """Return a release's musicbrainz XML metadata"""
 
@@ -336,8 +336,8 @@ class Catalog(object):
                 # use store method because JPEG is already compressed
                 coverArtPath = self._getCoverArtPath(releaseId)
                 if os.path.isfile(coverArtPath):
-                    zf.write(coverArtPath, 
-                            zipReleasePath+'/cover.jpg', 
+                    zf.write(coverArtPath,
+                            zipReleasePath+'/cover.jpg',
                             zipfile.ZIP_STORED)
 
                 #zf.writestr('extra.xml', \
@@ -375,7 +375,7 @@ class Catalog(object):
                     _log.error('Release ID in path \'%s\' not expected length '
                             '(36)' % releaseId)
                     continue
-                
+
                 if fileName == 'metadata.xml':
                     self.digestReleaseXml(releaseId, zf.read(fInfo))
 
@@ -430,16 +430,16 @@ class Catalog(object):
         for track in mbcat.Catalog.getReleaseTracks(rel):
             if 'recording' in track and 'title' in track['recording']:
                 trackWords = set()
-                mbcat.Catalog.processWords(trackWords, 'title', 
+                mbcat.Catalog.processWords(trackWords, 'title',
                     track['recording'])
                 for word in trackWords:
-                    actionFun(cur, 'trackwords', 'trackword', 
+                    actionFun(cur, 'trackwords', 'trackword',
                         word, track['recording']['id'])
                 releaseTrackWords = releaseTrackWords.union(trackWords)
-                actionFun(cur, 'recordings', 'recording', 
+                actionFun(cur, 'recordings', 'recording',
                     track['recording']['id'], relId)
                 cur.execute('update recordings set title=?,length=? '
-                    'where recording=?', (track['recording']['title'], 
+                    'where recording=?', (track['recording']['title'],
                         track['recording']['length'] if
                             'length' in track['recording'] else -1,
                         track['recording']['id']))
@@ -475,7 +475,7 @@ class Catalog(object):
                         matches = set(fetched[0])
                     else:
                         # intersect the releases that have this word with the
-                        # current release set 
+                        # current release set
                         matches = matches & set(fetched[0])
                 else:
                     # this word is not contained in any releases and therefore
@@ -523,7 +523,7 @@ class Catalog(object):
                 'where recording=?', (recordingId,))
             recordingRow = cur.fetchall()[0]
 
-        return '%s: %s (%s)' % (recordingId, recordingRow[0], 
+        return '%s: %s (%s)' % (recordingId, recordingRow[0],
             mbcat.Catalog.formatRecordingLength(recordingRow[1]))
 
     @staticmethod
@@ -538,7 +538,7 @@ class Catalog(object):
 
     def getReleaseSortStr(self, releaseId):
         """Return a string by which a release can be sorted."""
-        
+
         with self._connect() as con:
             cur = con.cursor()
             cur.execute('select sortstring from releases where id = ?',
@@ -559,7 +559,7 @@ class Catalog(object):
     def getSortedList(self, matchFmt=None):
         relIds = self.getReleaseIdsByFormat(matchFmt.__name__) if matchFmt \
                 else self.getReleaseIds()
-            
+
         sortKeys = [(relId, self.getReleaseSortStr(relId)) for relId in relIds]
 
         return sorted(sortKeys, key=lambda sortKey: sortKey[1].lower())
@@ -586,8 +586,8 @@ class Catalog(object):
                 self.getReleaseSortStr(releaseId)))
         neighborhoodIndexes = range(max(0,index-neighborHood),
                 min(len(sortedList), index+neighborHood))
-        return (index, 
-                zip(neighborhoodIndexes, 
+        return (index,
+                zip(neighborhoodIndexes,
                         [sortedList[i] for i in neighborhoodIndexes]))
 
     def getWordCount(self):
@@ -631,7 +631,7 @@ class Catalog(object):
         existingPaths = self.getDigitalPaths(releaseId)
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('update releases set digital=? where id=?', 
+            cur.execute('update releases set digital=? where id=?',
                     (existingPaths+[path],releaseId))
             con.commit()
 
@@ -652,7 +652,7 @@ class Catalog(object):
         existingDates = self.getAddedDates(releaseId)
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('update releases set added=? where id=?', 
+            cur.execute('update releases set added=? where id=?',
                 (existingDates+[date],releaseId))
             con.commit()
 
@@ -670,7 +670,7 @@ class Catalog(object):
         existingEvents = self.getLendEvents(releaseId)
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('update releases set lent=? where id=?', 
+            cur.execute('update releases set lent=? where id=?',
                 (existingEvents+[event],releaseId))
             con.commit()
 
@@ -693,7 +693,7 @@ class Catalog(object):
             cur.execute('select purchases from releases where id=?',
                     (releaseId,))
             return cur.fetchall()[0][0]
-        
+
     def addPurchase(self, releaseId, purchaseObj):
         # Some precursory error checking
         if not isinstance(purchaseObj, mbcat.extradata.PurchaseEvent):
@@ -701,7 +701,7 @@ class Catalog(object):
         existingEvents = self.getLendEvents(releaseId)
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('update releases set purchases=? where id=?', 
+            cur.execute('update releases set purchases=? where id=?',
                 (existingEvents+[purchaseObj],releaseId))
             con.commit()
 
@@ -719,7 +719,7 @@ class Catalog(object):
         existingDates = self.getListenDates(releaseId)
         with self._connect() as con:
             cur = con.cursor()
-            cur.execute('update releases set listened=? where id=?', 
+            cur.execute('update releases set listened=? where id=?',
                 (existingDates+[date],releaseId))
             con.commit()
 
@@ -793,8 +793,8 @@ class Catalog(object):
 
         htf = open(fileName, 'wt')
 
-        # TODO need a more extensible solution for replacing symbols in this 
-        # template file 
+        # TODO need a more extensible solution for replacing symbols in this
+        # template file
         with open ('mbcat/catalog_html.template') as template_file:
             htf.write(template_file.read())
 
@@ -999,7 +999,7 @@ class Catalog(object):
     def digestReleaseXml(self, releaseId, metaXml, rebuild=False):
         """Update the appropriate data structes for a new release."""
         relDict = self.getReleaseDictFromXml(metaXml)
-        
+
         exists = releaseId in self
         now = time.time()
 
@@ -1030,8 +1030,8 @@ class Catalog(object):
                             ','.join(['?']*len(releaseColumns)) + \
                             ')',
                             (
-                            releaseId, 
-                            buffer(zlib.compress(metaXml)), 
+                            releaseId,
+                            buffer(zlib.compress(metaXml)),
                             self.getSortStringFromRelease(relDict['release']),
                             now,
                             [],
@@ -1039,7 +1039,7 @@ class Catalog(object):
                             [],
                             [],
                             [],
-                            1, # set count to 1 for now 
+                            1, # set count to 1 for now
                             '',
                             0
                             )
@@ -1064,9 +1064,9 @@ class Catalog(object):
             for word in rel_words:
                 sql_list_append(cur, 'words', 'word', word, releaseId)
 
-            # We have to commit here to unlock the database for 
+            # We have to commit here to unlock the database for
             # digestTrackWords()
-            # Update words -> (word, recordings) and 
+            # Update words -> (word, recordings) and
             # recordings -> (recording, releases)
             self.digestTrackWords(relDict['release'], cur)
 
@@ -1093,7 +1093,7 @@ class Catalog(object):
         """Remove all references to a release from the data structures.
         Optionally, leave the release in the releases table. """
         relDict = self.getRelease(releaseId)
-        
+
         with self._connect() as con:
             cur = con.cursor()
 
@@ -1106,7 +1106,7 @@ class Catalog(object):
             for word in rel_words:
                 sql_list_remove(cur, 'words', 'word', word, releaseId)
 
-            # Update words -> (word, recordings) and 
+            # Update words -> (word, recordings) and
             # recordings -> (recording, releases)
             self.unDigestTrackWords(relDict, cur)
 
@@ -1178,7 +1178,7 @@ class Catalog(object):
     def searchDigitalPaths(self, releaseId='', pbar=None):
         """Search for files for a release in all locations and with variations
         """
-        releaseIdList = [releaseId] if releaseId else self.getReleaseIds() 
+        releaseIdList = [releaseId] if releaseId else self.getReleaseIds()
 
         if pbar:
             pbar.maxval = len(self)*len(self.prefs.pathRoots)
@@ -1265,8 +1265,8 @@ class Catalog(object):
 
     def checkReleases(self):
         """
-        Check releases for ugliness such as no barcode, no release format, etc. 
-        For now, this creates warnings in the log. 
+        Check releases for ugliness such as no barcode, no release format, etc.
+        For now, this creates warnings in the log.
         """
         for releaseId in self.getReleaseIds():
             release = self.getRelease(releaseId)
@@ -1295,9 +1295,9 @@ class Catalog(object):
             mbcat.coverart.saveCoverArt(meta, imgPath)
 
         except mb.ResponseError as e:
-            _log.warning('No cover art for ' + releaseId + 
+            _log.warning('No cover art for ' + releaseId +
                     ' available from Cover Art Archive')
-                
+
             if 'asin' in release:
                 _log.info('Trying to fetch cover art from Amazon instead')
                 mbcat.amazonservices.saveImage(release['asin'],
@@ -1342,13 +1342,13 @@ class Catalog(object):
 
     def syncCollection(self, colId):
         """
-        Synchronize the catalog with a MusicBrainz collection. 
+        Synchronize the catalog with a MusicBrainz collection.
 
         For now, only adds releases from the catalog to the collection
         if they do not already exist in the collection.
 
         In the future, should also reconcile releases in the collection
-        that are not in the catalog. 
+        that are not in the catalog.
         """
         # this is a hack so that the progress will appear immediately
         import sys
@@ -1368,7 +1368,7 @@ class Catalog(object):
             sys.stdout.flush()
             for rel in relList:
                 colRelIds.append(rel['id'])
-                
+
         #colRelList = mb.get_releases_in_collection(colId)
         print('OK')
         print('Found %d / %d releases.' % (len(colRelIds), len(self)))
@@ -1433,8 +1433,8 @@ class Catalog(object):
                 rec = track['recording']
                 length = float(rec['length'])/1000 if 'length' in rec else None
                 stream.write(
-                    rec['title'] + 
-                    ' '*(60-len(rec['title'])) + 
+                    rec['title'] +
+                    ' '*(60-len(rec['title'])) +
                     (('%3d:%02d' % (length/60, length%60)) \
                         if length else '  ?:??') + '\n')
 
