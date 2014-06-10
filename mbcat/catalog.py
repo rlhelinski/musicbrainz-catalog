@@ -1064,8 +1064,6 @@ class Catalog(object):
             for word in rel_words:
                 sql_list_append(cur, 'words', 'word', word, releaseId)
 
-            # We have to commit here to unlock the database for
-            # digestTrackWords()
             # Update words -> (word, recordings) and
             # recordings -> (recording, releases)
             self.digestTrackWords(relDict['release'], cur)
