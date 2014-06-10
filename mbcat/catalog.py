@@ -151,27 +151,31 @@ class Catalog(object):
                 "comment TEXT, "+\
                 "rating INT)")
             
-            # tables that map specific things to a list of releases
-            for columnName in [
-                    'word',
-                    'trackword',
-                    'discid',
-                    'barcode',
-                    'format'
-                    ]:
-
-                cur.execute('CREATE TABLE '+columnName+'s('+\
-                        columnName+' '+
-                        ('INT' if columnName is 'barcode' else 'TEXT')+\
-                        ' PRIMARY KEY, releases list)')
-
-            cur.execute('CREATE TABLE recordings ('
-                'recording TEXT PRIMARY KEY, '
-                'title TEXT, '
-                'length INTEGER, '
-                'releases list)')
+            self._createCacheTables(cur)
 
             con.commit()
+
+    def _createCacheTables(self, cur):
+        # tables that map specific things to a list of releases
+        for columnName in [
+                'word',
+                'trackword',
+                'discid',
+                'barcode',
+                'format'
+                ]:
+
+            cur.execute('CREATE TABLE '+columnName+'s('+\
+                    columnName+' '+
+                    ('INT' if columnName is 'barcode' else 'TEXT')+\
+                    ' PRIMARY KEY, releases list)')
+
+        cur.execute('CREATE TABLE recordings ('
+            'recording TEXT PRIMARY KEY, '
+            'title TEXT, '
+            'length INTEGER, '
+            'releases list)')
+
 
     def updateCacheTables(self, rebuild, pbar=None):
         """Use the releases table to populate the derived (cache) tables"""
