@@ -423,31 +423,29 @@ class Catalog(object):
             for track in medium['track-list']:
                 yield track
 
-    def digestTrackWords(self, rel, actionFun=sql_list_append):
+    def digestTrackWords(self, rel, cur, actionFun=sql_list_append):
         releaseTrackWords = set()
         relId = rel['id']
-        with self._connect() as con:
-            cur = con.cursor()
-            for track in mbcat.Catalog.getReleaseTracks(rel):
-                if 'recording' in track and 'title' in track['recording']:
-                    trackWords = set()
-                    mbcat.Catalog.processWords(trackWords, 'title', 
-                        track['recording'])
-                    for word in trackWords:
-                        actionFun(cur, 'trackwords', 'trackword', 
-                            word, track['recording']['id'])
-                    releaseTrackWords = releaseTrackWords.union(trackWords)
-                    actionFun(cur, 'recordings', 'recording', 
-                        track['recording']['id'], relId)
-                    cur.execute('update recordings set title=?,length=? '
-                        'where recording=?', (track['recording']['title'], 
-                            track['recording']['length'] if
-                                'length' in track['recording'] else -1,
-                            track['recording']['id']))
-            con.commit()
 
-    def unDigestTrackWords(self, rel):
-        self.digestTrackWords(rel, actionFun=sql_list_remove)
+        for track in mbcat.Catalog.getReleaseTracks(rel):
+            if 'recording' in track and 'title' in track['recording']:
+                trackWords = set()
+                mbcat.Catalog.processWords(trackWords, 'title', 
+                    track['recording'])
+                for word in trackWords:
+                    actionFun(cur, 'trackwords', 'trackword', 
+                        word, track['recording']['id'])
+                releaseTrackWords = releaseTrackWords.union(trackWords)
+                actionFun(cur, 'recordings', 'recording', 
+                    track['recording']['id'], relId)
+                cur.execute('update recordings set title=?,length=? '
+                    'where recording=?', (track['recording']['title'], 
+                        track['recording']['length'] if
+                            'length' in track['recording'] else -1,
+                        track['recording']['id']))
+
+    def unDigestTrackWords(self, rel, cur):
+        self.digestTrackWords(rel, cur, actionFun=sql_list_remove)
 
     @mbcat.utils.deprecated
     def mapWordsToRelease(self, words, releaseId):
@@ -1068,11 +1066,9 @@ class Catalog(object):
 
             # We have to commit here to unlock the database for 
             # digestTrackWords()
-            # TODO think of a way to do this so there's only one commit()
-            con.commit()
             # Update words -> (word, recordings) and 
             # recordings -> (recording, releases)
-            self.digestTrackWords(relDict['release'])
+            self.digestTrackWords(relDict['release'], cur)
 
             # Update barcodes -> (barcode, releases)
             if 'barcode' in relDict['release'] and \
@@ -1110,11 +1106,9 @@ class Catalog(object):
             for word in rel_words:
                 sql_list_remove(cur, 'words', 'word', word, releaseId)
 
-            # TODO think of a way to do this so there's only one commit()
-            con.commit()
             # Update words -> (word, recordings) and 
             # recordings -> (recording, releases)
-            self.unDigestTrackWords(relDict)
+            self.unDigestTrackWords(relDict, cur)
 
             # Update barcodes -> (barcode, releases)
             if 'barcode' in relDict and relDict['barcode']:
