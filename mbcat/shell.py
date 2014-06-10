@@ -551,7 +551,7 @@ class Shell:
         self.c.report()
 
     def RebuildCache(self):
-        """Rebuild cache DB tables"""
+        """Rebuild cache database tables (used for searching)"""
         pbar = progressbar.ProgressBar(widgets=self.widgets)
         self.c.rebuildCacheTables(pbar=pbar)
 
