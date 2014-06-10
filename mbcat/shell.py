@@ -686,10 +686,10 @@ to the catalog"""
         },
         'count': CopyCount,
         'browser': OpenBrowser,
-        'report': Report,
         'disc': ReadDiscTOC,
         'mbcat': {
             'rebuild': RebuildCache,
+            'report': Report,
             },
     }
 
