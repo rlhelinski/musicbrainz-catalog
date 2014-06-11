@@ -54,22 +54,22 @@ def sql_list_append(cursor, table_name, key_column, key, value, list_column='rel
             ' into '+table_name+'('+key_column+', '+list_column+') '
             'values (?, ?)', (key, relList))
 
-def sql_list_remove(cursor, table_name, field_name, key, value):
+def sql_list_remove(cursor, table_name, key_column, key, value, list_column='releases'):
     """Remove an item from a list in an SQL table."""
-    cursor.execute('select * from '+table_name+\
-            ' where '+field_name+' = ?', (key,))
+    cursor.execute('select '+list_column+' from '+table_name+\
+            ' where '+key_column+' = ?', (key,))
     row = cursor.fetchall()
     if row:
-        relList = row[0][1]
+        relList = row[0][0]
         relList.remove(value)
 
         if relList:
             cursor.execute('replace into %s (%s, releases) values (?, ?)' % \
-                    (table_name, field_name),
+                    (table_name, key_column),
                     (key, relList))
         else:
             cursor.execute('delete from %s where %s=?' % \
-                    (table_name, field_name),
+                    (table_name, key_column),
                     (key,))
 
 # For remembering user decision to overwrite existing data
