@@ -7,8 +7,8 @@ What is it?
 musicbrainz-catalog is a Python application for cataloging your music
 collection and cross-referencing with the
 [MusicBrainz.org](http://musicbrainz.org) online database. This approach helps
-provide the information about the releases you own given just a [CD
-TOC](http://musicbrainz.org/doc/Disc%20ID) or a
+provide the information about the releases you own given just a 
+[CD TOC](http://musicbrainz.org/doc/Disc%20ID) or a
 [barcode](http://en.wikipedia.org/wiki/Universal_Product_Code), for example.
 The caveat is that if the information about a release in the MusicBrainz.org
 online database is missing or incorrect, that you fix it for everyone's
@@ -69,18 +69,36 @@ Example Workflow
 
 You just got a new release. We can check if MusicBrainz.org has a release
 associated with the barcode on the label. Enter the command:
+
 ```
 mb release barcode 724596941621
 ```
+
 The shell comes back with the output:
+
 ```
 Release Results:
 8e378c3e-0af4-373f-94fc-84c03e8b4374 "Moby" "Wait for Me" (CD) label: Mute catno.: mut 9416-2 (US), barcode: 724596941621
 ```
+
 We recognize the artist and title of the single release that was found, which
-is identified by its UUID at the beginning of the line. We can add this release
+is identified by its [UUID](http://en.wikipedia.org/wiki/Uuid) at the beginning of the line. We can add this release
 to the catalog with the `add` command and copy & paste the release UUID: 
+
 ```
 add 8e378c3e-0af4-373f-94fc-84c03e8b4374
+```
+
+The shell fetches the information about this release from MusicBrainz.org, adds it to the catalog, and also fetches cover art. It tries coverartarchive.org first and then tries amazon.com.  
+
+```
+Add a release.
+Enter release ID: INFO:mbcat:Fetching metadata for 8e378c3e-0af4-373f-94fc-84c03e8b4374
+Added 'Wait for Me'.
+INFO:mbcat:Checking for coverart https://coverartarchive.org/release/8e378c3e-0af4-373f-94fc-84c03e8b4374
+WARNING:mbcat:No cover art for 8e378c3e-0af4-373f-94fc-84c03e8b4374 available from Cover Art Archive
+INFO:mbcat:Trying to fetch cover art from Amazon instead
+INFO:mbcat:Fetching 'http://ec1.images-amazon.com/images/P/B0027G783W.01.LZZZZZZZ.jpg'
+INFO:mbcat:Wrote 12859 bytes to /Users/ryan/.mbcat/cache/8/8e/8e378c3e-0af4-373f-94fc-84c03e8b4374/cover.jpg
 ```
 
