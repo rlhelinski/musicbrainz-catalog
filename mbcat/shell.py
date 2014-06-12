@@ -648,7 +648,6 @@ to the catalog"""
         'add': Add,
         'barcode': BarcodeSearch,
         'delete': Delete,
-        'check': Check,
         'checkout': CheckOut,
         'checkin': CheckIn,
         'digital': {
@@ -690,6 +689,7 @@ to the catalog"""
         'mbcat': {
             'rebuild': RebuildCache,
             'report': Report,
+            'check': Check,
             },
     }
 
