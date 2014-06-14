@@ -560,6 +560,13 @@ class Shell:
     def ReadDiscTOC(self):
         """Read table of contents from a CD-ROM, search for a release, and add
 to the catalog"""
+        def askBrowseSubmission():
+            answer = self.s.nextLine(
+                'Open browser to Submission URL? [y/N]')
+            if answer and answer.lower().startswith('y'):
+                _log.info('Opening web browser.')
+                webbrowser.open(disc.submission_url)
+
         try:
             import discid
         except ImportError as e:
@@ -583,7 +590,9 @@ to the catalog"""
                                                includes=["artists"])
             self.s.write('OK\n')
         except mb.ResponseError:
-            raise Exception("Disc not found or bad MusicBrainz response.")
+            _log.warning('Disc not found or bad MusicBrainz response.')
+            askBrowseSubmission()
+
         else:
             if result.get("disc"):
                 oneInCatalog = self.printDiscQueryResults(result)
@@ -596,11 +605,7 @@ to the catalog"""
                     if key in result['cdstub']:
                         self.s.write('%10s: %s\n' %
                                      (label, result['cdstub'][key]))
-                answer = self.s.nextLine(
-                    'Open browser to Submission URL? [y/N]')
-                if answer and answer.lower().startswith('y'):
-                    _log.info('Opening web browser.')
-                    webbrowser.open(disc.submission_url)
+                askBrowseSubmission()
 
                 raise Exception('There was only a CD stub.')
 
