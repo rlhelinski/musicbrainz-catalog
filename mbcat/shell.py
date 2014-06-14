@@ -437,12 +437,14 @@ class Shell:
                          (' ' + ', '.join([('label: ' + info['label']['name'] if 'label' in info else '') +
                                            (' catno.: ' + info['catalog-number']
                                             if 'catalog-number' in info else '')
-                                           for info in release['label-info-list']])) +
+                                           for info in release['label-info-list']])) \
+                                           if 'label-info-list' in release else '' +
                          (' (' + ', '.join(self.mergeList(
                              [[code for code in release_event['area']['iso-3166-1-code-list']]
                               if release_event and 'area' in release_event
                               and 'iso-3166-1-code-list' in release_event['area'] else []
-                              for release_event in release['release-event-list']])) + ')') +
+                              for release_event in release['release-event-list']])) + ')') \
+                              if 'release-event-list' in release else '' +
                          (', barcode: ' + release['barcode'] if 'barcode' in release
                           else '') +
                          '\n')
