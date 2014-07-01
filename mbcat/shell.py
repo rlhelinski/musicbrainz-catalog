@@ -704,53 +704,53 @@ to the catalog"""
         'disc': ReadDiscTOC,
     }
 
+    def cmdSummary(self, cmdStruct, level=0, parentLeader=''):
+        """Print a summary of commands."""
+        for i, cmdname in enumerate(sorted(cmdStruct.keys())):
+            cmdfun = cmdStruct[cmdname]
+            more = i < len(cmdStruct) - 1
+            thisLeader = (
+                ('\u251c' if more else '\u2514') + '\u2500' * 3 if level > 0 else '')
+            if type(cmdfun) == dict:
+                childLeader = (
+                    ('\u2502' if more else ' ') + ' ' * 3 if level > 0 else '')
+                self.s.write(parentLeader + thisLeader + cmdname + " :\n")
+                self.cmdSummary(cmdfun, level + 1, parentLeader + childLeader)
+            else:
+                try:
+                    self.s.write(parentLeader + thisLeader + cmdname + " : " +
+                                 cmdStruct[cmdname].__doc__.strip() + "\n")
+                except AttributeError as e:
+                    raise Exception('No docstring for \'%s\'' % cmdname)
+
+    def cmdParse(self, cmdStruct, input):
+        try:
+            if type(cmdStruct[input]) == dict:
+                # Help the user along if they haven't completed a command
+                if not self.s.hasMore():
+                    self.s.write('Possible completions:\n')
+                    self.cmdSummary(cmdStruct[input], parentLeader=' '*3)
+                # Use the next input word and recur into the structure
+                self.cmdParse(cmdStruct[input], self.s.nextWord().lower())
+            else:
+                # Remind the user what this command does
+                try:
+                    self.s.write(cmdStruct[input].__doc__.strip() + '\n')
+                except AttributeError as e:
+                    raise Exception('No docstring for \'%s\'' % input)
+                # Call the function
+                try:
+                    (cmdStruct[input])(self)
+                except ValueError as e:
+                    self.s.write(str(e) + " Command failed.\n")
+                except KeyError as e:
+                    self.s.write(str(e) + " Command failed.\n")
+                except Exception as e:
+                    self.s.write(str(e) + " Command failed.\n")
+        except KeyError as e:
+            self.s.write(str(e) + " Invalid command.\n")
+
     def main(self):
-        def cmdSummary(cmdStruct, level=0, parentLeader=''):
-            """Print a summary of commands."""
-            for i, cmdname in enumerate(sorted(cmdStruct.keys())):
-                cmdfun = cmdStruct[cmdname]
-                more = i < len(cmdStruct) - 1
-                thisLeader = (
-                    ('\u251c' if more else '\u2514') + '\u2500' * 3 if level > 0 else '')
-                if type(cmdfun) == dict:
-                    childLeader = (
-                        ('\u2502' if more else ' ') + ' ' * 3 if level > 0 else '')
-                    self.s.write(parentLeader + thisLeader + cmdname + " :\n")
-                    cmdSummary(cmdfun, level + 1, parentLeader + childLeader)
-                else:
-                    try:
-                        self.s.write(parentLeader + thisLeader + cmdname + " : " +
-                                     cmdStruct[cmdname].__doc__.strip() + "\n")
-                    except AttributeError as e:
-                        raise Exception('No docstring for \'%s\'' % cmdname)
-
-        def cmdParse(cmdStruct, input):
-            try:
-                if type(cmdStruct[input]) == dict:
-                    # Help the user along if they haven't completed a command
-                    if not self.s.hasMore():
-                        self.s.write('Possible completions:\n')
-                        cmdSummary(cmdStruct[input], parentLeader=' '*3)
-                    # Use the next input word and recur into the structure
-                    cmdParse(cmdStruct[input], self.s.nextWord().lower())
-                else:
-                    # Remind the user what this command does
-                    try:
-                        self.s.write(cmdStruct[input].__doc__.strip() + '\n')
-                    except AttributeError as e:
-                        raise Exception('No docstring for \'%s\'' % input)
-                    # Call the function
-                    try:
-                        (cmdStruct[input])(self)
-                    except ValueError as e:
-                        self.s.write(str(e) + " Command failed.\n")
-                    except KeyError as e:
-                        self.s.write(str(e) + " Command failed.\n")
-                    except Exception as e:
-                        self.s.write(str(e) + " Command failed.\n")
-            except KeyError as e:
-                self.s.write(str(e) + " Invalid command.\n")
-
         while (True):
             input = self.s.nextWord("Enter command ('h' for help): ").lower()
 
@@ -758,10 +758,10 @@ to the catalog"""
                 break
 
             if (input == 'h' or input == 'help'):
-                cmdSummary(self.shellCommands)
+                self.cmdSummary(self.shellCommands)
 
             elif input in self.shellCommands.keys():
-                cmdParse(self.shellCommands, input)
+                self.cmdParse(self.shellCommands, input)
 
             else:
                 self.s.write("Invalid command\n")
