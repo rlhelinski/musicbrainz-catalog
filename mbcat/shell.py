@@ -707,7 +707,6 @@ to the catalog"""
     def main(self):
         def cmdSummary(cmdStruct, level=0, parentLeader=''):
             """Print a summary of commands."""
-            #import pdb; pdb.set_trace()
             for i, cmdname in enumerate(sorted(cmdStruct.keys())):
                 cmdfun = cmdStruct[cmdname]
                 more = i < len(cmdStruct) - 1
