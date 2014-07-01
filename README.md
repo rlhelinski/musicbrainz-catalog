@@ -69,7 +69,7 @@ Example Workflow
 
 This section will walk you though several of the common tasks with
 musicbrainz-catalog using the text-mode shell. You can always get a list of the
-shell command and their descriptions by typing `h` or `help` at the shell
+shell commands and their descriptions by typing `h` or `help` at the shell
 prompt.
 
 Add a Release
