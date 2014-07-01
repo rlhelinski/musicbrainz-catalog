@@ -426,9 +426,11 @@ class Shell:
 
     def printQueryResults(self, results):
         self.s.write('Release Results:\n')
+        # TODO this is a mess and should be combined with other code
         for release in results['release-list']:
             self.s.write(release['id'] + ' ' +
-                         ', '.join(['"' + cred['artist']['name'] + '"'
+                         ''.join([(('"' + cred['artist']['name'] + '"') \
+                                    if isinstance(cred, dict) else cred)
                                     for cred in release['artist-credit']]) +
                          ' "' + release['title'] + '"' +
                          (' (' + ' + '.join(self.mergeList(
