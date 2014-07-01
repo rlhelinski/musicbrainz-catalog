@@ -647,42 +647,49 @@ to the catalog"""
     # The master list of shell commands
     shellCommands = {
         'q': Quit,
-        'search': SearchSort,
-        'track': {
-            'search': SearchTrackShowReleases,
+        'release' : {
+            'add': Add,
+            'switch': Switch,
+            'delete': Delete,
+            'refresh': Refresh,
+            'checkout': CheckOut,
+            'checkin': CheckIn,
+            'count': CopyCount,
+            'tracklist': TrackList,
+            'coverart': CoverArt,
+            'purchase': AddPurchaseEvent,
+            'listen': AddListenDate,
+            'comment': AddComment,
+            'rate': SetRating,
             },
-        'refresh': Refresh,
-        'html': Html,
-        'switch': Switch,
-        'add': Add,
-        'barcode': BarcodeSearch,
-        'delete': Delete,
-        'checkout': CheckOut,
-        'checkin': CheckIn,
+        'catalog' : {
+            'search': {
+                'release' : SearchSort,
+                'barcode': BarcodeSearch,
+                'track': SearchTrackShowReleases,
+                },
+            'html': Html,
+            'similar': GetSimilar,
+            'export': {
+                'zip': ZipExport,
+                },
+            'import': {
+                'zip': ZipImport,
+                },
+            'rebuild': RebuildCache,
+            'report': Report,
+            'check': Check,
+            },
         'digital': {
             'path': DigitalPath,
             'search': DigitalSearch,
             #'list' : DigitalList,
         },
-        'sync': SyncCollection,
-        'tracklist': TrackList,
         'audacity': {
             'labeltrack': LabelTrack,
             'metatags': MetaTags,
         },
-        'coverart': CoverArt,
-        'purchase': AddPurchaseEvent,
-        'listen': AddListenDate,
-        'comment': AddComment,
-        'rate': SetRating,
-        'similar': GetSimilar,
-        'export': {
-            'zip': ZipExport,
-        },
-        'import': {
-            'zip': ZipImport,
-        },
-        'mb': {
+        'webservice': {
             'release': {
                 'barcode': MBReleaseBarcode,
                 'catno': MBReleaseCatno,
@@ -691,15 +698,10 @@ to the catalog"""
             'group': {
                 'title': MBRelGroupTitle,
             },
+            'sync': SyncCollection,
         },
-        'count': CopyCount,
         'browser': OpenBrowser,
         'disc': ReadDiscTOC,
-        'mbcat': {
-            'rebuild': RebuildCache,
-            'report': Report,
-            'check': Check,
-            },
     }
 
     def main(self):
