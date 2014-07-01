@@ -39,3 +39,6 @@ class InputSplitter(object):
             return self.buffer.pop(0)
         else:
             return ''
+
+    def hasMore(self):
+        return len(self.buffer)
