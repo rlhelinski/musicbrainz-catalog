@@ -727,6 +727,10 @@ to the catalog"""
         def cmdParse(cmdStruct, input):
             try:
                 if type(cmdStruct[input]) == dict:
+                    # Help the user along if they haven't completed a command
+                    if not self.s.hasMore():
+                        self.s.write('Possible completions:\n')
+                        cmdSummary(cmdStruct[input], parentLeader=' '*3)
                     # Use the next input word and recur into the structure
                     cmdParse(cmdStruct[input], self.s.nextWord().lower())
                 else:
