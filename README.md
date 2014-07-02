@@ -135,10 +135,12 @@ organized separately from 12" vinyl records.
 To try it out, enter the `search` command. Then enter your search terms:
 
 ```
-Enter command ('h' for help): catalog search release
+Enter command ('h' for help): search release
 Enter search terms (or release ID): me
 ```
 
+You can also search for a release using a barcode (`search barcode`) or the
+name of a track (`search track`) as we discuss below.
 If there is more than one release found, you will be asked to choose one.
 
 ```
@@ -166,22 +168,155 @@ Finally, the neighborhood is printed out as follows:
  ...
 ```
 
-on ANSI terminals, the selected release is highlighted.
+on ANSI terminals, the selected release (denoted by a trailing "<<<" here) is
+highlighted.
 
 Write an HTML File of the Catalog
 ---------------------------------
 
+One of the main forms of output from the program is an
+[en.wikipedia.org/wiki/HTML](HTML) file containing information about your
+catalog. To write it out, use the command:
+
+```
+catalog html
+```
+
+The shell will prompt you for the path to write the HTML document. The path to
+this file is stored as a user prefernce in the file `~/.mbcat/userprefs.xml`.
+It will use the working directory by default.
+
+```
+Path for HTML file [empty for catalog.html]:
+```
+
+You will then be asked if you want to open the HTML file in a browser:
+
+```
+Open browser to view HTML? [y/N]
+```
+
+The default is not to open. 
+
 Refresh Release Metadata
 ------------------------
+
+The metadata about a release on MusicBrainz.org can change at any time. If
+there has been a change to a release that you have already added, you may wish
+to update the data about that release. Use the `release refresh` command:
+```
+Enter command ('h' for help): release refresh
+```
+
+The command will prompt you to enter search terms or a release ID. Enter
+nothing here if you wish to refresh all of the metadata in the catalog.  Note
+that musicbrainz-catalog [limits the rate at which queries are
+made](https://musicbrainz.org/doc/XML_Web_Service/Rate_Limiting) to the
+MusicBrainz.org web service to once per second and that a full refresh can take
+a while.
+
+```
+Enter search terms or release ID [empty for all]: moby
+2 matches found:
+0 679841df-599d-402f-9f89-0d0bb6e94368 : Moby - 1999-06-01 - Play  [Compact Disc]
+1 8e378c3e-0af4-373f-94fc-84c03e8b4374 : Moby - 2009-06-30 - Wait for Me  [Compact Disc]
+Select a match: 1
+Enter maximum cache age in minutes [leave empty for one minute]: 
+INFO:mbcat:Release 8e378c3e-0af4-373f-94fc-84c03e8b4374 is already in catalog.
+INFO:mbcat:Fetching metadata for 8e378c3e-0af4-373f-94fc-84c03e8b4374
+```
+
 
 Search Catalog by Barcode
 -------------------------
 
+If you are trying to put a release away and it has a
+[barcode](http://en.wikipedia.org/wiki/Universal_Product_Code), you can search 
+for it in your catalog using the command:
+
+```
+search barcode
+```
+
+You will be prompted for the barcode. Note that the program will try slight
+variations on the barcode, such as adding or removing leading 0s, when doing
+its search.
+
+```
+Enter barcode: 724596941621
+```
+
+In this case, one release was found, but it is possible that multiple releases
+will be returned. 
+
+```
+Enter barcode: 8e378c3e-0af4-373f-94fc-84c03e8b4374 : Moby - 2009-06-30 - Wait for Me  [Compact Disc]
+```
+
+If the release is not in the catalog and you wish to add it, you can search for
+it by barcode on the MusicBrainz.org web service. Use the command: 
+
+```
+Enter command ('h' for help): webservice release barcode
+```
+
+Again, you will be prompted for the barcode:
+
+```
+Enter barcode: 724596941621
+```
+
+A release was found.
+```
+Release Results:
+8e378c3e-0af4-373f-94fc-84c03e8b4374 "Moby" "Wait for Me" (CD) label: Mute catno.: mut 9416-2 (US), barcode: 724596941621
+```
+
+To add this release, you would copy and paste the release UUID and use the
+`release add` command as we did before. 
+
 Search for a Track (Recording)
 ------------------------------
+
+The musicbrainz-catalog application also stores information about what words
+are in the title of a track (or recording) and about on which releases that
+track appears. Use the `track search` command:
+
+```
+Enter command ('h' for help): search track
+```
+
+Enter your search terms
+```
+Enter search terms (or recording ID): back black
+```
+
+The catalog will come back and give you a list of track that were found 
+matching the search terms.
+
+```
+1 match found:
+0 ef71afb6-5e51-41df-999b-9e7c7306063a: Back in Black (4:15)
+```
+
+If more than one track is found, it will ask you to choose one so that it can
+report the releases. In this case, only one track was found, so the shell shows the releases on which this track appears. 
+
+```
+Appears on:
+0 83ff6988-2f79-40b9-82d5-437f2a5da5f3 : AC/DC - 2003-02-18 - Back in Black  [Compact Disc]
+```
 
 Delete and Switch Releases
 --------------------------
 
+If you wish to remove a release from the catalog, use the `release delete` command. 
 
+You may have noticed that the release you added was wrong, for example, if you
+added the wrong release from a release group or if you created a new release in
+a release group since adding a release to the catalog. To accurately reflect the 
+release that you have, you can use the `release switch` command. It will prompt
+you for the release you wish to switch and then for the new release UUID to use
+instead. Other information associated with this release, such as when it was
+first added and your personal rating are retained. 
 
