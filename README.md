@@ -79,7 +79,7 @@ Assume that you just bought a new release. We can check if MusicBrainz.org has
 a release associated with the barcode on the label. Enter the command:
 
 ```
-mb release barcode 724596941621
+webservice release barcode 724596941621
 ```
 
 We're in luck. The shell comes back with the output:
@@ -95,7 +95,7 @@ the line. We can add this release to the catalog with the `add` command and
 copy & paste the release UUID: 
 
 ```
-add 8e378c3e-0af4-373f-94fc-84c03e8b4374
+release add 8e378c3e-0af4-373f-94fc-84c03e8b4374
 ```
 
 The shell fetches the information about this release from MusicBrainz.org, adds
@@ -135,7 +135,7 @@ organized separately from 12" vinyl records.
 To try it out, enter the `search` command. Then enter your search terms:
 
 ```
-Enter command ('h' for help): search
+Enter command ('h' for help): catalog search release
 Enter search terms (or release ID): me
 ```
 
