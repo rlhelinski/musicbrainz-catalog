@@ -662,12 +662,12 @@ to the catalog"""
             'comment': AddComment,
             'rate': SetRating,
             },
+        'search': {
+            'release' : SearchSort,
+            'barcode': BarcodeSearch,
+            'track': SearchTrackShowReleases,
+            },
         'catalog' : {
-            'search': {
-                'release' : SearchSort,
-                'barcode': BarcodeSearch,
-                'track': SearchTrackShowReleases,
-                },
             'html': Html,
             'similar': GetSimilar,
             'export': {
