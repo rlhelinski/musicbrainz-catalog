@@ -53,9 +53,8 @@ class MBCatGtk:
         row = model.get_value(it, 0)
         cell.set_property('text', 'OK')
 
-    def editrecord(self, tree, path, column):
+    def on_row_activate(self, tree, path, column):
         pass
-        self.createEditWindow(self.get_current_row())
 
     def on_row_select(self, widget):
         pass
