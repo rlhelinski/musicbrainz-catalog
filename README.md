@@ -1,5 +1,4 @@
-This is the "master" branch, which should always be the latest and greatest
-revision. 
+The "master" branch should always be the latest and greatest revision.
 
 What is it?
 ===================
@@ -7,7 +6,7 @@ What is it?
 musicbrainz-catalog is a Python application for cataloging your music
 collection and cross-referencing with the
 [MusicBrainz.org](http://musicbrainz.org) online database. This approach helps
-provide the information about the releases you own given just a 
+provide the information about the releases you own given just a
 [CD TOC](http://musicbrainz.org/doc/Disc%20ID) or a
 [barcode](http://en.wikipedia.org/wiki/Universal_Product_Code), for example.
 The caveat is that if the information about a release in the MusicBrainz.org
@@ -30,9 +29,9 @@ This application will help you perform the following tasks:
     * Using the [CD TOC](http://musicbrainz.org/doc/Disc%20ID) (with
       [python-discid](https://github.com/JonnyJD/python-discid)) (optional)
     * Searching by title, barcode or catalog number
-* Synchronize your catalog with a 
+* Synchronize your catalog with a
   [MusicBrainz.org collection](https://musicbrainz.org/doc/Collections)
-* Output metatags and a label track to help with converting vinyl to digital 
+* Output metatags and a label track to help with converting vinyl to digital
   in [Audacity](http://audacity.sourceforge.net/)
 * Track other information like:
     * When, where and the cost when you purchased a release
@@ -47,19 +46,25 @@ Getting Started
 You'll need [Python](https://www.python.org/),
 [python-discid](https://github.com/JonnyJD/python-discid) (optional; requires
 [libdiscid](http://musicbrainz.org/doc/libdiscid)) and the musicbrainz-catalog
-source code. 
+source code.
 
-To copy the source code with Git so that you can easily upgrade later, use the
-command:
+On Ubuntu Linux, get the pre-requisites with the following command:
+```
+sudo apt-get install python libdiscid0 python-libdiscid
+```
+
+Once you have the pre-requisites, we recommend cloning the source code using
+Git so that you can stay up to date with development. To copy the source code
+with Git so that you can easily upgrade later, use the command:
 ```
 git clone https://github.com/rlhelinski/musicbrainz-catalog.git
 ```
 
-To get a ZIP file instead, use the following link:
+To get a ZIP file of the latest version instead, use the following link:
 https://github.com/rlhelinski/musicbrainz-catalog/archive/master.zip
 
 The 'catalog-cli.py' script is the text-mode interface to the catalog. Start it
-with 
+with
 ```
 python catalog-cli.py
 ```
