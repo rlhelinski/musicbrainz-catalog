@@ -59,30 +59,7 @@ class MBCatGtk:
     def on_row_select(self, widget):
         pass
 
-    def __init__(self, catalog):
-        self.catalog = catalog
-
-        # create a new window
-        self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        self.window.set_title('mbcat')
-        self.window.set_size_request(800, 600)
-        self.window.set_position(gtk.WIN_POS_CENTER)
-    
-        # When the window is given the "delete_event" signal (this is given
-        # by the window manager, usually by the "close" option, or on the
-        # titlebar), we ask it to call the delete_event () function
-        # as defined above. The data passed to the callback
-        # function is NULL and is ignored in the callback function.
-        self.window.connect("delete_event", self.delete_event)
-    
-        # Here we connect the "destroy" event to a signal handler.  
-        # This event occurs when we call gtk_widget_destroy() on the window,
-        # or if we return FALSE in the "delete_event" callback.
-        self.window.connect("destroy", self.destroy)
-    
-        # Sets the border width of the window.
-        self.window.set_border_width(10)
-    
+    def createMenuBar(self, widget):
         # Menu bar
         mb = gtk.MenuBar()
         # File menu
@@ -104,15 +81,15 @@ class MBCatGtk:
 
         mb.append(help)
 
+        widget.pack_start(mb, False, False, 0)
+
+    def createTreeView(self, widget):
         # create the TreeView
         self.treeview = gtk.TreeView()
         # TODO add ability to sort by headers
         self.treeview.set_headers_clickable(True)
         # rules-hint
         self.treeview.set_rules_hint(True);
-
-        vbox = gtk.VBox(False, 2)
-        vbox.pack_start(mb, False, False, 0)
 
         # create the TreeViewColumns to display the data
         self.tvcolumn = [None] * len(self.columnNames)
@@ -126,16 +103,44 @@ class MBCatGtk:
             self.tvcolumn[n].set_resizable(True)
             self.treeview.append_column(self.tvcolumn[n])
 
-        self.treeview.connect('row-activated', self.editrecord)
+        self.treeview.connect('row-activated', self.on_row_activate)
         self.treeview.connect('cursor-changed', self.on_row_select)
         self.scrolledwindow = gtk.ScrolledWindow()
         self.scrolledwindow.add(self.treeview)
-        vbox.pack_start(self.scrolledwindow, True, True, 0)
+
+        widget.pack_start(self.scrolledwindow, True, True, 0)
 
         self.releaseList = gtk.ListStore(object)
         for i, relId in enumerate(self.catalog.getReleaseIds()):
             self.releaseList.append([i])
         self.treeview.set_model(self.releaseList)
+
+    def __init__(self, catalog):
+        self.catalog = catalog
+
+        # create a new window
+        self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        self.window.set_title('mbcat')
+        self.window.set_size_request(800, 600)
+        self.window.set_position(gtk.WIN_POS_CENTER)
+
+        # When the window is given the "delete_event" signal (this is given
+        # by the window manager, usually by the "close" option, or on the
+        # titlebar), we ask it to call the delete_event () function
+        # as defined above. The data passed to the callback
+        # function is NULL and is ignored in the callback function.
+        self.window.connect("delete_event", self.delete_event)
+
+        # Here we connect the "destroy" event to a signal handler.
+        # This event occurs when we call gtk_widget_destroy() on the window,
+        # or if we return FALSE in the "delete_event" callback.
+        self.window.connect("destroy", self.destroy)
+
+        vbox = gtk.VBox(False, 2)
+
+        self.createMenuBar(vbox)
+
+        self.createTreeView(vbox)
 
         # Creates a new button with the label "Hello World".
         self.button = gtk.Button("Hello World")
