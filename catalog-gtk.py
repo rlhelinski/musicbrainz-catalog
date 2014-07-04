@@ -89,7 +89,7 @@ class MBCatGtk:
         # TODO add ability to sort by headers
         self.treeview.set_headers_clickable(True)
         # rules-hint
-        self.treeview.set_rules_hint(True);
+        self.treeview.set_rules_hint(True)
 
         # create the TreeViewColumns to display the data
         self.tvcolumn = [None] * len(self.columnNames)
