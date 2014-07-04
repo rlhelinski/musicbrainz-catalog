@@ -172,9 +172,12 @@ class MBCatGtk:
 # If the program is run directly or passed as an argument to the python
 # interpreter then create a GtkGui instance and show it
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Runs the MusicBrainz-Catalog shell')
-    parser.add_argument('--database', help='Specify the path to the catalog database')
-    parser.add_argument('--cache', help='Specify the path to the file cache')
+    parser = argparse.ArgumentParser(description=
+        'Runs the MusicBrainz-Catalog GTK interface')
+    parser.add_argument('--database', 
+        help='Specify the path to the catalog database')
+    parser.add_argument('--cache', 
+        help='Specify the path to the file cache')
     args = parser.parse_args()
 
     c = mbcat.catalog.Catalog(dbPath=args.database, cachePath=args.cache)
