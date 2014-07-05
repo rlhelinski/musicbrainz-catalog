@@ -83,6 +83,45 @@ class MBCatGtk:
 
         widget.pack_start(mb, False, False, 0)
 
+    def fmtArtist(self, release):
+        return ''.join([(cred['artist']['name'] \
+            if isinstance(cred, dict) else cred)
+            for cred in release['artist-credit']])
+
+    def fmtLabel(self, rel):
+        if 'label-info-list' not in rel:
+            return ''
+        return ', '.join([
+            (info['label']['name'] if 'label' in info else '')
+            for info in rel['label-info-list']])
+
+    def fmtCatNo(self, rel):
+        if 'label-info-list' not in rel:
+            return ''
+        return ', '.join([
+            (info['catalog-number'] if 'catalog-number' in info else '')
+            for info in rel['label-info-list']])
+
+
+    def cellArtist(self, column, cell, model, it, field):
+        row = model.get_value(it, 0)
+        release = self.catalog.getRelease(model[0])
+        cell.set_property('text', self.fmtArtist(release))
+
+    def sortReleaseFunc(self, model, row1, row2, data):
+        #sort_column, _ = model.get_sort_column_id()
+        sort_column = 0
+        value1 = self.catalog.getReleaseSortStr(
+            model.get_value(row1, sort_column))
+        value2 = self.catalog.getReleaseSortStr(
+            model.get_value(row2, sort_column))
+        if value1 < value2:
+            return -1
+        elif value1 == value2:
+            return 0
+        else:
+            return 1
+
     def createTreeView(self, widget):
         # create the TreeView
         self.treeview = gtk.TreeView()
@@ -90,6 +129,8 @@ class MBCatGtk:
         self.treeview.set_headers_clickable(True)
         # rules-hint
         self.treeview.set_rules_hint(True)
+        # search by release title; have to add 1 because of UUID at beginning
+        self.treeview.set_search_column(self.columnNames.index('Artist')+1)
 
         # create the TreeViewColumns to display the data
         self.tvcolumn = [None] * len(self.columnNames)
@@ -98,8 +139,7 @@ class MBCatGtk:
             if (columnName in self.numFields):
                 cell.set_property('xalign', 1.0)
             self.tvcolumn[n] = gtk.TreeViewColumn(columnName, cell)
-            self.tvcolumn[n].set_cell_data_func(cell, self.format_comment,
-                columnName)
+            self.tvcolumn[n].add_attribute(cell, 'text', n+1)
             self.tvcolumn[n].set_resizable(True)
             self.treeview.append_column(self.tvcolumn[n])
 
@@ -110,9 +150,23 @@ class MBCatGtk:
 
         widget.pack_start(self.scrolledwindow, True, True, 0)
 
-        self.releaseList = gtk.ListStore(object)
+        self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str)
+
         for i, relId in enumerate(self.catalog.getReleaseIds()):
-            self.releaseList.append([i])
+            rel = self.catalog.getRelease(relId)
+            self.releaseList.append([relId, 
+                self.fmtArtist(rel),
+                rel['title'],
+                (rel['date'] if 'date' in rel else ''),
+                (rel['country'] if 'country' in rel else ''),
+                self.fmtLabel(rel),
+                self.fmtCatNo(rel),
+                (rel['barcode'] if 'barcode' in rel else ''),
+                (rel['asin'] if 'asin' in rel else '')
+                ])
+        self.releaseList.set_sort_func(0, self.sortReleaseFunc, None)
+        self.releaseList.set_sort_column_id(0, gtk.SORT_ASCENDING)
+
         self.treeview.set_model(self.releaseList)
 
     def __init__(self, catalog):
