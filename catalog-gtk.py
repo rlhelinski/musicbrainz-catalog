@@ -71,8 +71,12 @@ class MBCatGtk:
     def on_row_activate(self, tree, path, column):
         pass
 
-    def on_row_select(self, widget):
-        pass
+    def on_row_select(self, treeview):
+        model, it = treeview.get_selection().get_selected()
+        relId = model.get_value(it, 0)
+        self.statusbar.pop(self.context_id)
+        self.statusbar.push(self.context_id, relId)
+
 
     def createMenuBar(self, widget):
         # Menu bar
