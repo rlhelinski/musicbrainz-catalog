@@ -89,7 +89,7 @@ class MBCatGtk:
         mb.append(filem)
 
         # ...
-                # Help menu
+        # Help menu
         helpmenu = gtk.Menu()
         help = gtk.MenuItem("Help")
         help.set_submenu(helpmenu)
