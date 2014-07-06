@@ -141,7 +141,29 @@ class MBCatGtk:
         else:
             return 1
 
-    def createTreeView(self, widget):
+    def makeListStore(self):
+        self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str)
+
+        for i, relId in enumerate(self.catalog.getReleaseIds()):
+            rel = self.catalog.getRelease(relId)
+            self.releaseList.append([relId,
+                self.catalog.getArtistSortPhrase(rel),
+                rel['title'],
+                (rel['date'] if 'date' in rel else ''),
+                (rel['country'] if 'country' in rel else ''),
+                self.fmtLabel(rel),
+                self.fmtCatNo(rel),
+                (rel['barcode'] if 'barcode' in rel else ''),
+                (rel['asin'] if 'asin' in rel else '')
+                ])
+        self.releaseList.set_sort_func(0, self.sortReleaseFunc, None)
+        self.releaseList.set_sort_column_id(0, gtk.SORT_ASCENDING)
+
+        self.treeview.set_model(self.releaseList)
+
+        return self.releaseList
+
+    def createTreeView(self):
         # create the TreeView
         self.treeview = gtk.TreeView()
         # TODO add ability to sort by headers
@@ -169,27 +191,6 @@ class MBCatGtk:
         self.scrolledwindow = gtk.ScrolledWindow()
         self.scrolledwindow.add(self.treeview)
 
-        widget.pack_start(self.scrolledwindow, True, True, 0)
-
-        self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str)
-
-        for i, relId in enumerate(self.catalog.getReleaseIds()):
-            rel = self.catalog.getRelease(relId)
-            self.releaseList.append([relId, 
-                self.catalog.getArtistSortPhrase(rel),
-                rel['title'],
-                (rel['date'] if 'date' in rel else ''),
-                (rel['country'] if 'country' in rel else ''),
-                self.fmtLabel(rel),
-                self.fmtCatNo(rel),
-                (rel['barcode'] if 'barcode' in rel else ''),
-                (rel['asin'] if 'asin' in rel else '')
-                ])
-        self.releaseList.set_sort_func(0, self.sortReleaseFunc, None)
-        self.releaseList.set_sort_column_id(0, gtk.SORT_ASCENDING)
-
-        self.treeview.set_model(self.releaseList)
-
     def __init__(self, catalog):
         self.catalog = catalog
 
@@ -214,8 +215,10 @@ class MBCatGtk:
         vbox = gtk.VBox(False, 2)
 
         self.createMenuBar(vbox)
+        self.createTreeView()
+        self.makeListStore()
+        vbox.pack_start(self.scrolledwindow, True, True, 0)
 
-        self.createTreeView(vbox)
 
         # Creates a new button with the label "Hello World".
         self.button = gtk.Button("Hello World")
