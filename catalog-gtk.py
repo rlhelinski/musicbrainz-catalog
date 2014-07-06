@@ -219,22 +219,11 @@ class MBCatGtk:
         self.makeListStore()
         vbox.pack_start(self.scrolledwindow, True, True, 0)
 
+        self.statusbar = gtk.Statusbar()
+        self.context_id = self.statusbar.get_context_id('PyGTK')
 
-        # Creates a new button with the label "Hello World".
-        self.button = gtk.Button("Hello World")
-    
-        # When the button receives the "clicked" signal, it will call the
-        # function hello() passing it None as its argument.  The hello()
-        # function is defined above.
-        self.button.connect("clicked", self.hello, None)
-    
-        # This will cause the window to be destroyed by calling
-        # gtk_widget_destroy(window) when "clicked".  Again, the destroy
-        # signal could come from here, or the window manager.
-        self.button.connect_object("clicked", gtk.Widget.destroy, self.window)
-    
         # This packs the button into the window (a GTK container).
-        vbox.pack_start(self.button, False, False, 0)
+        vbox.pack_start(self.statusbar, False, False, 0)
 
         self.window.add(vbox)
     
