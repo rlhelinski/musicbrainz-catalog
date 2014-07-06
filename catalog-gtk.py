@@ -137,8 +137,7 @@ class MBCatGtk:
         self.tvcolumn = [None] * len(self.columnNames)
         for n, columnName in enumerate(self.columnNames):
             cell = gtk.CellRendererText()
-            cell.ellipsize = cell.set_property('ellipsize', 
-                pango.ELLIPSIZE_END)
+            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
             if (columnName in self.numFields):
                 cell.set_property('xalign', 1.0)
             self.tvcolumn[n] = gtk.TreeViewColumn(columnName, cell)
