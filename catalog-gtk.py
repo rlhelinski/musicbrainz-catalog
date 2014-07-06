@@ -13,6 +13,12 @@ import mbcat
 import argparse
 
 class MBCatGtk:
+    """A GTK interface for managing a MusicBrainz Catalog"""
+    __name__ = 'MusicBrainz Catalog GTK Gui'
+    __version__ = '0.1'
+    __copyright__ = 'Ryan Helinski'
+    __website__ = 'https://github.com/rlhelinski/musicbrainz-catalog'
+
     columnNames = ['Artist', 'Release Title', 'Date', 'Country', 'Label',
         'Catalog #', 'Barcode', 'ASIN']
     columnWidths = [30, 45, 16, 2, 37, 23, 16, 16]
@@ -48,12 +54,12 @@ class MBCatGtk:
 
     def openAboutWindow(self, widget):
         about = gtk.AboutDialog()
-        about.set_program_name(progname)
-        about.set_version(progver)
-        about.set_copyright(progcopy)
-        about.set_comments(progcomm)
-        about.set_website(progurl)
-        about.set_logo(pumppb)
+        about.set_program_name(self.__name__)
+        about.set_version(self.__version__)
+        about.set_copyright(self.__copyright__)
+        about.set_comments(self.__doc__)
+        about.set_website(self.__website__)
+        #about.set_logo(...)
         about.run()
         about.destroy()
         return
