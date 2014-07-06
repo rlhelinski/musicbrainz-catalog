@@ -15,7 +15,15 @@ import argparse
 class MBCatGtk:
     columnNames = ['Artist', 'Release Title', 'Date', 'Country', 'Label',
         'Catalog #', 'Barcode', 'ASIN']
+    columnWidths = [30, 45, 16, 2, 37, 23, 16, 16]
     numFields = ['Barcode', 'ASIN']
+
+    @staticmethod
+    def getColumnWidth(i):
+        sl = [self.releaseList[j][i] for j in range(len(self.releaseList))]
+        sl = filter(None, sl)
+        ll = [len(s) for s in sl]
+        return int(numpy.mean(ll) + 3*numpy.std(ll))
 
     # This is a callback function. The data arguments are ignored
     # in this example. More on callbacks below.
@@ -138,6 +146,7 @@ class MBCatGtk:
         for n, columnName in enumerate(self.columnNames):
             cell = gtk.CellRendererText()
             cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('width-chars', self.columnWidths[n])
             if (columnName in self.numFields):
                 cell.set_property('xalign', 1.0)
             self.tvcolumn[n] = gtk.TreeViewColumn(columnName, cell)
