@@ -158,7 +158,7 @@ class MBCatGtk:
         for i, relId in enumerate(self.catalog.getReleaseIds()):
             rel = self.catalog.getRelease(relId)
             self.releaseList.append([relId, 
-                self.fmtArtist(rel),
+                self.catalog.getArtistSortPhrase(rel),
                 rel['title'],
                 (rel['date'] if 'date' in rel else ''),
                 (rel['country'] if 'country' in rel else ''),
