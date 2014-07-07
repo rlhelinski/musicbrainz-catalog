@@ -328,11 +328,13 @@ class MBCatGtk:
         # or if we return FALSE in the "delete_event" callback.
         self.window.connect("destroy", self.destroy)
 
+        self.agr = gtk.AccelGroup()
+        self.window.add_accel_group(self.agr)
+
         vbox = gtk.VBox(False, 2)
 
         self.createMenuBar(vbox)
         self.createTreeView()
-        self.makeListStore()
         vbox.pack_start(self.scrolledwindow, True, True, 0)
 
         self.statusbar = gtk.Statusbar()
