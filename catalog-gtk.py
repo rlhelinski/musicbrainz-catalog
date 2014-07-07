@@ -24,6 +24,14 @@ class MBCatGtk:
     columnWidths = [30, 45, 16, 2, 37, 23, 16, 16]
     numFields = ['Barcode', 'ASIN']
 
+    # Default extensions.
+    filePatterns = [
+        # These are essentially the same
+        ('sqlite3 files', '*.sqlite3'), # unambiguous
+        ('sqlite files', '*.sqlite'), # might tempt to open with sqlite < 3
+        ('db files', '*.db'), # not specific
+        ]
+
     @staticmethod
     def getColumnWidth(i):
         sl = [self.releaseList[j][i] for j in range(len(self.releaseList))]
@@ -64,6 +72,75 @@ class MBCatGtk:
         about.destroy()
         return
 
+    def openDatabase(self, filename=None):
+        if filename:
+            self.catalog = mbcat.catalog.Catalog(
+                dbPath=filename,
+                cachePath=self.catalog.cachePath)
+        self.makeListStore()
+
+        # Housekeeping
+        self.menuCatalogSaveAsItem.set_sensitive(True)
+        self.updateStatusBar()
+
+    def copyAndOpenDatabase(self, filename):
+        # Copy the database to the new location
+        shutil.copy(self.catalog.dbPath, filename)
+        # Open the new copy
+        self.openDatabase(filename)
+
+    def menuCatalogOpen(self, widget):
+        # Ask the user where to store the new database
+        dialog = gtk.FileChooserDialog(
+            title='Choose file',
+            action=gtk.FILE_CHOOSER_ACTION_OPEN,
+            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+
+        dialog.set_default_response(gtk.RESPONSE_OK)
+
+        for desc, pattern in self.filePatterns:
+            filt = gtk.FileFilter()
+            filt.set_name(desc)
+            filt.add_pattern(pattern)
+            dialog.add_filter(filt)
+
+        response = dialog.run()
+        if response != gtk.RESPONSE_OK:
+            dialog.destroy()
+            return
+
+        filename = dialog.get_filename()
+        dialog.destroy()
+
+        self.openDatabase(filename)
+
+    def menuCatalogSaveAs(self, widget):
+        # Ask the user where to store the new database
+        dialog = gtk.FileChooserDialog(
+            title='Choose file',
+            action=gtk.FILE_CHOOSER_ACTION_SAVE,
+            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+
+        dialog.set_default_response(gtk.RESPONSE_OK)
+
+        for desc, pattern in self.filePatterns:
+            filt = gtk.FileFilter()
+            filt.set_name(desc)
+            filt.add_pattern(pattern)
+            dialog.add_filter(filt)
+
+        response = dialog.run()
+        if response != gtk.RESPONSE_OK:
+            dialog.destroy()
+            return
+
+        filename = dialog.get_filename()
+        dialog.destroy()
+
+        self.openDatabase(filename)
+
     def format_comment(self, column, cell, model, it, field):
         row = model.get_value(it, 0)
         cell.set_property('text', 'OK')
@@ -82,13 +159,47 @@ class MBCatGtk:
         # Menu bar
         mb = gtk.MenuBar()
         # File menu
-        filemenu = gtk.Menu()
-        filem = gtk.MenuItem("_File")
-        filem.set_submenu(filemenu)
+        menu = gtk.Menu()
+        menuitem = gtk.MenuItem("_Catalog")
+        menuitem.set_submenu(menu)
 
-        mb.append(filem)
+        # Open
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_OPEN, self.agr)
+        # Note that this inherits the <Control>o accelerator
+        submenuitem.connect('activate', self.menuCatalogOpen)
+        menu.append(submenuitem)
+
+        # Save As...
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_SAVE_AS, self.agr)
+        submenuitem.set_sensitive(False) # should be enabled when opened
+        self.menuCatalogSaveAsItem = submenuitem
+        key, mod = gtk.accelerator_parse('<Control>s')
+        submenuitem.add_accelerator('activate', self.agr, key, mod,
+            gtk.ACCEL_VISIBLE)
+        submenuitem.connect('activate', self.menuCatalogSaveAs)
+        menu.append(submenuitem)
+
+        # Separator
+        sep = gtk.SeparatorMenuItem()
+        menu.append(sep)
+
+        # Check
+        # Rebuild
+        # Report
+        # Similar
+        # Separator
+        # Quit
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_QUIT, self.agr)
+        key, mod = gtk.accelerator_parse('Q')
+        submenuitem.add_accelerator('activate', self.agr, key, mod, 
+            gtk.ACCEL_VISIBLE)
+        submenuitem.connect('activate', self.destroy)
+        menu.append(submenuitem)
+
+        mb.append(menuitem)
 
         # ...
+
         # Help menu
         helpmenu = gtk.Menu()
         help = gtk.MenuItem("Help")
