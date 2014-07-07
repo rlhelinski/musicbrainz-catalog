@@ -151,9 +151,14 @@ class MBCatGtk:
     def on_row_select(self, treeview):
         model, it = treeview.get_selection().get_selected()
         relId = model.get_value(it, 0)
-        self.statusbar.pop(self.context_id)
-        self.statusbar.push(self.context_id, relId)
+        print (relId+' selected')
 
+    def updateStatusBar(self):
+        self.statusbar.pop(self.context_id)
+        msg = '%d releases, %d release words, %d track words' % \
+            (len(self.catalog), self.catalog.getWordCount(), 
+                self.catalog.getTrackWordCount())
+        self.statusbar.push(self.context_id, msg)
 
     def createMenuBar(self, widget):
         # Menu bar
@@ -341,6 +346,8 @@ class MBCatGtk:
         # The final step is to display this newly created widget.
         # and the window
         self.window.show_all()
+
+        self.openDatabase()
 
     def main(self):
         # All PyGTK applications must have a gtk.main(). Control ends here
