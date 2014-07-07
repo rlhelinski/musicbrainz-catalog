@@ -307,8 +307,8 @@ class MBCatGtk:
         self.scrolledwindow = gtk.ScrolledWindow()
         self.scrolledwindow.add(self.treeview)
 
-    def __init__(self, catalog):
-        self.catalog = catalog
+    def __init__(self, dbPath, cachePath):
+        self.catalog = mbcat.catalog.Catalog(dbPath, cachePath)
 
         # create a new window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -365,6 +365,5 @@ if __name__ == "__main__":
         help='Specify the path to the file cache')
     args = parser.parse_args()
 
-    c = mbcat.catalog.Catalog(dbPath=args.database, cachePath=args.cache)
-    gui = MBCatGtk(catalog=c)
+    gui = MBCatGtk(dbPath=args.database, cachePath=args.cache)
     gui.main()
