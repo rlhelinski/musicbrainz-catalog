@@ -153,6 +153,12 @@ class MBCatGtk:
         relId = model.get_value(it, 0)
         print (relId+' selected')
 
+    def toggleStatusBar(self, widget):
+        if widget.active:
+            self.statusbar.show()
+        else:
+            self.statusbar.hide()
+
     def updateStatusBar(self):
         self.statusbar.pop(self.context_id)
         msg = '%d releases, %d release words, %d track words' % \
@@ -163,7 +169,7 @@ class MBCatGtk:
     def createMenuBar(self, widget):
         # Menu bar
         mb = gtk.MenuBar()
-        # File menu
+        # Catalog (File) menu
         menu = gtk.Menu()
         menuitem = gtk.MenuItem("_Catalog")
         menuitem.set_submenu(menu)
@@ -193,12 +199,25 @@ class MBCatGtk:
         # Report
         # Similar
         # Separator
+
         # Quit
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_QUIT, self.agr)
         key, mod = gtk.accelerator_parse('Q')
         submenuitem.add_accelerator('activate', self.agr, key, mod, 
             gtk.ACCEL_VISIBLE)
         submenuitem.connect('activate', self.destroy)
+        menu.append(submenuitem)
+
+        mb.append(menuitem)
+
+        # View menu
+        menu = gtk.Menu()
+        menuitem = gtk.MenuItem("_View")
+        menuitem.set_submenu(menu)
+
+        submenuitem = gtk.CheckMenuItem('Show Statusbar')
+        submenuitem.set_active(True)
+        submenuitem.connect('activate', self.toggleStatusBar)
         menu.append(submenuitem)
 
         mb.append(menuitem)
