@@ -223,7 +223,6 @@ class Catalog(object):
 
     def rebuildCacheTables(self, pbar=None):
         """Drop the derived tables in the database and rebuild them"""
-        # This doesn't actually drop, but empties
         with self._connect() as con:
             cur = con.cursor()
             for tab in ['words', 'trackwords', 'recordings', 'discids',
