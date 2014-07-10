@@ -265,37 +265,12 @@ class MBCatGtk:
         release = self.catalog.getRelease(model[0])
         cell.set_property('text', self.fmtArtist(release))
 
-    def sortReleaseFunc(self, model, row1, row2, data):
-        #sort_column, _ = model.get_sort_column_id()
-        sort_column = 0
-        value1 = self.catalog.getReleaseSortStr(
-            model.get_value(row1, sort_column))
-        value2 = self.catalog.getReleaseSortStr(
-            model.get_value(row2, sort_column))
-        if value1 < value2:
-            return -1
-        elif value1 == value2:
-            return 0
-        else:
-            return 1
-
     def makeListStore(self):
-        self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str)
+        self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str, str)
 
-        for i, relId in enumerate(self.catalog.getReleaseIds()):
-            rel = self.catalog.getRelease(relId)
-            self.releaseList.append([relId,
-                self.catalog.getArtistSortPhrase(rel),
-                rel['title'],
-                (rel['date'] if 'date' in rel else ''),
-                (rel['country'] if 'country' in rel else ''),
-                self.fmtLabel(rel),
-                self.fmtCatNo(rel),
-                (rel['barcode'] if 'barcode' in rel else ''),
-                (rel['asin'] if 'asin' in rel else '')
-                ])
-        self.releaseList.set_sort_func(0, self.sortReleaseFunc, None)
-        self.releaseList.set_sort_column_id(0, gtk.SORT_ASCENDING)
+        for row in self.catalog.getBasicTable():
+            self.releaseList.append(row)
+        self.releaseList.set_sort_column_id(1, gtk.SORT_ASCENDING)
 
         self.treeview.set_model(self.releaseList)
 
@@ -320,7 +295,7 @@ class MBCatGtk:
             if (columnName in self.numFields):
                 cell.set_property('xalign', 1.0)
             self.tvcolumn[n] = gtk.TreeViewColumn(columnName, cell)
-            self.tvcolumn[n].add_attribute(cell, 'text', n+1)
+            self.tvcolumn[n].add_attribute(cell, 'text', n+2)
             self.tvcolumn[n].set_resizable(True)
             self.treeview.append_column(self.tvcolumn[n])
 
