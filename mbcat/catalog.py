@@ -1141,6 +1141,25 @@ class Catalog(object):
                 for credit in release['artist-credit']
                 ])
 
+    def fmtArtist(self, release):
+        return ''.join([(cred['artist']['name'] \
+            if isinstance(cred, dict) else cred)
+            for cred in release['artist-credit']])
+
+    def fmtLabel(self, rel):
+        if 'label-info-list' not in rel:
+            return ''
+        return ', '.join([
+            (info['label']['name'] if 'label' in info else '')
+            for info in rel['label-info-list']])
+
+    def fmtCatNo(self, rel):
+        if 'label-info-list' not in rel:
+            return ''
+        return ', '.join([
+            (info['catalog-number'] if 'catalog-number' in info else '')
+            for info in rel['label-info-list']])
+
     def getArtistPathVariations(self, release):
         return set([
                 # the non-sorting-friendly string
