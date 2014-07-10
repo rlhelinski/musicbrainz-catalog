@@ -102,6 +102,29 @@ class Catalog(object):
 
     zipReleaseRoot = 'release-id'
 
+    releaseColumns = [
+        'id',
+        'meta',
+        'sortstring',
+        'artist',
+        'title',
+        'date',
+        'country',
+        'label',
+        'catno',
+        'barcode',
+        'asin',
+        'metatime',
+        'purchases',
+        'added',
+        'lent',
+        'listened',
+        'digital',
+        'count',
+        'comment',
+        'rating'
+        ]
+
     def __init__(self, dbPath=None, cachePath=None):
         """Open or create a new catalog"""
 
@@ -1002,21 +1025,6 @@ class Catalog(object):
 
         exists = releaseId in self
         now = time.time()
-
-        releaseColumns = [
-                'id',
-                'meta',
-                'sortstring',
-                'metatime',
-                'purchases',
-                'added',
-                'lent',
-                'listened',
-                'digital',
-                'count',
-                'comment',
-                'rating'
-                ]
 
         with self._connect() as con:
             cur = con.cursor()
