@@ -1507,4 +1507,28 @@ class Catalog(object):
                     (('%3d:%02d' % (length/60, length%60)) \
                         if length else '  ?:??') + '\n')
 
+    basicColumns = [
+        'id',
+        'sortstring',
+        'artist',
+        'title',
+        'date',
+        'country',
+        'label',
+        'catno',
+        'barcode',
+        'asin',
+        ]
+
+    def getBasicTable(self):
+        """
+        Fetch basic information about all the releases and return an iterator.
+        If you need to get all the releases, this will be
+
+        """
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select '+','.join(self.basicColumns)+\
+                ' from releases')
+            return cur #.fetchall()
 
