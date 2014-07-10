@@ -229,6 +229,24 @@ class Catalog(object):
                     'barcodes', 'formats']:
                 cur.execute('drop table '+tab)
             self._createCacheTables(cur)
+
+            # Add the columns if they don't exist
+            for column in [
+                'artist',
+                'title',
+                'date',
+                'country',
+                'label',
+                'catno',
+                'barcode',
+                'asin',
+                ]:
+                try:
+                    cur.execute('alter table releases add column '+column+\
+                        ' text')
+                except sqlite3.OperationalError as e:
+                    pass
+
         # Rebuild
         self.updateCacheTables(rebuild=True, pbar=pbar)
 
@@ -1074,23 +1092,6 @@ class Catalog(object):
                         releaseId
                         )
                     )
-
-            # Add the columns if they don't exist. Should move this somewhere else
-            for column in [
-                'artist',
-                'title',
-                'date',
-                'country',
-                'label',
-                'catno',
-                'barcode',
-                'asin',
-                ]:
-                try:
-                    cur.execute('alter table releases add column '+column+\
-                        ' text')
-                except OperationalError as e:
-                    pass
 
             metaColumns = [
                 ('sortstring', self.getSortStringFromRelease(relDict['release'])),
