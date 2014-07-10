@@ -163,6 +163,14 @@ class Catalog(object):
                 # TODO maybe store a dict instead of the XML?
                 "meta BLOB, "+\
                 "sortstring TEXT, "+\
+                "artist TEXT, "+\
+                "title TEXT, "+\
+                "date TEXT, "+\
+                "country TEXT, "+\
+                "label TEXT, "+\
+                "catno TEXT, "+\
+                "barcode TEXT, "+\
+                "asin TEXT, "+\
                 "metatime FLOAT, "+\
                 # now all the extra data
                 "purchases LIST, "+\
@@ -1031,25 +1039,26 @@ class Catalog(object):
 
             if not exists:
                 # Update releases table
+                newColumns = [
+                    'id',
+                    'meta',
+                    'metatime',
+                    'added',
+                    'count',
+                    ]
+
                 try:
-                    cur.execute('insert into releases(' + \
-                            ','.join(releaseColumns) + \
+                    cur.execute('update releases set' + \
+                            ','.join(newColumns) + \
                             ') values (' + \
-                            ','.join(['?']*len(releaseColumns)) + \
+                            ','.join(['?']*len(newColumns)) + \
                             ')',
                             (
                             releaseId,
                             buffer(zlib.compress(metaXml)),
-                            self.getSortStringFromRelease(relDict['release']),
                             now,
-                            [],
                             [now],
-                            [],
-                            [],
-                            [],
                             1, # set count to 1 for now
-                            '',
-                            0
                             )
                     )
                 except sqlite3.IntegrityError as e:
@@ -1066,6 +1075,41 @@ class Catalog(object):
                         releaseId
                         )
                     )
+
+            # Add the columns if they don't exist. Should move this somewhere else
+            for column in [
+                'artist',
+                'title',
+                'date',
+                'country',
+                'label',
+                'catno',
+                'barcode',
+                'asin',
+                ]:
+                try:
+                    cur.execute('alter table releases add column '+column+\
+                        ' text')
+                except OperationalError as e:
+                    pass
+
+            metaColumns = [
+                ('sortstring', self.getSortStringFromRelease(relDict['release'])),
+                ('artist', self.getArtistSortPhrase(relDict['release'])),
+                ('title', relDict['release']['title']),
+                ('date', (relDict['release']['date'] if 'date' in relDict['release'] else '')),
+                ('country', (relDict['release']['country'] if 'country' in relDict['release'] else '')),
+                ('label', self.fmtLabel(relDict['release'])),
+                ('catno', self.fmtCatNo(relDict['release'])),
+                ('barcode', (relDict['release']['barcode'] if 'barcode' in relDict['release'] else '')),
+                ('asin', (relDict['release']['asin'] if 'asin' in relDict['release'] else '')),
+                ]
+
+            cur.execute('update releases set '+\
+                ','.join([key+'=?' for key,val in metaColumns])+\
+                ' where id=?',
+                [val for key,val in metaColumns] + [releaseId]
+                )
 
             # Update words table
             rel_words = self.getReleaseWords(relDict['release'])
