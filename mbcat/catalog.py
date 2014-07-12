@@ -114,6 +114,7 @@ class Catalog(object):
         'catno',
         'barcode',
         'asin',
+        'format',
         'metatime',
         'purchases',
         'added',
@@ -171,6 +172,7 @@ class Catalog(object):
                 "catno TEXT, "+\
                 "barcode TEXT, "+\
                 "asin TEXT, "+\
+                "format TEXT, "+\
                 "metatime FLOAT, "+\
                 # now all the extra data
                 "purchases LIST, "+\
@@ -240,6 +242,7 @@ class Catalog(object):
                 'catno',
                 'barcode',
                 'asin',
+                'format',
                 ]:
                 try:
                     cur.execute('alter table releases add column '+column+\
@@ -1103,6 +1106,8 @@ class Catalog(object):
                 ('catno', self.fmtCatNo(relDict['release'])),
                 ('barcode', (relDict['release']['barcode'] if 'barcode' in relDict['release'] else '')),
                 ('asin', (relDict['release']['asin'] if 'asin' in relDict['release'] else '')),
+                ('format', mbcat.formats.getReleaseFormat(relDict['release'])\
+                    .__class__.__name__),
                 ]
 
             cur.execute('update releases set '+\
@@ -1518,6 +1523,7 @@ class Catalog(object):
         'catno',
         'barcode',
         'asin',
+        'format',
         ]
 
     def getBasicTable(self):
