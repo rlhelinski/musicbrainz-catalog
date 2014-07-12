@@ -1526,7 +1526,7 @@ class Catalog(object):
         'format',
         ]
 
-    def getBasicTable(self):
+    def getBasicTable(self, filt={}):
         """
         Fetch basic information about all the releases and return an iterator.
         If you need to get all the releases, this will be
@@ -1535,6 +1535,10 @@ class Catalog(object):
         with self._connect() as con:
             cur = con.cursor()
             cur.execute('select '+','.join(self.basicColumns)+\
-                ' from releases')
-            return cur #.fetchall()
+                ' from releases'+\
+                ((' where '+','.join(
+                    key+'=?' for key in filt.keys()
+                    )) if filt else ''),
+                filt.values())
+            return cur
 
