@@ -171,7 +171,13 @@ class MBCatGtk:
 
     def selectFormat(self, action, current):
         text = self.formatNames[action.get_current_value()]
-        print (text+' selected')
+        if text != 'All':
+            fmt = mbcat.formats.getFormatObj(text).__class__.__name__
+            #print ('Filtering formats: '+text+', '+fmt)
+            filt = {'format': fmt}
+        else:
+            filt = {}
+        self.makeListStore(filt)
 
     def createMenuBar(self, widget):
         # Menu bar
@@ -304,7 +310,7 @@ class MBCatGtk:
     def makeListStore(self):
         self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str, str)
 
-        for row in self.catalog.getBasicTable():
+        for row in self.catalog.getBasicTable(filt):
             self.releaseList.append(row)
         self.releaseList.set_sort_column_id(1, gtk.SORT_ASCENDING)
 
