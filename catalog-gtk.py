@@ -172,7 +172,7 @@ class MBCatGtk:
     def selectFormat(self, action, current):
         text = self.formatNames[action.get_current_value()]
         if text != 'All':
-            fmt = mbcat.formats.getFormatObj(text).name
+            fmt = mbcat.formats.getFormatObj(text).name()
             #print ('Filtering formats: '+text+', '+fmt)
             filt = {'format': fmt}
         else:
