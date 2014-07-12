@@ -307,8 +307,8 @@ class MBCatGtk:
         release = self.catalog.getRelease(model[0])
         cell.set_property('text', self.fmtArtist(release))
 
-    def makeListStore(self):
-        self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str, str)
+    def makeListStore(self, filt={}):
+        self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str, str, str)
 
         for row in self.catalog.getBasicTable(filt):
             self.releaseList.append(row)
