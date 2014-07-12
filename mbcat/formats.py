@@ -11,7 +11,10 @@ class Format(object):
 
     def __str__(self):
         return self.__doc__
-    
+
+    def name(self):
+        return self.__class__.__name__
+
 class Vinyl12(Format):
     """12" Vinyl"""
     size = 30
