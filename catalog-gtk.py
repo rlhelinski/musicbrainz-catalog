@@ -164,9 +164,11 @@ class MBCatGtk:
 
     def updateStatusBar(self):
         self.statusbar.pop(self.context_id)
-        msg = '%d releases, %d release words, %d track words' % \
-            (len(self.catalog), self.catalog.getWordCount(), 
-                self.catalog.getTrackWordCount())
+        msg = ('%d total releases, %d release words, %d track words, '+\
+            '%d releases selected') % \
+            (len(self.catalog), self.catalog.getWordCount(),
+                self.catalog.getTrackWordCount(),
+                len(self.releaseList))
         self.statusbar.push(self.context_id, msg)
 
     def selectFormat(self, action, current):
@@ -178,6 +180,7 @@ class MBCatGtk:
         else:
             filt = {}
         self.makeListStore(filt)
+        self.updateStatusBar()
 
     def createMenuBar(self, widget):
         # Menu bar
