@@ -24,6 +24,9 @@ class MBCatGtk:
     columnWidths = [30, 45, 16, 2, 37, 23, 16, 16]
     numFields = ['Barcode', 'ASIN']
 
+    formatNames = ['All', 'Digital', 'CD', '7" Vinyl', '12" Vinyl']
+    formatLabels = ['_All', '_Digital', '_CD', '_7" Vinyl', '_12" Vinyl']
+
     # Default extensions.
     filePatterns = [
         # These are essentially the same
@@ -166,6 +169,10 @@ class MBCatGtk:
                 self.catalog.getTrackWordCount())
         self.statusbar.push(self.context_id, msg)
 
+    def format_cb(self, action, current):
+        text = self.formatNames[action.get_current_value()]
+        print (text+' selected')
+
     def createMenuBar(self, widget):
         # Menu bar
         mb = gtk.MenuBar()
@@ -215,10 +222,39 @@ class MBCatGtk:
         menuitem = gtk.MenuItem("_View")
         menuitem.set_submenu(menu)
 
+        ## Show Statusbar
         submenuitem = gtk.CheckMenuItem('Show Statusbar')
         submenuitem.set_active(True)
         submenuitem.connect('activate', self.toggleStatusBar)
         menu.append(submenuitem)
+
+        ## Formats
+        # TODO this should be dynamically generated after loading or changing
+        # the database
+        self.actiongroup = gtk.ActionGroup('FormatsGroup')
+
+        self.actiongroup.add_actions([('Formats', None, '_Formats')])
+
+        self.actiongroup.add_radio_actions([
+            (name, None, label, None, None, i) \
+            for i, [name, label] in enumerate(zip(self.formatNames, \
+                self.formatLabels))
+            ], 0, self.format_cb)
+
+        submenuitem = self.actiongroup.get_action('Formats').create_menu_item()
+        menu.append(submenuitem)
+        subsubmenu = gtk.Menu()
+        submenuitem.set_submenu(subsubmenu)
+        action = self.actiongroup.get_action('All')
+        subsubmenu.append(action.create_menu_item())
+        action = self.actiongroup.get_action('Digital')
+        subsubmenu.append(action.create_menu_item())
+        action = self.actiongroup.get_action('CD')
+        subsubmenu.append(action.create_menu_item())
+        action = self.actiongroup.get_action('7" Vinyl')
+        subsubmenu.append(action.create_menu_item())
+        action = self.actiongroup.get_action('12" Vinyl')
+        subsubmenu.append(action.create_menu_item())
 
         mb.append(menuitem)
 
