@@ -169,7 +169,7 @@ class MBCatGtk:
                 self.catalog.getTrackWordCount())
         self.statusbar.push(self.context_id, msg)
 
-    def format_cb(self, action, current):
+    def selectFormat(self, action, current):
         text = self.formatNames[action.get_current_value()]
         print (text+' selected')
 
@@ -239,7 +239,7 @@ class MBCatGtk:
             (name, None, label, None, None, i) \
             for i, [name, label] in enumerate(zip(self.formatNames, \
                 self.formatLabels))
-            ], 0, self.format_cb)
+            ], 0, self.selectFormat)
 
         submenuitem = self.actiongroup.get_action('Formats').create_menu_item()
         menu.append(submenuitem)
