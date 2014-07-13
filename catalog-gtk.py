@@ -10,7 +10,69 @@ pygtk.require('2.0')
 import gtk
 import pango
 import mbcat
+import musicbrainzngs as mb
 import argparse
+
+_log = logging.getLogger("mbcat")
+
+# Thanks http://stackoverflow.com/a/8907574/3098007
+def ReleaseIDEntry(parent, message, default=''):
+    """
+    Display a dialog with a text entry.
+    Returns the text, or None if canceled.
+    """
+    d = gtk.MessageDialog(parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_QUESTION,
+            gtk.BUTTONS_OK_CANCEL,
+            message)
+    entry = gtk.Entry()
+    entry.set_text(default)
+    entry.show()
+    d.vbox.pack_end(entry)
+    entry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
+    d.set_default_response(gtk.RESPONSE_OK)
+
+    r = d.run()
+    text = entry.get_text().decode('utf8')
+    d.destroy()
+    if r == gtk.RESPONSE_OK:
+        return text
+    else:
+        return None
+
+def ErrorDialog(parent, message, type=gtk.MESSAGE_ERROR):
+    _log.error(message)
+    d = gtk.MessageDialog(parent,
+        gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+        type,
+        buttons=gtk.BUTTONS_OK)
+    d.set_markup(message)
+    d.run()
+    d.destroy()
+
+class ReleaseIDEntryTest:
+    def __init__(self):
+        d = gtk.Dialog('Query')
+        vbox = gtk.VBox(False, 2)
+        label = gtk.Label('Enter release ID:')
+        d.child.pack_start(label)
+        entry = gtk.Entry()
+        entry.set_text('A-ha!')
+        d.child.pack_start(entry)
+        okb = gtk.Button(label="Add", stock=gtk.STOCK_OK)
+        okb.connect('activate', self.addReleaseOK)
+        okb.connect('clicked', self.addReleaseOK)
+        d.child.pack_start(okb)
+        okb = gtk.Button(label="Add", stock=gtk.STOCK_CANCEL)
+        okb.connect('activate', d.close)
+        okb.connect('clicked', d.close)
+        d.child.pack_start(okb)
+        d.show_all()
+
+    def addReleaseOK(self, widget):
+        widget.close()
+
 
 class MBCatGtk:
     """A GTK interface for managing a MusicBrainz Catalog"""
@@ -182,6 +244,26 @@ class MBCatGtk:
         self.makeListStore(filt)
         self.updateStatusBar()
 
+    def addRelease(self, widget):
+        entry = ReleaseIDEntry(self.window, 'Enter Release ID')
+        if not entry:
+            return
+        if entry in self.catalog:
+            ErrorDialog(self.window, 'Release already exists')
+            return
+        try:
+            self.catalog.addRelease(entry)
+        except mb.ResponseError as e:
+            ErrorDialog(self.window, str(e) + ". Bad release ID?")
+            return
+
+        _log.info("Added '%s'" % self.catalog.getRelease(releaseId)['title'])
+
+        self.catalog.getCoverArt(entry)
+
+    def deleteRelease(self, widget):
+        pass
+
     def createMenuBar(self, widget):
         # Menu bar
         mb = gtk.MenuBar()
@@ -258,6 +340,23 @@ class MBCatGtk:
         for name in self.formatNames:
             action = self.actiongroup.get_action(name)
             subsubmenu.append(action.create_menu_item())
+
+        mb.append(menuitem)
+
+        # Release menu
+        menu = gtk.Menu()
+        menuitem = gtk.MenuItem("_Release")
+        menuitem.set_submenu(menu)
+
+        ## Add
+        submenuitem = gtk.MenuItem('_Add')
+        submenuitem.connect('activate', self.addRelease)
+        menu.append(submenuitem)
+
+        ## Delete
+        submenuitem = gtk.MenuItem('_Delete')
+        submenuitem.connect('activate', self.deleteRelease)
+        menu.append(submenuitem)
 
         mb.append(menuitem)
 
