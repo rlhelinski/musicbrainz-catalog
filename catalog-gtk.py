@@ -28,6 +28,7 @@ def ReleaseIDEntry(parent, message, default=''):
             message)
     entry = gtk.Entry()
     entry.set_text(default)
+    entry.set_width_chars(36)
     entry.show()
     d.vbox.pack_end(entry)
     entry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
