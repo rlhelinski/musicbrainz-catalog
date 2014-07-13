@@ -51,29 +51,6 @@ def ErrorDialog(parent, message, type=gtk.MESSAGE_ERROR):
     d.run()
     d.destroy()
 
-class ReleaseIDEntryTest:
-    def __init__(self):
-        d = gtk.Dialog('Query')
-        vbox = gtk.VBox(False, 2)
-        label = gtk.Label('Enter release ID:')
-        d.child.pack_start(label)
-        entry = gtk.Entry()
-        entry.set_text('A-ha!')
-        d.child.pack_start(entry)
-        okb = gtk.Button(label="Add", stock=gtk.STOCK_OK)
-        okb.connect('activate', self.addReleaseOK)
-        okb.connect('clicked', self.addReleaseOK)
-        d.child.pack_start(okb)
-        okb = gtk.Button(label="Add", stock=gtk.STOCK_CANCEL)
-        okb.connect('activate', d.close)
-        okb.connect('clicked', d.close)
-        d.child.pack_start(okb)
-        d.show_all()
-
-    def addReleaseOK(self, widget):
-        widget.close()
-
-
 class MBCatGtk:
     """A GTK interface for managing a MusicBrainz Catalog"""
     __name__ = 'MusicBrainz Catalog GTK Gui'
