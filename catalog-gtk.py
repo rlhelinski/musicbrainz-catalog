@@ -377,7 +377,7 @@ class MBCatGtk:
         self.context_id = self.statusbar.get_context_id('PyGTK')
 
         # This packs the button into the window (a GTK container).
-        vbox.pack_start(self.statusbar, False, False, 0)
+        vbox.pack_end(self.statusbar, False, False, 0)
 
         self.window.add(vbox)
     
