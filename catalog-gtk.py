@@ -165,7 +165,7 @@ class MBCatGtk:
     def updateStatusBar(self):
         self.statusbar.pop(self.context_id)
         msg = ('%d total releases, %d release words, %d track words, '+\
-            '%d releases selected') % \
+            'showing %d releases') % \
             (len(self.catalog), self.catalog.getWordCount(),
                 self.catalog.getTrackWordCount(),
                 len(self.releaseList))
