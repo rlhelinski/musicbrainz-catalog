@@ -20,8 +20,8 @@ class MBCatGtk:
     __website__ = 'https://github.com/rlhelinski/musicbrainz-catalog'
 
     columnNames = ['Artist', 'Release Title', 'Date', 'Country', 'Label',
-        'Catalog #', 'Barcode', 'ASIN']
-    columnWidths = [30, 45, 16, 2, 37, 23, 16, 16]
+        'Catalog #', 'Barcode', 'ASIN', 'Format']
+    columnWidths = [30, 45, 16, 2, 37, 23, 16, 16, 16]
     numFields = ['Barcode', 'ASIN']
 
     formatNames = ['All', 'Digital', 'CD', '7" Vinyl', '12" Vinyl']
