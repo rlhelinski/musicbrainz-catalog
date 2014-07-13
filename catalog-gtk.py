@@ -254,16 +254,10 @@ class MBCatGtk:
         menu.append(submenuitem)
         subsubmenu = gtk.Menu()
         submenuitem.set_submenu(subsubmenu)
-        action = self.actiongroup.get_action('All')
-        subsubmenu.append(action.create_menu_item())
-        action = self.actiongroup.get_action('Digital')
-        subsubmenu.append(action.create_menu_item())
-        action = self.actiongroup.get_action('CD')
-        subsubmenu.append(action.create_menu_item())
-        action = self.actiongroup.get_action('7" Vinyl')
-        subsubmenu.append(action.create_menu_item())
-        action = self.actiongroup.get_action('12" Vinyl')
-        subsubmenu.append(action.create_menu_item())
+
+        for name in self.formatNames:
+            action = self.actiongroup.get_action(name)
+            subsubmenu.append(action.create_menu_item())
 
         mb.append(menuitem)
 
