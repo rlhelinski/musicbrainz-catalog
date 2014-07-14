@@ -272,6 +272,28 @@ class MBCatGtk:
         self.catalog.getCoverArt(entry)
 
     def deleteRelease(self, widget):
+        releaseId = ReleaseSearchDialog(self.window, self.catalog)
+
+        relTitle = self.catalog.getRelease(releaseId)['title']
+        if releaseId in self.catalog:
+            response = ConfirmDialog(self.window,
+                'Are you sure you wish to delete "%s"?' % relTitle)
+            if not response:
+                return
+
+        self.catalog.deleteRelease(releaseId)
+        _log.info("Deleted '%s'" % relTitle)
+
+    def switchRelease(self, widget):
+        pass
+
+    def getCoverArt(self, widget):
+        pass
+
+    def refreshRelease(self, widget):
+        pass
+
+    def rateRelease(self, widget):
         pass
 
     def createMenuBar(self, widget):
@@ -367,6 +389,30 @@ class MBCatGtk:
         submenuitem = gtk.MenuItem('_Delete')
         submenuitem.connect('activate', self.deleteRelease)
         menu.append(submenuitem)
+
+        ## Switch
+        submenuitem = gtk.MenuItem('_Switch')
+        submenuitem.connect('activate', self.switchRelease)
+        menu.append(submenuitem)
+
+        ## Cover Art
+        submenuitem = gtk.MenuItem('Get Cover Art')
+        submenuitem.connect('activate', self.getCoverArt)
+        menu.append(submenuitem)
+
+        ## Refresh
+        submenuitem = gtk.MenuItem('_Refresh')
+        submenuitem.connect('activate', self.refreshRelease)
+        menu.append(submenuitem)
+
+        sep = gtk.SeparatorMenuItem()
+        menu.append(sep)
+
+        ## Rate
+        submenuitem = gtk.MenuItem('_Rate')
+        submenuitem.connect('activate', self.rateRelease)
+        menu.append(submenuitem)
+
 
         mb.append(menuitem)
 
