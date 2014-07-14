@@ -1069,7 +1069,7 @@ class Catalog(object):
                     ]
 
                 try:
-                    cur.execute('update releases set' + \
+                    cur.execute('insert into releases (' + \
                             ','.join(newColumns) + \
                             ') values (' + \
                             ','.join(['?']*len(newColumns)) + \
