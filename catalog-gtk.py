@@ -267,7 +267,7 @@ class MBCatGtk:
             ErrorDialog(self.window, str(e) + ". Bad release ID?")
             return
 
-        _log.info("Added '%s'" % self.catalog.getRelease(releaseId)['title'])
+        _log.info("Added '%s'" % self.catalog.getRelease(entry)['title'])
 
         self.catalog.getCoverArt(entry)
 
