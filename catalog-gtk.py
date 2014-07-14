@@ -52,6 +52,38 @@ def ErrorDialog(parent, message, type=gtk.MESSAGE_ERROR):
     d.run()
     d.destroy()
 
+def ReleaseSearchDialog(parent,
+        catalog,
+        message='Enter search terms or release ID',
+        default=''):
+    entry = ReleaseIDEntry(parent, message, default)
+    if not entry:
+        return
+    if len(entry) == 36:
+        releaseId = mbcat.utils.getReleaseIdFromInput(input)
+        return releaseId
+    matches = list(catalog._search(entry))
+    print (matches)
+    if len(matches) > 1:
+        # Have to ask the user which release they mean
+        return
+    elif len(matches) == 1:
+        return matches[0]
+    else:
+        raise ErrorDialog('No matches found for "%s"' % entry)
+
+def ConfirmDialog(parent, message, type=gtk.MESSAGE_QUESTION):
+    d = gtk.MessageDialog(parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_QUESTION,
+            gtk.BUTTONS_OK_CANCEL,
+            message)
+    d.set_default_response(gtk.RESPONSE_OK)
+
+    r = d.run()
+    d.destroy()
+    return (r == gtk.RESPONSE_OK)
+
 class MBCatGtk:
     """A GTK interface for managing a MusicBrainz Catalog"""
     __name__ = 'MusicBrainz Catalog GTK Gui'
