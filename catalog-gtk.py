@@ -248,10 +248,10 @@ class MBCatGtk:
         if text != 'All':
             fmt = mbcat.formats.getFormatObj(text).name()
             #print ('Filtering formats: '+text+', '+fmt)
-            filt = {'format': fmt}
+            self.filt = {'format': fmt}
         else:
-            filt = {}
-        self.makeListStore(filt)
+            self.filt = {}
+        self.makeListStore()
         self.updateStatusBar()
 
     def addRelease(self, widget):
@@ -459,10 +459,10 @@ class MBCatGtk:
         release = self.catalog.getRelease(model[0])
         cell.set_property('text', self.fmtArtist(release))
 
-    def makeListStore(self, filt={}):
+    def makeListStore(self):
         self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str, str, str)
 
-        for row in self.catalog.getBasicTable(filt):
+        for row in self.catalog.getBasicTable(self.filt):
             self.releaseList.append(row)
         self.releaseList.set_sort_column_id(1, gtk.SORT_ASCENDING)
 
@@ -501,6 +501,7 @@ class MBCatGtk:
 
     def __init__(self, dbPath, cachePath):
         self.catalog = mbcat.catalog.Catalog(dbPath, cachePath)
+        self.filt = {}
 
         # create a new window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
