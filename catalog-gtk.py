@@ -467,6 +467,9 @@ class MBCatGtk:
         self.releaseList.set_sort_column_id(1, gtk.SORT_ASCENDING)
 
         self.treeview.set_model(self.releaseList)
+        # search by release title; have to add 2 because of UUID and sort
+        # string at beginning
+        self.treeview.set_search_column(self.columnNames.index('Artist')+2)
 
         return self.releaseList
 
@@ -477,8 +480,6 @@ class MBCatGtk:
         self.treeview.set_headers_clickable(True)
         # rules-hint
         self.treeview.set_rules_hint(True)
-        # search by release title; have to add 1 because of UUID at beginning
-        self.treeview.set_search_column(self.columnNames.index('Artist')+1)
 
         # create the TreeViewColumns to display the data
         self.tvcolumn = [None] * len(self.columnNames)
