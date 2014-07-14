@@ -1108,7 +1108,7 @@ class Catalog(object):
                 ('barcode', (relDict['release']['barcode'] if 'barcode' in relDict['release'] else '')),
                 ('asin', (relDict['release']['asin'] if 'asin' in relDict['release'] else '')),
                 ('format', mbcat.formats.getReleaseFormat(relDict['release'])\
-                    .name),
+                    .name()),
                 ]
 
             cur.execute('update releases set '+\
@@ -1140,7 +1140,7 @@ class Catalog(object):
 
             # Update formats -> (format, releases)
             fmt = mbcat.formats.getReleaseFormat(relDict['release'])\
-                .name
+                .name()
             sql_list_append(cur, 'formats', 'format', fmt, releaseId)
 
             con.commit()
@@ -1178,7 +1178,7 @@ class Catalog(object):
                             releaseId)
 
             # Update formats -> (format, releases)
-            fmt = mbcat.formats.getReleaseFormat(relDict).name
+            fmt = mbcat.formats.getReleaseFormat(relDict).name()
             sql_list_remove(cur, 'formats', 'format', fmt, releaseId)
 
             con.commit()
