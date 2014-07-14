@@ -507,6 +507,7 @@ class Catalog(object):
             else:
                 self.wordMap[word] = [releaseId]
 
+    # TODO this is used externally, but has an underscore prefix
     def _search(self, query, table='words', keycolumn='word'):
         query_words = query.lower().split(' ')
         matches = set()
