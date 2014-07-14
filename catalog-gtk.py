@@ -270,6 +270,7 @@ class MBCatGtk:
         _log.info("Added '%s'" % self.catalog.getRelease(entry)['title'])
 
         self.catalog.getCoverArt(entry)
+        self.makeListStore()
 
     def deleteRelease(self, widget):
         releaseId = ReleaseSearchDialog(self.window, self.catalog)
@@ -283,6 +284,7 @@ class MBCatGtk:
 
         self.catalog.deleteRelease(releaseId)
         _log.info("Deleted '%s'" % relTitle)
+        self.makeListStore()
 
     def switchRelease(self, widget):
         pass
