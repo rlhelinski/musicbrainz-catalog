@@ -466,6 +466,7 @@ class MBCatGtk:
 
         for row in self.catalog.getBasicTable(self.filt):
             self.releaseList.append(row)
+        # Need to add 1 here to get to sort string because of UUID at beginning
         self.releaseList.set_sort_column_id(1, gtk.SORT_ASCENDING)
 
         self.treeview.set_model(self.releaseList)
