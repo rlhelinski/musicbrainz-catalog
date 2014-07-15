@@ -292,7 +292,8 @@ class MBCatGtk:
         relTitle = self.catalog.getRelease(releaseId)['title']
         if releaseId in self.catalog:
             response = ConfirmDialog(self.window,
-                'Are you sure you wish to delete "%s"?' % relTitle)
+                'Are you sure you wish to delete "%s"\nwith ID %s?' % \
+                    (relTitle, releaseId))
             if not response:
                 return
 
