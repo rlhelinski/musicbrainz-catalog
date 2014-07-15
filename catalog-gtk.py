@@ -281,7 +281,13 @@ class MBCatGtk:
         self.makeListStore()
 
     def deleteRelease(self, widget):
-        releaseId = ReleaseSearchDialog(self.window, self.catalog)
+        releaseId = self.getSelection()
+        # TODO keep this? or just make the Delete menu item not sensitive
+        # when there is no selection?
+        if not releaseId:
+            releaseId = ReleaseSearchDialog(self.window, self.catalog)
+        if not releaseId:
+            return
 
         relTitle = self.catalog.getRelease(releaseId)['title']
         if releaseId in self.catalog:
