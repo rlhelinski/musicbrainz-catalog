@@ -228,6 +228,14 @@ class MBCatGtk:
         relId = model.get_value(it, 0)
         print (relId+' selected')
 
+    def getSelection(self):
+        """Returns the selected release ID or None"""
+        model, it = self.treeview.get_selection().get_selected()
+        if not it:
+            return None
+        else:
+            return model.get_value(it, 0)
+
     def toggleStatusBar(self, widget):
         if widget.active:
             self.statusbar.show()
