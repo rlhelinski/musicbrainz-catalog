@@ -303,6 +303,8 @@ class MBCatGtk:
 
     def deleteRelease(self, widget):
         releaseId = self.getSelection()
+        row = self.getSelectedRow()
+
         # TODO keep this? or just make the Delete menu item not sensitive
         # when there is no selection?
         if not releaseId:
@@ -321,6 +323,7 @@ class MBCatGtk:
         self.catalog.deleteRelease(releaseId)
         _log.info("Deleted '%s'" % relTitle)
         self.makeListStore()
+        self.setSelectedRow(row)
 
     def switchRelease(self, widget):
         pass
