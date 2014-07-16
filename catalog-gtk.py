@@ -257,6 +257,25 @@ class MBCatGtk:
         self.treeview.get_selection().select_path(actualRow)
         self.treeview.scroll_to_cell(actualRow)
 
+    def getReleaseRow(self, releaseID):
+        def match_func(model, iter, data):
+            column, key = data # data is a tuple containing column number, key
+            value = model.get_value(iter, column)
+            return value == key
+        def search(model, iter, func, data):
+            while iter:
+                if func(model, iter, data):
+                    return iter
+                result = search(model, model.iter_children(iter), func, data)
+                if result: return result
+                iter = model.iter_next(iter)
+            return None
+
+        result_iter = search(self.releaseList,
+                self.releaseList.iter_children(None),
+                match_func, (0, releaseID))
+        return self.releaseList.get_path(result_iter)[0]
+
     def toggleStatusBar(self, widget):
         if widget.active:
             self.statusbar.show()
@@ -300,6 +319,7 @@ class MBCatGtk:
 
         self.catalog.getCoverArt(entry)
         self.makeListStore()
+        self.setSelectedRow(self.getReleaseRow(entry))
 
     def deleteRelease(self, widget):
         releaseId = self.getSelection()
