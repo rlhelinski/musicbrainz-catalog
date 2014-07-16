@@ -255,7 +255,7 @@ class MBCatGtk:
         """Selects and scrolls to a row in the TreeView"""
         actualRow = min(len(self.releaseList), row)
         self.treeview.get_selection().select_path(actualRow)
-        self.treeview.scroll_to_cell(actualRow)
+        self.treeview.scroll_to_cell(actualRow, use_align=True, row_align=0.5)
 
     def getReleaseRow(self, releaseID):
         def match_func(model, iter, data):
