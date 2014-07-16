@@ -251,6 +251,12 @@ class MBCatGtk:
         else:
             return None
 
+    def setSelectedRow(self, row):
+        """Selects and scrolls to a row in the TreeView"""
+        actualRow = min(len(self.releaseList), row)
+        self.treeview.get_selection().select_path(actualRow)
+        self.treeview.scroll_to_cell(actualRow)
+
     def toggleStatusBar(self, widget):
         if widget.active:
             self.statusbar.show()
