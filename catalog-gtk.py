@@ -152,7 +152,14 @@ class MBCatGtk:
             self.catalog = mbcat.catalog.Catalog(
                 dbPath=filename,
                 cachePath=self.catalog.cachePath)
-        self.makeListStore()
+        try:
+            self.makeListStore()
+        except OperationalError as e:
+            # This can happen if the database is using an old schema
+            _log.error(e)
+            _log.info('Trying to rebuild cache tables...')
+            self.catalog.rebuildCacheTables()
+            self.makeListStore()
 
         # Housekeeping
         self.menuCatalogSaveAsItem.set_sensitive(True)
