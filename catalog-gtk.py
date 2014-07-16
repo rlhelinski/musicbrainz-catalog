@@ -345,7 +345,32 @@ class MBCatGtk:
         self.setSelectedRow(row)
 
     def switchRelease(self, widget):
-        pass
+        releaseId = self.getSelection()
+        row = self.getSelectedRow()
+
+        # Ask the user to specify a release
+        if not releaseId:
+            releaseId = ReleaseSearchDialog(self.window, self.catalog)
+        if not releaseId or releaseId not in self.catalog:
+            return
+
+        relTitle = self.catalog.getRelease(releaseId)['title']
+        newRelId = ReleaseIDEntry(self.window,
+            'Enter release ID to replace %s\n"%s"' % (releaseId, relTitle))
+        if newRelId in self.catalog:
+            ErrorDialog(self.window, 'New release ID already exists')
+            return
+
+        self.catalog.renameRelease(releaseId, newRelId)
+        newRelTitle = self.catalog.getRelease(newRelId)['title']
+
+        if relTitle != newRelTitle:
+            _log.info("Replaced '%s' with '%s'" % (relTitle, newRelTitle))
+        else:
+            _log.info("Replaced '%s'" % (relTitle))
+
+        self.makeListStore()
+        self.setSelectedRow(row)
 
     def getCoverArt(self, widget):
         pass
