@@ -492,29 +492,6 @@ class MBCatGtk:
 
         widget.pack_start(mb, False, False, 0)
 
-    @mbcat.utils.deprecated
-    def fmtArtist(self, release):
-        return ''.join([(cred['artist']['name'] \
-            if isinstance(cred, dict) else cred)
-            for cred in release['artist-credit']])
-
-    @mbcat.utils.deprecated
-    def fmtLabel(self, rel):
-        if 'label-info-list' not in rel:
-            return ''
-        return ', '.join([
-            (info['label']['name'] if 'label' in info else '')
-            for info in rel['label-info-list']])
-
-    @mbcat.utils.deprecated
-    def fmtCatNo(self, rel):
-        if 'label-info-list' not in rel:
-            return ''
-        return ', '.join([
-            (info['catalog-number'] if 'catalog-number' in info else '')
-            for info in rel['label-info-list']])
-
-
     def cellArtist(self, column, cell, model, it, field):
         row = model.get_value(it, 0)
         release = self.catalog.getRelease(model[0])
