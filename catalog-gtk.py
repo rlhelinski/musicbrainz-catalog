@@ -329,16 +329,15 @@ class MBCatGtk:
         # when there is no selection?
         if not releaseId:
             releaseId = ReleaseSearchDialog(self.window, self.catalog)
-        if not releaseId:
+        if not releaseId or releaseId not in self.catalog:
             return
 
         relTitle = self.catalog.getRelease(releaseId)['title']
-        if releaseId in self.catalog:
-            response = ConfirmDialog(self.window,
-                'Are you sure you wish to delete "%s"\nwith ID %s?' % \
-                    (relTitle, releaseId))
-            if not response:
-                return
+        response = ConfirmDialog(self.window,
+            'Are you sure you wish to delete "%s"\nwith ID %s?' % \
+                (relTitle, releaseId))
+        if not response:
+            return
 
         self.catalog.deleteRelease(releaseId)
         _log.info("Deleted '%s'" % relTitle)
