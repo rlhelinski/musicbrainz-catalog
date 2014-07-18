@@ -410,7 +410,14 @@ class MBCatGtk:
         pass
 
     def rateRelease(self, widget):
-        pass
+        releaseId = self.getSelection()
+        if not releaseId:
+            return
+        nr = RatingDialog(self.window, 
+            default=self.catalog.getRating(releaseId))
+        if not nr:
+            return
+        self.catalog.setRating(releaseId, nr)
 
     def createMenuBar(self, widget):
         # Menu bar
