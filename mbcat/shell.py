@@ -194,8 +194,8 @@ class Shell:
             "Enter maximum cache age in minutes [leave empty for one minute]: ")
         maxAge = int(maxAge) * 60 if maxAge else 60
 
-        pbar = progressbar.ProgressBar(widgets=self.widgets)
         if not releaseId:
+            pbar = progressbar.ProgressBar(widgets=self.widgets)
             self.c.refreshAllMetaData(maxAge, pbar)
         elif releaseId not in self.c:
             self.s.write("Release not found\n")
