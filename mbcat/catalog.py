@@ -730,7 +730,8 @@ class Catalog(object):
         with self._connect() as con:
             cur = con.cursor()
             cur.execute('select rating from releases where id=?', (releaseId,))
-            return cur.fetchall()[0][0]
+            result = cur.fetchall()
+        return result[0][0] if result else None
 
     def setRating(self, releaseId, rating):
         with self._connect() as con:
