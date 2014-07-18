@@ -130,6 +130,8 @@ class MBCatGtk:
     formatNames = ['All', 'Digital', 'CD', '7" Vinyl', '12" Vinyl']
     formatLabels = ['_All', '_Digital', '_CD', '_7" Vinyl', '_12" Vinyl']
 
+    maxAge = 60
+
     # Default extensions.
     filePatterns = [
         # These are essentially the same
@@ -404,10 +406,15 @@ class MBCatGtk:
         self.setSelectedRow(row)
 
     def getCoverArt(self, widget):
-        pass
+        releaseId = self.getSelection()
+        self.catalog.getCoverArt(releaseId)
 
     def refreshRelease(self, widget):
-        pass
+        row = self.getSelectedRow()
+        releaseId = self.getSelection()
+        self.catalog.addRelease(releaseId, olderThan=self.maxAge)
+        self.makeListStore()
+        self.setSelectedRow(row)
 
     def rateRelease(self, widget):
         releaseId = self.getSelection()
