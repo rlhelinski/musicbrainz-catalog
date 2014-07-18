@@ -72,6 +72,37 @@ def ReleaseSearchDialog(parent,
     else:
         raise ErrorDialog('No matches found for "%s"' % entry)
 
+def RatingDialog(parent,
+        message='Enter rating',
+        default=None):
+        d = gtk.MessageDialog(parent,
+                gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+                gtk.MESSAGE_QUESTION,
+                gtk.BUTTONS_OK_CANCEL,
+                message
+                )
+        combobox = gtk.combo_box_new_text()
+        d.vbox.pack_end(combobox)
+        combobox.append_text('None')
+        combobox.append_text('1')
+        combobox.append_text('2')
+        combobox.append_text('3')
+        combobox.append_text('4')
+        combobox.append_text('5')
+        combobox.set_active(default if default is not None else 0)
+        combobox.show()
+        d.set_default_response(gtk.RESPONSE_OK)
+
+        r = d.run()
+        model = combobox.get_model()
+        index = combobox.get_active()
+        text = model[index][0]
+        d.destroy()
+        if r == gtk.RESPONSE_OK and text != 'None':
+            return text
+        else:
+            return None
+
 def ConfirmDialog(parent, message, type=gtk.MESSAGE_QUESTION):
     d = gtk.MessageDialog(parent,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
