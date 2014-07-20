@@ -455,10 +455,20 @@ class MBCatGtk:
         menu.append(sep)
 
         # Check
+        submenuitem = gtk.MenuItem('Check')
+        menu.append(submenuitem)
+
         # Rebuild
-        # Report
+        submenuitem = gtk.MenuItem('Rebuild')
+        menu.append(submenuitem)
+
         # Similar
+        submenuitem = gtk.MenuItem('Similar')
+        menu.append(submenuitem)
+
         # Separator
+        sep = gtk.SeparatorMenuItem()
+        menu.append(sep)
 
         # Quit
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_QUIT, self.agr)
@@ -535,18 +545,80 @@ class MBCatGtk:
         submenuitem.connect('activate', self.refreshRelease)
         menu.append(submenuitem)
 
+        ## Track List
+        submenuitem = gtk.MenuItem('Track List')
+        menu.append(submenuitem)
+
+        ## Separator
         sep = gtk.SeparatorMenuItem()
         menu.append(sep)
+
+        ## Check In
+        submenuitem = gtk.MenuItem('Check In')
+        menu.append(submenuitem)
+
+        ## Check Out
+        submenuitem = gtk.MenuItem('Check Out')
+        menu.append(submenuitem)
+
+        ## Comment
+        submenuitem = gtk.MenuItem('Comment')
+        menu.append(submenuitem)
+
+        ## Count
+        submenuitem = gtk.MenuItem('Count')
+        menu.append(submenuitem)
+
+        ## Listen
+        submenuitem = gtk.MenuItem('Listen')
+        menu.append(submenuitem)
+
+        ## Purchase Info
+        submenuitem = gtk.MenuItem('Purchase Info')
+        menu.append(submenuitem)
 
         ## Rate
         submenuitem = gtk.MenuItem('_Rate')
         submenuitem.connect('activate', self.rateRelease)
         menu.append(submenuitem)
 
-
         mb.append(menuitem)
 
-        # ...
+        # Search menu
+        menu = gtk.Menu()
+        menuitem = gtk.MenuItem("_Search")
+        menuitem.set_submenu(menu)
+        mb.append(menuitem)
+
+        ## Barcode (UPC)
+        submenuitem = gtk.MenuItem('Barcode (UPC)')
+        menu.append(submenuitem)
+
+        ## Artist/Title
+        submenuitem = gtk.MenuItem('Artist/Title')
+        menu.append(submenuitem)
+
+        ## Track
+        submenuitem = gtk.MenuItem('Track')
+        menu.append(submenuitem)
+
+        # Webservice menu
+        menu = gtk.Menu()
+        menuitem = gtk.MenuItem("Webservice")
+        menuitem.set_submenu(menu)
+        mb.append(menuitem)
+
+        ## Release Group Search
+        submenuitem = gtk.MenuItem('Release Group')
+        menu.append(submenuitem)
+
+        ## Release Search
+        submenuitem = gtk.MenuItem('Release')
+        menu.append(submenuitem)
+
+        ## Sync Collection
+        submenuitem = gtk.MenuItem('Sync Collection')
+        menu.append(submenuitem)
 
         # Help menu
         helpmenu = gtk.Menu()
