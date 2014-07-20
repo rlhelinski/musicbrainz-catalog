@@ -521,12 +521,14 @@ class MBCatGtk:
         menuitem.set_submenu(menu)
 
         ## Add
-        submenuitem = gtk.MenuItem('_Add')
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_ADD)
+        submenuitem.get_children()[0].set_label('_Add')
         submenuitem.connect('activate', self.addRelease)
         menu.append(submenuitem)
 
         ## Delete
-        submenuitem = gtk.MenuItem('_Delete')
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_REMOVE)
+        submenuitem.get_children()[0].set_label('_Delete')
         submenuitem.connect('activate', self.deleteRelease)
         menu.append(submenuitem)
 
