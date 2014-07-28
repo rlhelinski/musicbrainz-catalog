@@ -129,17 +129,26 @@ def TrackListDialog(parent, tracklist):
             gtk.MESSAGE_QUESTION,
             gtk.BUTTONS_OK_CANCEL,
             'Track List')
-    table = gtk.Table(len(tracklist)+1, 2, False)
-    for i, (track,length) in enumerate(tracklist):
-        label = gtk.Label(track)
-        #label.set_justify(gtk.JUSTIFY_LEFT)
-        label.set_alignment(0, 0.5)
-        table.attach(label, 0, 1, i, i+1)
-        label = gtk.Label(length)
-        label.set_alignment(1, 0.5)
-        table.attach(label, 1, 2, i, i+1)
-    table.show_all()
-    d.vbox.pack_end(table)
+    tv = gtk.TreeView()
+    titleCell = gtk.CellRendererText()
+    titleCell.set_property('xalign', 0)
+    titleCol = gtk.TreeViewColumn('Title', titleCell)
+    titleCol.add_attribute(titleCell, 'text', 0)
+    tv.append_column(titleCol)
+    lenCell = gtk.CellRendererText()
+    lenCell.set_property('xalign', 1.0)
+    lenCol = gtk.TreeViewColumn('Length', lenCell)
+    lenCol.add_attribute(lenCell, 'text', 1)
+    tv.append_column(lenCol)
+
+    # make the list store
+    trackListStore = gtk.ListStore(str, str)
+    for track,length in tracklist:
+        trackListStore.append((track, length))
+    tv.set_model(trackListStore)
+
+    tv.show_all()
+    d.vbox.pack_end(tv)
     d.set_default_response(gtk.RESPONSE_OK)
 
     r = d.run()
