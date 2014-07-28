@@ -1527,7 +1527,9 @@ class Catalog(object):
         for medium in rel['medium-list']:
             for track in medium['track-list']:
                 rec = track['recording']
-                l.append((rec['title'],
+                l.append((
+                    rec['id'],
+                    rec['title'],
                     recLengthAsString(rec['length'] if 'length' in rec else None)))
         return l
 

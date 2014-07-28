@@ -133,18 +133,18 @@ def TrackListDialog(parent, tracklist):
     titleCell = gtk.CellRendererText()
     titleCell.set_property('xalign', 0)
     titleCol = gtk.TreeViewColumn('Title', titleCell)
-    titleCol.add_attribute(titleCell, 'text', 0)
+    titleCol.add_attribute(titleCell, 'text', 1)
     tv.append_column(titleCol)
     lenCell = gtk.CellRendererText()
     lenCell.set_property('xalign', 1.0)
     lenCol = gtk.TreeViewColumn('Length', lenCell)
-    lenCol.add_attribute(lenCell, 'text', 1)
+    lenCol.add_attribute(lenCell, 'text', 2)
     tv.append_column(lenCol)
 
     # make the list store
-    trackListStore = gtk.ListStore(str, str)
-    for track,length in tracklist:
-        trackListStore.append((track, length))
+    trackListStore = gtk.ListStore(str, str, str)
+    for item in tracklist:
+        trackListStore.append(item)
     tv.set_model(trackListStore)
 
     tv.show_all()
