@@ -455,8 +455,9 @@ class MBCatGtk:
             self.catalog.addRelease(releaseId, olderThan=self.maxAge)
         except mb.NetworkError as e:
             ErrorDialog(self.window, 'Network error, failed to refresh')
-        self.makeListStore()
-        self.setSelectedRow(row)
+        else:
+            self.makeListStore()
+            self.setSelectedRow(row)
 
     def showTrackList(self, widget):
         releaseId = self.getSelection()
