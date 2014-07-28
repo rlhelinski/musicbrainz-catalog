@@ -115,6 +115,36 @@ def ConfirmDialog(parent, message, type=gtk.MESSAGE_QUESTION):
     d.destroy()
     return (r == gtk.RESPONSE_OK)
 
+def TrackListDialog(parent, tracklist):
+    """
+    Display a dialog with a list of tracks for a release.
+    Example:
+    TrackListDialog(gui.window,
+        gui.catalog.getTrackList('1cd1d24c-1705-485c-ae6f-c53e7831b1e4'))
+    """
+    # TODO this won't scale it really long track lists (e.g., 100 long)
+    # TODO this assumes there is one medium in the release
+    d = gtk.MessageDialog(parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_QUESTION,
+            gtk.BUTTONS_OK_CANCEL,
+            'Track List')
+    table = gtk.Table(len(tracklist)+1, 2, False)
+    for i, (track,length) in enumerate(tracklist):
+        label = gtk.Label(track)
+        #label.set_justify(gtk.JUSTIFY_LEFT)
+        label.set_alignment(0, 0.5)
+        table.attach(label, 0, 1, i, i+1)
+        label = gtk.Label(length)
+        label.set_alignment(1, 0.5)
+        table.attach(label, 1, 2, i, i+1)
+    table.show_all()
+    d.vbox.pack_end(table)
+    d.set_default_response(gtk.RESPONSE_OK)
+
+    r = d.run()
+    d.destroy()
+
 class MBCatGtk:
     """A GTK interface for managing a MusicBrainz Catalog"""
     __name__ = 'MusicBrainz Catalog GTK Gui'
@@ -416,6 +446,10 @@ class MBCatGtk:
         self.makeListStore()
         self.setSelectedRow(row)
 
+    def showTrackList(self, widget):
+        releaseId = self.getSelection()
+        TrackListDialog(self.window, self.catalog.getTrackList(releaseId))
+
     def rateRelease(self, widget):
         releaseId = self.getSelection()
         if not releaseId:
@@ -549,6 +583,7 @@ class MBCatGtk:
 
         ## Track List
         submenuitem = gtk.MenuItem('Track List')
+        submenuitem.connect('activate', self.showTrackList)
         menu.append(submenuitem)
 
         ## Separator
