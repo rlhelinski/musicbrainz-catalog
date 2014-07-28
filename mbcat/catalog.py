@@ -72,6 +72,11 @@ def sql_list_remove(cursor, table_name, key_column, key, value, list_column='rel
                     (table_name, key_column),
                     (key,))
 
+def recLengthAsString(recLength):
+    length = float(recLength)/1000
+    return (('%d:%02d' % (length/60, length%60)) \
+            if length else '  ?:??')
+
 # For remembering user decision to overwrite existing data
 overWriteAll = False
 
@@ -1507,12 +1512,24 @@ class Catalog(object):
         for medium in rel['medium-list']:
             for track in medium['track-list']:
                 rec = track['recording']
-                length = float(rec['length'])/1000 if 'length' in rec else None
                 stream.write(
                     rec['title'] +
                     ' '*(60-len(rec['title'])) +
-                    (('%3d:%02d' % (length/60, length%60)) \
-                        if length else '  ?:??') + '\n')
+                    ('%6s' % recLengthAsString(rec['length'] if 'length' in rec else None)) + '\n')
+
+    def getTrackList(self, releaseId):
+        """
+        Return a list of track titles, track length as strings tuples
+        for a release.
+        """
+        l = []
+        rel = self.getRelease(releaseId)
+        for medium in rel['medium-list']:
+            for track in medium['track-list']:
+                rec = track['recording']
+                l.append((rec['title'],
+                    recLengthAsString(rec['length'] if 'length' in rec else None)))
+        return l
 
     basicColumns = [
         'id',
