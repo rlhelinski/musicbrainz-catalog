@@ -165,6 +165,7 @@ def TextEntry(parent, message, default=''):
             gtk.MESSAGE_QUESTION,
             gtk.BUTTONS_OK_CANCEL,
             message)
+    d.set_resizable(True)
     sw = gtk.ScrolledWindow()
     sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
     textview = gtk.TextView()
@@ -537,7 +538,8 @@ class MBCatGtk:
         releaseId = self.getSelection()
         oldcomment = self.catalog.getComment(releaseId)
         newcomment = TextEntry(self.window, 'Edit Release Comments', oldcomment if oldcomment is not None else '')
-        self.catalog.setComment(releaseId, newcomment)
+        if newcomment is not None:
+            self.catalog.setComment(releaseId, newcomment)
 
     def rateRelease(self, widget):
         releaseId = self.getSelection()
