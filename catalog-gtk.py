@@ -12,6 +12,7 @@ import pango
 import mbcat
 import musicbrainzngs as mb
 import argparse
+import time
 
 _log = logging.getLogger("mbcat")
 
@@ -142,9 +143,9 @@ def TrackListDialog(parent, tracklist):
     tv.append_column(lenCol)
 
     # make the list store
-    trackListStore = gtk.ListStore(str, str, str)
+    trackListStore = gtk.TreeStore(str, str, str)
     for item in tracklist:
-        trackListStore.append(item)
+        trackListStore.append(None, item)
     tv.set_model(trackListStore)
 
     tv.show_all()
@@ -153,6 +154,32 @@ def TrackListDialog(parent, tracklist):
 
     r = d.run()
     d.destroy()
+
+def TextEntry(parent, message, default=''):
+    """
+    Display a dialog with a text entry.
+    Returns the text, or None if canceled.
+    """
+    d = gtk.MessageDialog(parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_QUESTION,
+            gtk.BUTTONS_OK_CANCEL,
+            message)
+    entry = gtk.TextView()
+    entry.set_text(default)
+    entry.set_width_chars(80)
+    entry.show()
+    d.vbox.pack_end(entry)
+    entry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
+    d.set_default_response(gtk.RESPONSE_OK)
+
+    r = d.run()
+    text = entry.get_text().decode('utf8')
+    d.destroy()
+    if r == gtk.RESPONSE_OK:
+        return text
+    else:
+        return None
 
 class MBCatGtk:
     """A GTK interface for managing a MusicBrainz Catalog"""
@@ -463,6 +490,46 @@ class MBCatGtk:
         releaseId = self.getSelection()
         TrackListDialog(self.window, self.catalog.getTrackList(releaseId))
 
+    def checkOut(self, widget):
+        releaseId = self.getSelection()
+
+        lendEvents = self.catalog.getLendEvents(releaseId)
+        for event in lendEvents:
+            _log.info(str(event) + '\n')
+
+        borrower = ReleaseIDEntry(self.window, "Borrower (leave empty to return): ")
+        if not borrower:
+            return
+
+        date = ReleaseIDEntry(self.window,
+            "Lend date  (" + mbcat.dateFmtUsr + ") (leave empty for today): ")
+        if not date:
+            date = time.time()
+        self.catalog.addLendEvent(releaseId,
+            mbcat.extradata.CheckOutEvent(borrower, date))
+
+    def checkIn(self, widget):
+        releaseId = self.getSelection()
+
+        lendEvents = self.catalog.getLendEvents(releaseId)
+        if not lendEvents or not isinstance(lendEvents[-1],
+            mbcat.extradata.CheckOutEvent):
+            ErrorDialog(self.window, 'Release is not checked out.')
+            return
+
+        date = ReleaseIDEntry(self.window,
+            "Return date (" + mbcat.dateFmtUsr +
+            ") (leave empty for today): ")
+        if not date:
+            date = time.time()
+        self.catalog.addLendEvent(releaseId,
+            mbcat.extradata.CheckInEvent(date))
+
+    def editComment(self, widget):
+        releaseId = self.getSelection()
+        buff = gtk.GtkTextBuffer()
+        entry = TextEntry(self.window, 'this is a test')
+
     def rateRelease(self, widget):
         releaseId = self.getSelection()
         if not releaseId:
@@ -603,12 +670,14 @@ class MBCatGtk:
         sep = gtk.SeparatorMenuItem()
         menu.append(sep)
 
-        ## Check In
-        submenuitem = gtk.MenuItem('Check In')
-        menu.append(submenuitem)
-
         ## Check Out
         submenuitem = gtk.MenuItem('Check Out')
+        submenuitem.connect('activate', self.checkOut)
+        menu.append(submenuitem)
+
+        ## Check In
+        submenuitem = gtk.MenuItem('Check In')
+        submenuitem.connect('activate', self.checkIn)
         menu.append(submenuitem)
 
         ## Comment
