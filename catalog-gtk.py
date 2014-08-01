@@ -165,17 +165,24 @@ def TextEntry(parent, message, default=''):
             gtk.MESSAGE_QUESTION,
             gtk.BUTTONS_OK_CANCEL,
             message)
-    entry = gtk.TextView()
-    buff = entry.get_buffer()
-    buff.set_text(default)
-    entry.set_wrap_mode(gtk.WRAP_WORD)
+    sw = gtk.ScrolledWindow()
+    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+    textview = gtk.TextView()
+    textbuffer = textview.get_buffer()
+    sw.add(textview)
+    textbuffer.set_text(default)
+    textview.set_wrap_mode(gtk.WRAP_WORD)
     #entry.set_width_chars(80)
-    entry.show()
-    d.vbox.pack_end(entry)
+    sw.show()
+    textview.show()
+    d.vbox.pack_end(sw)
     d.set_default_response(gtk.RESPONSE_OK)
 
     r = d.run()
-    text = buff.get_text(buff.get_start_iter(), buff.get_end_iter()).decode('utf8')
+    # TODO is there any easier way to get the whole buffer?
+    text = textbuffer.get_text(
+        textbuffer.get_start_iter(), 
+        textbuffer.get_end_iter()).decode('utf8')
     d.destroy()
     if r == gtk.RESPONSE_OK:
         return text
