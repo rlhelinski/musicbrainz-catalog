@@ -166,15 +166,16 @@ def TextEntry(parent, message, default=''):
             gtk.BUTTONS_OK_CANCEL,
             message)
     entry = gtk.TextView()
-    entry.set_text(default)
-    entry.set_width_chars(80)
+    buff = entry.get_buffer()
+    buff.set_text(default)
+    entry.set_wrap_mode(gtk.WRAP_WORD)
+    #entry.set_width_chars(80)
     entry.show()
     d.vbox.pack_end(entry)
-    entry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
     d.set_default_response(gtk.RESPONSE_OK)
 
     r = d.run()
-    text = entry.get_text().decode('utf8')
+    text = buff.get_text(buff.get_start_iter(), buff.get_end_iter()).decode('utf8')
     d.destroy()
     if r == gtk.RESPONSE_OK:
         return text
@@ -527,8 +528,9 @@ class MBCatGtk:
 
     def editComment(self, widget):
         releaseId = self.getSelection()
-        buff = gtk.GtkTextBuffer()
-        entry = TextEntry(self.window, 'this is a test')
+        oldcomment = self.catalog.getComment(releaseId)
+        newcomment = TextEntry(self.window, 'Edit Release Comments', oldcomment if oldcomment is not None else '')
+        self.catalog.setComment(releaseId, newcomment)
 
     def rateRelease(self, widget):
         releaseId = self.getSelection()
@@ -682,6 +684,7 @@ class MBCatGtk:
 
         ## Comment
         submenuitem = gtk.MenuItem('Comment')
+        submenuitem.connect('activate', self.editComment)
         menu.append(submenuitem)
 
         ## Count
