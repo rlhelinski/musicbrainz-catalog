@@ -307,7 +307,7 @@ class Shell:
 
         borrower = self.s.nextLine("Borrower (leave empty to return): ")
         if not borrower:
-            raise ValueError('No release specified.')
+            raise ValueError('No borrower specified.')
 
         date = self.s.nextLine(
             "Lend date  (" + dateFmtUsr + ") (leave empty for today): ")
