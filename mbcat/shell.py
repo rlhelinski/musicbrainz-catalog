@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 from mbcat.catalog import *
 from mbcat.extradata import *
 from mbcat.barcode import UPC
+import mbcat
 import os
 import sys
 from mbcat.inputsplitter import InputSplitter
@@ -148,10 +149,12 @@ class Shell:
         listenDates = self.c.getListenDates(releaseId)
         for listenDate in listenDates:
             self.s.write(
-                time.strftime(dateFmtStr, time.localtime(listenDate)) + '\n')
+                time.strftime(mbcat.dateFmtStr, time.localtime(listenDate)) + '\n')
         dateStr = self.s.nextLine(
-            'Enter listen date (' + dateFmtUsr + ') [enter for now]: ')
-        date = time.strptime(dateStr, dateFmtStr) if dateStr else time.time()
+            'Enter listen date (' + mbcat.dateFmtUsr + ') [enter for now]: ')
+        date = float(time.strftime('%s',
+            time.strptime(dateStr, mbcat.dateFmtStr))) \
+            if dateStr else time.time()
 
         self.c.addListenDate(releaseId, date)
 
