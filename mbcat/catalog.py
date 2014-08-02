@@ -1563,3 +1563,9 @@ class Catalog(object):
                 filt.values())
             return cur
 
+    def getReleaseTitle(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select title from releases where id=?',
+                (releaseId,))
+            return cur.fetchone()[0]

@@ -541,6 +541,16 @@ class MBCatGtk:
         if newcomment is not None:
             self.catalog.setComment(releaseId, newcomment)
 
+    def listen(self, widget):
+        releaseId = self.getSelection()
+        dateStr = TextEntry(self.window,
+            'Enter listen date (' + mbcat.dateFmtUsr + ')',
+            time.strftime(mbcat.dateFmtStr))
+        if dateStr:
+            date = float(time.strftime('%s',
+                time.strptime(dateStr, mbcat.dateFmtStr)))
+            self.catalog.addListenDate(releaseId, date)
+
     def rateRelease(self, widget):
         releaseId = self.getSelection()
         if not releaseId:
@@ -702,6 +712,7 @@ class MBCatGtk:
 
         ## Listen
         submenuitem = gtk.MenuItem('Listen')
+        submenuitem.connect('activate', self.listen)
         menu.append(submenuitem)
 
         ## Purchase Info
