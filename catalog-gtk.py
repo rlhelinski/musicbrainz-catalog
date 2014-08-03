@@ -74,32 +74,61 @@ def ReleaseSearchDialog(parent,
         raise ErrorDialog('No matches found for "%s"' % entry)
 
 def RatingDialog(parent,
-        message='Enter rating',
-        default=None):
-        d = gtk.MessageDialog(parent,
-                gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-                gtk.MESSAGE_QUESTION,
-                gtk.BUTTONS_OK_CANCEL,
-                message
-                )
-        combobox = gtk.combo_box_new_text()
-        d.vbox.pack_end(combobox)
-        combobox.append_text('None')
-        combobox.append_text('1')
-        combobox.append_text('2')
-        combobox.append_text('3')
-        combobox.append_text('4')
-        combobox.append_text('5')
-        combobox.set_active(default if default is not None else 0)
-        combobox.show()
-        d.set_default_response(gtk.RESPONSE_OK)
+    message='Enter rating',
+    default=None):
+    d = gtk.MessageDialog(parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_QUESTION,
+            gtk.BUTTONS_OK_CANCEL,
+            message
+            )
+    combobox = gtk.combo_box_new_text()
+    d.vbox.pack_end(combobox)
+    combobox.append_text('None')
+    combobox.append_text('1')
+    combobox.append_text('2')
+    combobox.append_text('3')
+    combobox.append_text('4')
+    combobox.append_text('5')
+    combobox.set_active(default if default is not None else 0)
+    combobox.show()
+    d.set_default_response(gtk.RESPONSE_OK)
 
+    r = d.run()
+    model = combobox.get_model()
+    index = combobox.get_active()
+    text = model[index][0]
+    d.destroy()
+    if r == gtk.RESPONSE_OK and text != 'None':
+        return text
+    else:
+        return None
+
+def IntegerDialog(parent,
+        message='Enter a number',
+        default=0):
+    d = gtk.MessageDialog(parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_QUESTION,
+            gtk.BUTTONS_OK_CANCEL,
+            message)
+    entry = gtk.Entry()
+    entry.set_text(default)
+    entry.set_width_chars(10)
+    entry.show()
+    d.vbox.pack_end(entry)
+    entry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
+    d.set_default_response(gtk.RESPONSE_OK)
+
+    while True:
         r = d.run()
-        model = combobox.get_model()
-        index = combobox.get_active()
-        text = model[index][0]
         d.destroy()
-        if r == gtk.RESPONSE_OK and text != 'None':
+        if r == gtk.RESPONSE_OK:
+            try:
+                i = int(entry.get_text().decode('utf8'))
+            except ValueError:
+                ErrorDialog(parent, 'Entry must be an integer')
+                continue
             return text
         else:
             return None
@@ -541,6 +570,13 @@ class MBCatGtk:
         if newcomment is not None:
             self.catalog.setComment(releaseId, newcomment)
 
+    def changeCount(self, widget):
+        releaseId = self.getSelection()
+        newcount = IntegerDialog(self.window, 'Enter new copy count',
+            self.catalog.getCopyCount(releaseId))
+        if newcount is not None:
+            self.catalog.setCopyCount(releaseId, newcount)
+
     def listen(self, widget):
         releaseId = self.getSelection()
         dateStr = TextEntry(self.window,
@@ -708,6 +744,7 @@ class MBCatGtk:
 
         ## Count
         submenuitem = gtk.MenuItem('Count')
+        submenuitem.connect('activate', self.changeCount)
         menu.append(submenuitem)
 
         ## Listen
