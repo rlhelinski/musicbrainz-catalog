@@ -106,32 +106,32 @@ def RatingDialog(parent,
 
 def IntegerDialog(parent,
         message='Enter a number',
-        default=0):
+        default=0,
+        lower=0,
+        upper=1000):
     d = gtk.MessageDialog(parent,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
             gtk.MESSAGE_QUESTION,
             gtk.BUTTONS_OK_CANCEL,
             message)
-    entry = gtk.Entry()
-    entry.set_text(default)
-    entry.set_width_chars(10)
-    entry.show()
-    d.vbox.pack_end(entry)
-    entry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
+    adjustment = gtk.Adjustment(
+        value=1,
+        lower=lower,
+        upper=upper,
+        step_incr=1)
+    spinbutton = gtk.SpinButton(adjustment)
+    spinbutton.set_value(default)
+    spinbutton.show()
+    d.vbox.pack_end(spinbutton)
+    spinbutton.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
     d.set_default_response(gtk.RESPONSE_OK)
 
-    while True:
-        r = d.run()
-        d.destroy()
-        if r == gtk.RESPONSE_OK:
-            try:
-                i = int(entry.get_text().decode('utf8'))
-            except ValueError:
-                ErrorDialog(parent, 'Entry must be an integer')
-                continue
-            return text
-        else:
-            return None
+    r = d.run()
+    d.destroy()
+    if r == gtk.RESPONSE_OK:
+        return spinbutton.get_value_as_int()
+    else:
+        return None
 
 def ConfirmDialog(parent, message, type=gtk.MESSAGE_QUESTION):
     d = gtk.MessageDialog(parent,
