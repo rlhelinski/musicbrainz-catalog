@@ -145,7 +145,7 @@ def ConfirmDialog(parent, message, type=gtk.MESSAGE_QUESTION):
     d.destroy()
     return (r == gtk.RESPONSE_OK)
 
-def TrackListDialog(parent, tracklist):
+def TrackListDialog(parent, releaseDict):
     """
     Display a dialog with a list of tracks for a release.
     Example:
@@ -159,6 +159,10 @@ def TrackListDialog(parent, tracklist):
             gtk.MESSAGE_QUESTION,
             gtk.BUTTONS_OK_CANCEL,
             'Track List')
+    d.set_resizable(True)
+    sw = gtk.ScrolledWindow()
+    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+    d.set_size_request(400, 300)
     tv = gtk.TreeView()
     titleCell = gtk.CellRendererText()
     titleCell.set_property('xalign', 0)
@@ -173,12 +177,27 @@ def TrackListDialog(parent, tracklist):
 
     # make the list store
     trackListStore = gtk.TreeStore(str, str, str)
-    for item in tracklist:
-        trackListStore.append(None, item)
+    for medium in releaseDict['medium-list']:
+        parent = trackListStore.append(None, 
+            ('',
+            medium['format']+' '+medium['position'], 
+            mbcat.catalog.recLengthAsString(
+                sum([int(track['recording']['length']) \
+                    for track in medium['track-list']]))))
+        for track in medium['track-list']:
+            trackListStore.append(parent,
+                (track['recording']['id'],
+                track['recording']['title'],
+                mbcat.catalog.recLengthAsString(
+                    track['recording']['length'] \
+                    if 'length' in track['recording'] else None)))
     tv.set_model(trackListStore)
+    tv.expand_all()
 
     tv.show_all()
-    d.vbox.pack_end(tv)
+    sw.add(tv)
+    sw.show()
+    d.vbox.pack_end(sw)
     d.set_default_response(gtk.RESPONSE_OK)
 
     r = d.run()
@@ -526,7 +545,7 @@ class MBCatGtk:
 
     def showTrackList(self, widget):
         releaseId = self.getSelection()
-        TrackListDialog(self.window, self.catalog.getTrackList(releaseId))
+        TrackListDialog(self.window, self.catalog.getRelease(releaseId))
 
     def checkOut(self, widget):
         releaseId = self.getSelection()
