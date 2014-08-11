@@ -1571,3 +1571,10 @@ class Catalog(object):
             cur.execute('select title from releases where id=?',
                 (releaseId,))
             return cur.fetchone()[0]
+
+def getMediumLen(medium):
+    try:
+        return sum([int(track['recording']['length']) \
+            for track in medium['track-list']])
+    except KeyError as e:
+        return None
