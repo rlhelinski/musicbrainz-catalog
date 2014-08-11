@@ -166,8 +166,11 @@ def TrackListDialog(parent, releaseDict):
     tv = gtk.TreeView()
     titleCell = gtk.CellRendererText()
     titleCell.set_property('xalign', 0)
+    titleCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    titleCell.set_property('width-chars', 40)
     titleCol = gtk.TreeViewColumn('Title', titleCell)
     titleCol.add_attribute(titleCell, 'text', 1)
+    titleCol.set_resizable(True)
     tv.append_column(titleCol)
     lenCell = gtk.CellRendererText()
     lenCell.set_property('xalign', 1.0)
@@ -182,8 +185,8 @@ def TrackListDialog(parent, releaseDict):
             ('',
             medium['format']+' '+medium['position'], 
             mbcat.catalog.recLengthAsString(
-                sum([int(track['recording']['length']) \
-                    for track in medium['track-list']]))))
+                mbcat.catalog.getMediumLen(medium)
+                )))
         for track in medium['track-list']:
             trackListStore.append(parent,
                 (track['recording']['id'],
