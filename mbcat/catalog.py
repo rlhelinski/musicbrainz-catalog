@@ -73,9 +73,11 @@ def sql_list_remove(cursor, table_name, key_column, key, value, list_column='rel
                     (key,))
 
 def recLengthAsString(recLength):
+    if not recLength:
+        return '?:??'
+    # convert milli-seconds to seconds
     length = float(recLength)/1000
-    return (('%d:%02d' % (length/60, length%60)) \
-            if length else '  ?:??')
+    return ('%d:%02d' % (length/60, length%60))
 
 # For remembering user decision to overwrite existing data
 overWriteAll = False
