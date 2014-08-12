@@ -54,6 +54,67 @@ def ErrorDialog(parent, message, type=gtk.MESSAGE_ERROR):
     d.run()
     d.destroy()
 
+def ReleaseSelectDialog(parent,
+        catalog,
+        message='Choose a release',
+        releaseIdList=[],
+        releaseDictList=[]
+        ):
+    # TODO releaseDictList argument should support metadata returned from a
+    # webservice query
+    d = gtk.MessageDialog(parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_QUESTION,
+            gtk.BUTTONS_OK_CANCEL,
+            message)
+    d.set_resizable(True)
+    sw = gtk.ScrolledWindow()
+    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+    d.set_size_request(400, 300)
+    tv = gtk.TreeView()
+    titleCell = gtk.CellRendererText()
+    titleCell.set_property('xalign', 0)
+    titleCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    titleCell.set_property('width-chars', 40)
+    titleCol = gtk.TreeViewColumn('Artist', titleCell)
+    titleCol.add_attribute(titleCell, 'text', 1)
+    titleCol.set_resizable(True)
+    tv.append_column(titleCol)
+    lenCell = gtk.CellRendererText()
+    lenCell.set_property('xalign', 1.0)
+    lenCol = gtk.TreeViewColumn('Title', lenCell)
+    lenCol.add_attribute(lenCell, 'text', 2)
+    tv.append_column(lenCol)
+
+    # make the list store
+    releaseListStore = gtk.ListStore(str, str, str)
+    for releaseId in releaseIdList:
+        releaseListStore.append((
+            #release['id'],
+            #mbcat.catalog.getArtistSortPhrase(release),
+            #release['title']))
+            releaseId,
+            catalog.getReleaseTitle(releaseId),
+            catalog.getReleaseArtist(releaseId)
+            ))
+    tv.set_model(releaseListStore)
+    tv.expand_all()
+
+    tv.show_all()
+    sw.add(tv)
+    sw.show()
+    d.vbox.pack_end(sw)
+    d.set_default_response(gtk.RESPONSE_OK)
+
+    r = d.run()
+    model, it = tv.get_selection().get_selected()
+    if it:
+        selection = model.get_value(it, 0)
+    else:
+        selection = None
+    d.destroy()
+    return selection
+
 def ReleaseSearchDialog(parent,
         catalog,
         message='Enter search terms or release ID',
@@ -64,11 +125,11 @@ def ReleaseSearchDialog(parent,
     if len(entry) == 36:
         releaseId = mbcat.utils.getReleaseIdFromInput(input)
         return releaseId
+    # else, assume that a search query was entered
     matches = list(catalog._search(entry))
-    print (matches)
     if len(matches) > 1:
         # Have to ask the user which release they mean
-        return
+        return ReleaseSelectDialog(parent, catalog, releaseIdList=matches)
     elif len(matches) == 1:
         return matches[0]
     else:
