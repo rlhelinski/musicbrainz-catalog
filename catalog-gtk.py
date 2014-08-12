@@ -679,6 +679,12 @@ class MBCatGtk:
             return
         self.catalog.setRating(releaseId, nr)
 
+    def searchArtistTitle(self, widget):
+        releaseId = ReleaseSearchDialog(self.window, self.catalog)
+        if not releaseId or releaseId not in self.catalog:
+            return
+        self.setSelectedRow(self.getReleaseRow(releaseId))
+
     def createMenuBar(self, widget):
         # Menu bar
         mb = gtk.MenuBar()
@@ -857,6 +863,7 @@ class MBCatGtk:
 
         ## Artist/Title
         submenuitem = gtk.MenuItem('Artist/Title')
+        submenuitem.connect('activate', self.searchArtistTitle)
         menu.append(submenuitem)
 
         ## Track
