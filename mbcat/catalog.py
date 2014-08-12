@@ -1107,7 +1107,7 @@ class Catalog(object):
 
             metaColumns = [
                 ('sortstring', self.getSortStringFromRelease(relDict['release'])),
-                ('artist', self.getArtistSortPhrase(relDict['release'])),
+                ('artist', mbcat.catalog.getArtistSortPhrase(relDict['release'])),
                 ('title', relDict['release']['title']),
                 ('date', (relDict['release']['date'] if 'date' in relDict['release'] else '')),
                 ('country', (relDict['release']['country'] if 'country' in relDict['release'] else '')),
@@ -1191,7 +1191,8 @@ class Catalog(object):
 
             con.commit()
 
-    def getArtistSortPhrase(self, release):
+    @staticmethod
+    def getArtistSortPhrase(release):
         """Join artist sort names together"""
         return ''.join([
                 credit if type(credit)==str else \
@@ -1227,7 +1228,7 @@ class Catalog(object):
                 # if just the first artist is used, sort-friendly
                 release['artist-credit'][0]['artist']['name'],
                 # the sort-friendly string with all artists credited
-                self.getArtistSortPhrase(release)
+                mbcat.catalog.getArtistSortPhrase(release)
                 ])
 
     @staticmethod
