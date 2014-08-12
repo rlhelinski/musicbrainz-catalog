@@ -1573,6 +1573,13 @@ class Catalog(object):
                 (releaseId,))
             return cur.fetchone()[0]
 
+    def getReleaseArtist(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select artist from releases where id=?',
+                (releaseId,))
+            return cur.fetchone()[0]
+
 def getMediumLen(medium):
     try:
         return sum([int(track['recording']['length']) \
