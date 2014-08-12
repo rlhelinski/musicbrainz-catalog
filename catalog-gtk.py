@@ -239,22 +239,22 @@ def TrackListDialog(parent, releaseDict):
     tv.append_column(lenCol)
 
     # make the list store
-    trackListStore = gtk.TreeStore(str, str, str)
+    trackTreeStore = gtk.TreeStore(str, str, str)
     for medium in releaseDict['medium-list']:
-        parent = trackListStore.append(None, 
+        parent = trackTreeStore.append(None, 
             ('',
             medium['format']+' '+medium['position'], 
             mbcat.catalog.recLengthAsString(
                 mbcat.catalog.getMediumLen(medium)
                 )))
         for track in medium['track-list']:
-            trackListStore.append(parent,
+            trackTreeStore.append(parent,
                 (track['recording']['id'],
                 track['recording']['title'],
                 mbcat.catalog.recLengthAsString(
                     track['recording']['length'] \
                     if 'length' in track['recording'] else None)))
-    tv.set_model(trackListStore)
+    tv.set_model(trackTreeStore)
     tv.expand_all()
 
     tv.show_all()
