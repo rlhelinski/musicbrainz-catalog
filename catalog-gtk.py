@@ -36,9 +36,10 @@ def ReleaseIDEntry(parent, message, default=''):
     d.set_default_response(gtk.RESPONSE_OK)
 
     r = d.run()
+    # have to get the text before we destroy the gtk.Entry
+    text = entry.get_text().decode('utf8')
     d.destroy()
     if r == gtk.RESPONSE_OK:
-        text = entry.get_text().decode('utf8')
         return text
     else:
         return None
