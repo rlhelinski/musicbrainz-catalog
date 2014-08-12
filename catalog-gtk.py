@@ -214,8 +214,6 @@ def TrackListDialog(parent, releaseDict):
     TrackListDialog(gui.window,
         gui.catalog.getTrackList('1cd1d24c-1705-485c-ae6f-c53e7831b1e4'))
     """
-    # TODO this won't scale it really long track lists (e.g., 100 long)
-    # TODO this assumes there is one medium in the release
     d = gtk.MessageDialog(parent,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
             gtk.MESSAGE_QUESTION,
