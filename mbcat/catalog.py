@@ -587,6 +587,20 @@ class Catalog(object):
         return '%s: %s (%s)' % (recordingId, recordingRow[0],
             mbcat.Catalog.formatRecordingLength(recordingRow[1]))
 
+    def getRecordingTitle(self, recordingId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select title from recordings '
+                'where recording=?', (recordingId,))
+            return cur.fetchone()[0]
+
+    def getRecordingLength(self, recordingId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select length from recordings '
+                'where recording=?', (recordingId,))
+            return cur.fetchone()[0]
+
     @staticmethod
     def getSortStringFromRelease(release):
         return ' - '.join ( [ \
