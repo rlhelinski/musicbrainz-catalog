@@ -72,30 +72,42 @@ def ReleaseSelectDialog(parent,
     sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
     d.set_size_request(400, 300)
     tv = gtk.TreeView()
+    artistCell = gtk.CellRendererText()
+    artistCell.set_property('xalign', 0)
+    artistCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    artistCell.set_property('width-chars', 20)
+    artistCol = gtk.TreeViewColumn('Artist', artistCell)
+    artistCol.add_attribute(artistCell, 'text', 1)
+    artistCol.set_resizable(True)
+    tv.append_column(artistCol)
+
     titleCell = gtk.CellRendererText()
     titleCell.set_property('xalign', 0)
     titleCell.set_property('ellipsize', pango.ELLIPSIZE_END)
-    titleCell.set_property('width-chars', 40)
-    titleCol = gtk.TreeViewColumn('Artist', titleCell)
-    titleCol.add_attribute(titleCell, 'text', 1)
-    titleCol.set_resizable(True)
+    titleCell.set_property('width-chars', 30)
+    titleCol = gtk.TreeViewColumn('Title', titleCell)
+    titleCol.add_attribute(titleCell, 'text', 2)
     tv.append_column(titleCol)
-    lenCell = gtk.CellRendererText()
-    lenCell.set_property('xalign', 1.0)
-    lenCol = gtk.TreeViewColumn('Title', lenCell)
-    lenCol.add_attribute(lenCell, 'text', 2)
-    tv.append_column(lenCol)
+
+    formatCell = gtk.CellRendererText()
+    formatCell.set_property('xalign', 0)
+    formatCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    formatCell.set_property('width-chars', -1)
+    formatCol = gtk.TreeViewColumn('Format', formatCell)
+    formatCol.add_attribute(formatCell, 'text', 3)
+    tv.append_column(formatCol)
 
     # make the list store
-    releaseListStore = gtk.ListStore(str, str, str)
+    releaseListStore = gtk.ListStore(str, str, str, str)
     for releaseId in releaseIdList:
         releaseListStore.append((
             #release['id'],
             #mbcat.catalog.getArtistSortPhrase(release),
             #release['title']))
             releaseId,
+            catalog.getReleaseArtist(releaseId),
             catalog.getReleaseTitle(releaseId),
-            catalog.getReleaseArtist(releaseId)
+            catalog.getReleaseFormat(releaseId)
             ))
     tv.set_model(releaseListStore)
     tv.expand_all()

@@ -1580,6 +1580,13 @@ class Catalog(object):
                 (releaseId,))
             return cur.fetchone()[0]
 
+    def getReleaseFormat(self, releaseId):
+        with self._connect() as con:
+            cur = con.cursor()
+            cur.execute('select format from releases where id=?',
+                (releaseId,))
+            return cur.fetchone()[0]
+
 def getMediumLen(medium):
     try:
         return sum([int(track['recording']['length']) \
