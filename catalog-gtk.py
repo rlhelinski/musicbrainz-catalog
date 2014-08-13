@@ -145,7 +145,7 @@ def ReleaseSearchDialog(parent,
     elif len(matches) == 1:
         return matches[0]
     else:
-        raise ErrorDialog('No matches found for "%s"' % entry)
+        ErrorDialog(parent, 'No matches found for "%s"' % entry)
 
 def RatingDialog(parent,
     message='Enter rating',
