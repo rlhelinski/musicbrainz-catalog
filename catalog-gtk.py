@@ -10,6 +10,7 @@ pygtk.require('2.0')
 import gtk
 import pango
 import mbcat
+import mbcat.barcode # why does this not automatically import?
 import musicbrainzngs as mb
 import argparse
 import time
@@ -139,6 +140,34 @@ def ReleaseSearchDialog(parent,
         return releaseId
     # else, assume that a search query was entered
     matches = list(catalog._search(entry))
+    if len(matches) > 1:
+        # Have to ask the user which release they mean
+        return ReleaseSelectDialog(parent, catalog, releaseIdList=matches)
+    elif len(matches) == 1:
+        return matches[0]
+    else:
+        ErrorDialog(parent, 'No matches found for "%s"' % entry)
+
+def BarcodeSearchDialog(parent,
+        catalog,
+        message='Enter barcode (UPC):',
+        default=''):
+    entry = ReleaseIDEntry(parent, message, default)
+    if not entry:
+        return
+
+    barCodes = mbcat.barcode.UPC(entry).variations()
+    matches = set()
+    for barCode in barCodes:
+        try:
+            for releaseId in catalog.barCodeLookup(barCode):
+                matches.add(releaseId)
+        except KeyError as e:
+            pass
+        else:
+            found = True
+    matches = list(matches)
+
     if len(matches) > 1:
         # Have to ask the user which release they mean
         return ReleaseSelectDialog(parent, catalog, releaseIdList=matches)
@@ -691,6 +720,12 @@ class MBCatGtk:
             return
         self.catalog.setRating(releaseId, nr)
 
+    def searchBarcode(self, widget):
+        releaseId = BarcodeSearchDialog(self.window, self.catalog)
+        if not releaseId or releaseId not in self.catalog:
+            return
+        self.setSelectedRow(self.getReleaseRow(releaseId))
+
     def searchArtistTitle(self, widget):
         releaseId = ReleaseSearchDialog(self.window, self.catalog)
         if not releaseId or releaseId not in self.catalog:
@@ -871,6 +906,7 @@ class MBCatGtk:
 
         ## Barcode (UPC)
         submenuitem = gtk.MenuItem('Barcode (UPC)')
+        submenuitem.connect('activate', self.searchBarcode)
         menu.append(submenuitem)
 
         ## Artist/Title
