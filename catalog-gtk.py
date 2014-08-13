@@ -128,6 +128,88 @@ def ReleaseSelectDialog(parent,
     d.destroy()
     return selection
 
+def TrackSelectDialog(parent,
+        catalog,
+        message='Choose a track',
+        trackIdList=[],
+        ):
+    d = gtk.MessageDialog(parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_QUESTION,
+            gtk.BUTTONS_OK_CANCEL,
+            message)
+    d.set_resizable(True)
+    sw = gtk.ScrolledWindow()
+    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+    d.set_size_request(400, 300)
+    tv = gtk.TreeView()
+    titleCell = gtk.CellRendererText()
+    titleCell.set_property('xalign', 0)
+    titleCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    titleCell.set_property('width-chars', 30)
+    titleCol = gtk.TreeViewColumn('Title', titleCell)
+    titleCol.add_attribute(titleCell, 'text', 1)
+    titleCol.set_resizable(True)
+    tv.append_column(titleCol)
+
+    lengthCell = gtk.CellRendererText()
+    lengthCell.set_property('xalign', 0)
+    lengthCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    lengthCell.set_property('width-chars', -1)
+    lengthCol = gtk.TreeViewColumn('Length', lengthCell)
+    lengthCol.add_attribute(lengthCell, 'text', 2)
+    tv.append_column(lengthCol)
+
+    releaseCell = gtk.CellRendererText()
+    releaseCell.set_property('xalign', 0)
+    releaseCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    releaseCell.set_property('width-chars', 30)
+    releaseCol = gtk.TreeViewColumn('Appears on', releaseCell)
+    releaseCol.add_attribute(releaseCell, 'text', 3)
+    tv.append_column(releaseCol)
+
+    artistCell = gtk.CellRendererText()
+    artistCell.set_property('xalign', 0)
+    artistCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    artistCell.set_property('width-chars', 20)
+    artistCol = gtk.TreeViewColumn('Artist', artistCell)
+    artistCol.add_attribute(artistCell, 'text', 4)
+    tv.append_column(artistCol)
+
+    # make the list store
+    trackListStore = gtk.ListStore(str, str, str, str, str, str)
+    for trackId in trackIdList:
+        for releaseId in catalog.recordingGetReleases(trackId):
+            trackListStore.append((
+                trackId,
+                catalog.getRecordingTitle(trackId),
+                mbcat.catalog.recLengthAsString(
+                    catalog.getRecordingLength(trackId)),
+                catalog.getReleaseTitle(releaseId),
+                # TODO this should be specific to the recording,
+                # not the release
+                catalog.getReleaseArtist(releaseId),
+                releaseId
+                ))
+    tv.set_model(trackListStore)
+    tv.expand_all()
+
+    tv.show_all()
+    sw.add(tv)
+    sw.show()
+    d.vbox.pack_end(sw)
+    d.set_default_response(gtk.RESPONSE_OK)
+
+    r = d.run()
+    model, it = tv.get_selection().get_selected()
+    if r == gtk.RESPONSE_OK and it:
+        # use the releaseId in position 5
+        selection = model.get_value(it, 5)
+    else:
+        selection = None
+    d.destroy()
+    return selection
+
 def ReleaseSearchDialog(parent,
         catalog,
         message='Enter search terms or release ID',
@@ -171,6 +253,26 @@ def BarcodeSearchDialog(parent,
     if len(matches) > 1:
         # Have to ask the user which release they mean
         return ReleaseSelectDialog(parent, catalog, releaseIdList=matches)
+    elif len(matches) == 1:
+        return matches[0]
+    else:
+        ErrorDialog(parent, 'No matches found for "%s"' % entry)
+
+def TrackSearchDialog(parent,
+        catalog,
+        message='Enter search terms',
+        default=''):
+    entry = ReleaseIDEntry(parent, message, default)
+    if not entry:
+        return
+    if len(entry) == 36:
+        matches = [mbcat.utils.getReleaseIdFromInput(input)]
+    else: # assume that a search query was entered
+        matches = list(catalog._search(entry, table='trackwords',
+            keycolumn='trackword'))
+    if len(matches) > 1:
+        # Have to ask the user which release they mean
+        return TrackSelectDialog(parent, catalog, trackIdList=matches)
     elif len(matches) == 1:
         return matches[0]
     else:
@@ -732,6 +834,12 @@ class MBCatGtk:
             return
         self.setSelectedRow(self.getReleaseRow(releaseId))
 
+    def searchTrack(self, widget):
+        releaseId = TrackSearchDialog(self.window, self.catalog)
+        if not releaseId or releaseId not in self.catalog:
+            return
+        self.setSelectedRow(self.getReleaseRow(releaseId))
+
     def createMenuBar(self, widget):
         # Menu bar
         mb = gtk.MenuBar()
@@ -916,6 +1024,7 @@ class MBCatGtk:
 
         ## Track
         submenuitem = gtk.MenuItem('Track')
+        submenuitem.connect('activate', self.searchTrack)
         menu.append(submenuitem)
 
         # Webservice menu
