@@ -555,6 +555,7 @@ class Catalog(object):
             # get the record, there should be one or none
             fetched = cur.fetchone()
 
+        # remember that the field is a list type
         return fetched[0]
 
     def formatDiscInfo(self, releaseId):
