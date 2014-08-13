@@ -120,7 +120,7 @@ def ReleaseSelectDialog(parent,
 
     r = d.run()
     model, it = tv.get_selection().get_selected()
-    if it:
+    if r == gtk.RESPONSE_OK and it:
         selection = model.get_value(it, 0)
     else:
         selection = None
