@@ -571,6 +571,7 @@ class Catalog(object):
                 ] )
 
     @staticmethod
+    @mbcat.utils.deprecated
     def formatRecordingLength(length):
         seconds = float(length)/1000 if length else None
         return (('%d:%02d' % (seconds/60, seconds%60)) \
