@@ -409,6 +409,155 @@ def TrackListDialog(parent, releaseDict):
     r = d.run()
     d.destroy()
 
+def GroupQueryResultsDialog(parent, catalog, queryResult):
+    """
+    Display a dialog with a list of tracks for a release.
+    Example:
+    TrackListDialog(gui.window,
+        gui.catalog.getTrackList('1cd1d24c-1705-485c-ae6f-c53e7831b1e4'))
+    """
+    d = gtk.MessageDialog(parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_QUESTION,
+            gtk.BUTTONS_OK_CANCEL,
+            'Track List')
+    d.set_resizable(True)
+    sw = gtk.ScrolledWindow()
+    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+    d.set_size_request(400, 300)
+    tv = gtk.TreeView()
+
+    authorCell = gtk.CellRendererText()
+    authorCell.set_property('xalign', 0)
+    authorCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    authorCell.set_property('width-chars', 20)
+    authorCol = gtk.TreeViewColumn('Title', authorCell)
+    authorCol.add_attribute(authorCell, 'text', 1)
+    authorCol.set_resizable(True)
+    tv.append_column(authorCol)
+
+    titleCell = gtk.CellRendererText()
+    titleCell.set_property('xalign', 0)
+    titleCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    titleCell.set_property('width-chars', 30)
+    titleCol = gtk.TreeViewColumn('Title', titleCell)
+    titleCol.add_attribute(titleCell, 'text', 2)
+    titleCol.set_resizable(True)
+    tv.append_column(titleCol)
+
+    lenCell = gtk.CellRendererText()
+    lenCell.set_property('xalign', 1.0)
+    lenCol = gtk.TreeViewColumn('Releases', lenCell)
+    lenCol.add_attribute(lenCell, 'text', 3)
+    tv.append_column(lenCol)
+
+    # make the list store
+    resultListStore = gtk.ListStore(str, str, str, str)
+    for group in queryResult['release-group-list']:
+        resultListStore.append((
+            group['id'],
+            mbcat.catalog.formatQueryArtist(group),
+            group['title'],
+            '%d' % len(group['release-list'])
+            ))
+    tv.set_model(resultListStore)
+    tv.expand_all()
+
+    tv.show_all()
+    sw.add(tv)
+    sw.show()
+    d.vbox.pack_end(sw)
+    d.set_default_response(gtk.RESPONSE_OK)
+
+    r = d.run()
+    d.destroy()
+
+def QueryResultsDialog(parent, catalog, queryResult):
+    """
+    Display a dialog with a list of tracks for a release.
+    Example:
+    TrackListDialog(gui.window,
+        gui.catalog.getTrackList('1cd1d24c-1705-485c-ae6f-c53e7831b1e4'))
+    """
+    d = gtk.MessageDialog(parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_QUESTION,
+            gtk.BUTTONS_OK_CANCEL,
+            'Track List')
+    d.set_resizable(True)
+    sw = gtk.ScrolledWindow()
+    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+    d.set_size_request(400, 300)
+    tv = gtk.TreeView()
+
+    authorCell = gtk.CellRendererText()
+    authorCell.set_property('xalign', 0)
+    authorCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    authorCell.set_property('width-chars', 20)
+    authorCol = gtk.TreeViewColumn('Title', authorCell)
+    authorCol.add_attribute(authorCell, 'text', 1)
+    authorCol.set_resizable(True)
+    tv.append_column(authorCol)
+
+    titleCell = gtk.CellRendererText()
+    titleCell.set_property('xalign', 0)
+    titleCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    titleCell.set_property('width-chars', 30)
+    titleCol = gtk.TreeViewColumn('Title', titleCell)
+    titleCol.add_attribute(titleCell, 'text', 2)
+    titleCol.set_resizable(True)
+    tv.append_column(titleCol)
+
+    formatCell = gtk.CellRendererText()
+    formatCell.set_property('xalign', 0)
+    formatCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    formatCell.set_property('width-chars', 30)
+    formatCol = gtk.TreeViewColumn('Format', formatCell)
+    formatCol.add_attribute(formatCell, 'text', 3)
+    formatCol.set_resizable(True)
+    tv.append_column(formatCol)
+
+    formatCell = gtk.CellRendererText()
+    formatCell.set_property('xalign', 0)
+    formatCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    formatCell.set_property('width-chars', 20)
+    formatCol = gtk.TreeViewColumn('Label', formatCell)
+    formatCol.add_attribute(formatCell, 'text', 4)
+    formatCol.set_resizable(True)
+    tv.append_column(formatCol)
+
+    formatCell = gtk.CellRendererText()
+    formatCell.set_property('xalign', 0)
+    formatCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    formatCell.set_property('width-chars', 20)
+    formatCol = gtk.TreeViewColumn('Catalog #', formatCell)
+    formatCol.add_attribute(formatCell, 'text', 5)
+    formatCol.set_resizable(True)
+    tv.append_column(formatCol)
+
+    # make the list store
+    resultListStore = gtk.ListStore(str, str, str, str, str, str)
+    for release in queryResult['release-list']:
+        resultListStore.append((
+            release['id'],
+            mbcat.catalog.formatQueryArtist(release),
+            release['title'],
+            mbcat.catalog.formatQueryMedia(release),
+            mbcat.catalog.formatQueryRecordLabel(release),
+            mbcat.catalog.formatQueryCatNo(release),
+            ))
+    tv.set_model(resultListStore)
+    tv.expand_all()
+
+    tv.show_all()
+    sw.add(tv)
+    sw.show()
+    d.vbox.pack_end(sw)
+    d.set_default_response(gtk.RESPONSE_OK)
+
+    r = d.run()
+    d.destroy()
+
 def TextEntry(parent, message, default=''):
     """
     Display a dialog with a text entry.
@@ -460,6 +609,7 @@ class MBCatGtk:
     formatLabels = ['_All', '_Digital', '_CD', '_7" Vinyl', '_12" Vinyl']
 
     maxAge = 60
+    searchResultsLimit = 100
 
     # Default extensions.
     filePatterns = [
@@ -840,6 +990,26 @@ class MBCatGtk:
             return
         self.setSelectedRow(self.getReleaseRow(releaseId))
 
+    def webserviceReleaseGroup(self, widget):
+        entry = ReleaseIDEntry(self.window, 'Enter release group search terms')
+        if not entry:
+            return
+        results = mb.search_release_groups(releasegroup=entry,
+             limit=self.searchResultsLimit)
+        if not results:
+            ErrorDialog(self.window, 'No results found for "%s"' % entry)
+        GroupQueryResultsDialog(self.window, self.catalog, results)
+
+    def webserviceRelease(self, widget):
+        entry = ReleaseIDEntry(self.window, 'Enter release search terms')
+        if not entry:
+            return
+        results = mb.search_releases(release=entry,
+             limit=self.searchResultsLimit)
+        if not results:
+            ErrorDialog(self.window, 'No results found for "%s"' % entry)
+        QueryResultsDialog(self.window, self.catalog, results)
+
     def createMenuBar(self, widget):
         # Menu bar
         mb = gtk.MenuBar()
@@ -1035,10 +1205,12 @@ class MBCatGtk:
 
         ## Release Group Search
         submenuitem = gtk.MenuItem('Release Group')
+        submenuitem.connect('activate', self.webserviceReleaseGroup)
         menu.append(submenuitem)
 
         ## Release Search
         submenuitem = gtk.MenuItem('Release')
+        submenuitem.connect('activate', self.webserviceRelease)
         menu.append(submenuitem)
 
         ## Sync Collection
