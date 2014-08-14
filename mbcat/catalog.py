@@ -1609,3 +1609,25 @@ def getMediumLen(medium):
             for track in medium['track-list']])
     except KeyError as e:
         return None
+
+def formatQueryArtist(releaseDict):
+    return ''.join([((cred['artist']['name']) \
+            if isinstance(cred, dict) else cred)
+            for cred in releaseDict['artist-credit']])
+
+def formatQueryMedia(releaseDict):
+    return ' + '.join(mbcat.utils.mergeList(
+         [[medium['format']] if medium and 'format' in medium else []
+          for medium in releaseDict['medium-list']]))
+
+def formatQueryRecordLabel(releaseDict):
+    return (', '.join([(info['label']['name'] if 'label' in info \
+            and 'name' in info['label'] else '') \
+            for info in releaseDict['label-info-list']])) \
+            if 'label-info-list' in releaseDict else ''
+
+def formatQueryCatNo(releaseDict):
+    return (', '.join([(info['catalog-number'] \
+            if 'catalog-number' in info else '') \
+            for info in releaseDict['label-info-list']])) \
+            if 'label-info-list' in releaseDict else ''
