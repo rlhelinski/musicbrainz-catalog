@@ -428,24 +428,29 @@ class Shell:
         # TODO this is a mess and should be combined with other code
         for release in results['release-list']:
             self.s.write(release['id'] + ' ' +
+                        # Artist(s)
                          ''.join([(('"' + cred['artist']['name'] + '"') \
                                     if isinstance(cred, dict) else cred)
                                     for cred in release['artist-credit']]) +
                          ' "' + release['title'] + '"' +
+                         # Format(s)
                          (' (' + ' + '.join(mbcat.utils.mergeList(
                              [[medium['format']] if medium and 'format' in medium else []
                               for medium in release['medium-list']])) + ')') +
+                         # Record Label(s) and Catalog Number(s)
                          ((' ' + ', '.join([('label: ' + info['label']['name'] if 'label' in info else '') +
                                            (' catno.: ' + info['catalog-number']
                                             if 'catalog-number' in info else '')
                                            for info in release['label-info-list']])) \
                                            if 'label-info-list' in release else '') +
+                         # Country
                          ((' (' + ', '.join(mbcat.utils.mergeList(
                              [[code for code in release_event['area']['iso-3166-1-code-list']]
                               if release_event and 'area' in release_event
                               and 'iso-3166-1-code-list' in release_event['area'] else []
                               for release_event in release['release-event-list']])) + ')') \
                               if 'release-event-list' in release else '') +
+                         # Barcode
                          (', barcode: ' + release['barcode'] if 'barcode' in release
                           else '') +
                          '\n')
