@@ -7,6 +7,7 @@ This module contains helper functions to make common tasks easier.
 __revision__ = '$Id: utils.py 13322 2011-11-03 13:38:06Z luks $'
 
 import warnings
+import itertools
 
 def deprecated(func):
     """This is a decorator which can be used to mark functions
@@ -125,5 +126,7 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         yield l[i:i+n]
 
+def mergeList(l):
+    return list(set(itertools.chain.from_iterable(l)))
 
 # EOF

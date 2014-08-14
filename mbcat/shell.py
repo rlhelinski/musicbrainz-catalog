@@ -423,10 +423,6 @@ class Shell:
         pbar = progressbar.ProgressBar(widgets=self.widgets)
         self.c.loadZip(path, pbar)
 
-    @staticmethod
-    def mergeList(l):
-        return list(set(itertools.chain.from_iterable(l)))
-
     def printQueryResults(self, results):
         self.s.write('Release Results:\n')
         # TODO this is a mess and should be combined with other code
@@ -436,7 +432,7 @@ class Shell:
                                     if isinstance(cred, dict) else cred)
                                     for cred in release['artist-credit']]) +
                          ' "' + release['title'] + '"' +
-                         (' (' + ' + '.join(self.mergeList(
+                         (' (' + ' + '.join(mbcat.utils.mergeList(
                              [[medium['format']] if medium and 'format' in medium else []
                               for medium in release['medium-list']])) + ')') +
                          ((' ' + ', '.join([('label: ' + info['label']['name'] if 'label' in info else '') +
@@ -444,7 +440,7 @@ class Shell:
                                             if 'catalog-number' in info else '')
                                            for info in release['label-info-list']])) \
                                            if 'label-info-list' in release else '') +
-                         ((' (' + ', '.join(self.mergeList(
+                         ((' (' + ', '.join(mbcat.utils.mergeList(
                              [[code for code in release_event['area']['iso-3166-1-code-list']]
                               if release_event and 'area' in release_event
                               and 'iso-3166-1-code-list' in release_event['area'] else []
