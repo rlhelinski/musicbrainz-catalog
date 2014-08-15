@@ -18,7 +18,7 @@ import time
 _log = logging.getLogger("mbcat")
 
 # Thanks http://stackoverflow.com/a/8907574/3098007
-def ReleaseIDEntry(parent, message, default=''):
+def ReleaseIDEntry(parent, message, default='', textVisible=True):
     """
     Display a dialog with a text entry.
     Returns the text, or None if canceled.
@@ -29,6 +29,7 @@ def ReleaseIDEntry(parent, message, default=''):
             gtk.BUTTONS_OK_CANCEL,
             message)
     entry = gtk.Entry()
+    entry.set_visibility(textVisible)
     entry.set_text(default)
     entry.set_width_chars(36)
     entry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
