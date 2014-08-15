@@ -333,9 +333,10 @@ def IntegerDialog(parent,
     d.set_default_response(gtk.RESPONSE_OK)
 
     r = d.run()
+    val = spinbutton.get_value_as_int()
     d.destroy()
     if r == gtk.RESPONSE_OK:
-        return spinbutton.get_value_as_int()
+        return val
     else:
         return None
 
