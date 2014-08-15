@@ -768,7 +768,8 @@ class Catalog(object):
             cur = con.cursor()
             cur.execute('select purchases from releases where id=?',
                     (releaseId,))
-            return cur.fetchall()[0][0]
+            result = cur.fetchone()
+            return result[0] if result else []
 
     def addPurchase(self, releaseId, purchaseObj):
         # Some precursory error checking
