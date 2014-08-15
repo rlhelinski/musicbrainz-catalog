@@ -14,6 +14,7 @@ import mbcat.barcode # why does this not automatically import?
 import musicbrainzngs as mb
 import argparse
 import time
+import webbrowser
 
 _log = logging.getLogger("mbcat")
 
@@ -802,8 +803,10 @@ class MBCatGtk:
         row = model.get_value(it, 0)
         cell.set_property('text', 'OK')
 
-    def on_row_activate(self, tree, path, column):
-        pass
+    def on_row_activate(self, treeview, path, column):
+        model, it = treeview.get_selection().get_selected()
+        relId = model.get_value(it, 0)
+        webbrowser.open(self.catalog.releaseUrl + relId)
 
     def on_row_select(self, treeview):
         model, it = treeview.get_selection().get_selected()
