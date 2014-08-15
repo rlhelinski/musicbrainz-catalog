@@ -560,6 +560,67 @@ def QueryResultsDialog(parent, catalog, queryResult):
     r = d.run()
     d.destroy()
 
+def SelectCollectionDialog(parent, result):
+    """
+    Display a dialog with a list of tracks for a release.
+    Example:
+    TrackListDialog(gui.window,
+        gui.catalog.getTrackList('1cd1d24c-1705-485c-ae6f-c53e7831b1e4'))
+    """
+    d = gtk.MessageDialog(parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_QUESTION,
+            gtk.BUTTONS_OK_CANCEL,
+            'Track List')
+    d.set_resizable(True)
+    sw = gtk.ScrolledWindow()
+    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+    d.set_size_request(400, 300)
+    tv = gtk.TreeView()
+
+    authorCell = gtk.CellRendererText()
+    authorCell.set_property('xalign', 0)
+    authorCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    authorCell.set_property('width-chars', 30)
+    authorCol = gtk.TreeViewColumn('Name', authorCell)
+    authorCol.add_attribute(authorCell, 'text', 1)
+    authorCol.set_resizable(True)
+    tv.append_column(authorCol)
+
+    titleCell = gtk.CellRendererText()
+    titleCell.set_property('xalign', 0)
+    titleCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    titleCell.set_property('width-chars', 20)
+    titleCol = gtk.TreeViewColumn('Editor', titleCell)
+    titleCol.add_attribute(titleCell, 'text', 2)
+    titleCol.set_resizable(True)
+    tv.append_column(titleCol)
+
+    # make the list store
+    resultListStore = gtk.ListStore(str, str, str)
+    for i, collection in enumerate(result['collection-list']):
+        resultListStore.append((
+            collection['id'],
+            collection['name'],
+            collection['editor']
+            ))
+    tv.set_model(resultListStore)
+    tv.expand_all()
+
+    tv.show_all()
+    sw.add(tv)
+    sw.show()
+    d.vbox.pack_end(sw)
+    d.set_default_response(gtk.RESPONSE_OK)
+
+    r = d.run()
+    model, it = tv.get_selection().get_selected()
+    d.destroy()
+    if r == gtk.RESPONSE_OK and it:
+        return model.get_value(it, 0)
+    else:
+        return None
+
 def TextEntry(parent, message, default=''):
     """
     Display a dialog with a text entry.
@@ -1022,6 +1083,31 @@ class MBCatGtk:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
         QueryResultsDialog(self.window, self.catalog, results)
 
+    def webserviceSyncCollection(self, widget):
+        """Synchronize with a musicbrainz collection (currently only pushes releases)."""
+        if not self.catalog.prefs.username:
+            username = ReleaseIDEntry('Enter username:')
+            self.catalog.prefs.username = username
+            self.catalog.prefs.save()
+        else:
+            username = self.catalog.prefs.username
+
+        # Input the password.
+        password = ReleaseIDEntry(self.window,
+            "Password for '%s': " % username,
+            textVisible=False)
+        if not password:
+            return
+
+        # Call musicbrainzngs.auth() before making any API calls that
+        # require authentication.
+        mb.auth(username, password)
+
+        result = mb.get_collections()
+        collectionId = SelectCollectionDialog(self.window, result)
+
+        self.catalog.syncCollection(collectionId)
+
     def createMenuBar(self, widget):
         # Menu bar
         mb = gtk.MenuBar()
@@ -1236,6 +1322,7 @@ class MBCatGtk:
 
         ## Sync Collection
         submenuitem = gtk.MenuItem('Sync Collection')
+        submenuitem.connect('activate', self.webserviceSyncCollection)
         menu.append(submenuitem)
 
         # Help menu
