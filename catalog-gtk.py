@@ -1010,6 +1010,16 @@ class MBCatGtk:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
         QueryResultsDialog(self.window, self.catalog, results)
 
+    def webserviceBarcode(self, widget):
+        entry = ReleaseIDEntry(self.window, 'Enter search barcode (UPC):')
+        if not entry:
+            return
+        results = mb.search_releases(barcode=entry,
+             limit=self.searchResultsLimit)
+        if not results:
+            ErrorDialog(self.window, 'No results found for "%s"' % entry)
+        QueryResultsDialog(self.window, self.catalog, results)
+
     def createMenuBar(self, widget):
         # Menu bar
         mb = gtk.MenuBar()
@@ -1212,6 +1222,15 @@ class MBCatGtk:
         submenuitem = gtk.MenuItem('Release')
         submenuitem.connect('activate', self.webserviceRelease)
         menu.append(submenuitem)
+
+        ## Barcode Search
+        submenuitem = gtk.MenuItem('Barcode (UPC)')
+        submenuitem.connect('activate', self.webserviceBarcode)
+        menu.append(submenuitem)
+
+        ## Separator
+        sep = gtk.SeparatorMenuItem()
+        menu.append(sep)
 
         ## Sync Collection
         submenuitem = gtk.MenuItem('Sync Collection')
