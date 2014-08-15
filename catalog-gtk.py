@@ -47,6 +47,60 @@ def ReleaseIDEntry(parent, message, default='', textVisible=True):
     else:
         return None
 
+def PurchaseInfoEntry(parent,
+        message='Enter purchase info:'):
+    """
+    Display a dialog with a text entry.
+    Returns the text, or None if canceled.
+    """
+    d = gtk.MessageDialog(parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_QUESTION,
+            gtk.BUTTONS_OK_CANCEL,
+            message)
+    d.set_resizable(True)
+    table = gtk.Table(3, 2)
+
+    label = gtk.Label('Date:')
+    label.set_alignment(xalign=0, yalign=0)
+    table.attach(label, 0, 1, 0, 1)
+    dateEntry = gtk.Calendar()
+    table.attach(dateEntry, 1, 2, 0, 1)
+
+    label = gtk.Label('Vendor:')
+    label.set_alignment(xalign=0, yalign=0)
+    table.attach(label, 0, 1, 1, 2)
+    vendorEntry = gtk.Entry()
+    vendorEntry.set_width_chars(20)
+    vendorEntry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
+    table.attach(vendorEntry, 1, 2, 1, 2)
+
+    label = gtk.Label('Price:')
+    label.set_alignment(xalign=0, yalign=0)
+    table.attach(label, 0, 1, 2, 3)
+    priceEntry = gtk.Entry()
+    priceEntry.set_width_chars(20)
+    priceEntry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
+    table.attach(priceEntry, 1, 2, 2, 3)
+
+    table.show_all()
+    d.vbox.pack_end(table)
+    d.set_default_response(gtk.RESPONSE_OK)
+
+    r = d.run()
+    # have to get the text before we destroy the gtk.Entry
+    year, month, day = dateEntry.get_date()
+    val = {'date': '%d/%d/%d' % (year, month, day),
+        'vendor' : vendorEntry.get_text().decode('utf8'),
+        'price' : priceEntry.get_text().decode('utf8'),
+        }
+
+    d.destroy()
+    if r == gtk.RESPONSE_OK:
+        return val
+    else:
+        return None
+
 def ErrorDialog(parent, message, type=gtk.MESSAGE_ERROR):
     _log.error(message)
     d = gtk.MessageDialog(parent,
@@ -1028,6 +1082,20 @@ class MBCatGtk:
                 time.strptime(dateStr, mbcat.dateFmtStr)))
             self.catalog.addListenDate(releaseId, date)
 
+    def purchaseInfo(self, widget):
+        """Add a purchase date."""
+        releaseId = self.getSelection()
+
+        purchases = self.catalog.getPurchases(releaseId)
+        for purchase in purchases:
+            print(str(purchase))
+        info = PurchaseInfoEntry(self.window)
+        if not info:
+            return
+
+        pe = mbcat.extradata.PurchaseEvent(info['date'], info['price'], info['vendor'])
+        self.catalog.addPurchase(releaseId, pe)
+
     def rateRelease(self, widget):
         releaseId = self.getSelection()
         if not releaseId:
@@ -1268,6 +1336,7 @@ class MBCatGtk:
 
         ## Purchase Info
         submenuitem = gtk.MenuItem('Purchase Info')
+        submenuitem.connect('activate', self.purchaseInfo)
         menu.append(submenuitem)
 
         ## Rate
