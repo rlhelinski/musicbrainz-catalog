@@ -711,6 +711,97 @@ def TextEntry(parent, message, default=''):
     else:
         return None
 
+class UnknownLength: pass
+
+class ProgressDialog:
+    """A GTK progress dialog class"""
+    def __init__(self, parent,
+            processLabel='Processing',
+            initStepLabe='Doing something',
+            maxval=None, poll=1):
+        """Initializes a progress bar with sane defaults."""
+        self.window = gtk.Window(type=gtk.WINDOW_TOPLEVEL)
+        self.window.set_transient_for(parent)
+        self.window.set_position(gtk.WIN_POS_CENTER_ON_PARENT)
+        self.maxval = maxval
+
+        self.currval = 0
+        self.finished = False
+        self.last_update_time = None
+        self.poll = poll
+        self.seconds_elapsed = 0
+        self.start_time = None
+        self.update_interval = 1
+
+        vbox = gtk.VBox(False, 10)
+        self.status = gtk.Label()
+        self.status.set_width_chars(60)
+        vbox.pack_start(self.status)
+        self.pbar = gtk.ProgressBar()
+        vbox.pack_start(self.pbar)
+
+        self.window.add(vbox)
+        self.window.set_title(processLabel)
+        self.window.show_all()
+
+        self.start()
+
+    def start(self):
+        """Starts measuring time, and prints the bar at 0%.
+
+        It returns self so you can use it like this:
+        >>> pbar = ProgressBar().start()
+        >>> for i in range(100):
+        ...    # do something
+        ...    pbar.update(i+1)
+        ...
+        >>> pbar.finish()
+        """
+
+        if self.maxval is None:
+            self.maxval = self._DEFAULT_MAXVAL
+
+        self.next_update = 0
+
+        if self.maxval is not UnknownLength:
+            if self.maxval < 0: raise ValueError('Value out of range')
+
+        self.start_time = self.last_update_time = time.time()
+
+        return self
+
+    def update(self, value=None):
+        if value is not None and value is not UnknownLength:
+            if (self.maxval is not UnknownLength
+                and not 0 <= value <= self.maxval):
+
+                raise ValueError('Value out of range')
+
+            self.currval = value
+
+        if not self._need_update(): return
+
+        now = time.time()
+        self.seconds_elapsed = now - self.start_time
+        self.next_update = self.currval + self.update_interval
+        if self.maxval:
+            self.pbar.set_fraction(float(self.currval) / self.maxval)
+        else:
+            if value:
+                self.pbar.set_pulse_step(value)
+            self.pbar.pulse()
+        self.last_update_time = now
+
+    def set_status(self, status):
+        self.status.set_text(status)
+
+    def _need_update(self):
+        """Returns whether the ProgressBar should redraw the line."""
+        if self.currval >= self.next_update or self.finished: return True
+
+        delta = time.time() - self.last_update_time
+        return self._time_sensitive and delta > self.poll
+
 class MBCatGtk:
     """A GTK interface for managing a MusicBrainz Catalog"""
     __name__ = 'MusicBrainz Catalog GTK Gui'
