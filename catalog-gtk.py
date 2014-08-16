@@ -703,7 +703,7 @@ def TextEntry(parent, message, default=''):
     r = d.run()
     # TODO is there any easier way to get the whole buffer?
     text = textbuffer.get_text(
-        textbuffer.get_start_iter(), 
+        textbuffer.get_start_iter(),
         textbuffer.get_end_iter()).decode('utf8')
     d.destroy()
     if r == gtk.RESPONSE_OK:
