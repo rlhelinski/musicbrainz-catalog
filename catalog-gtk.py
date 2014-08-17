@@ -974,6 +974,20 @@ class MBCatGtk:
 
         self.openDatabase(filename)
 
+    def menuCatalogRebuild(self, widget):
+        pd = ProgressDialog(parent=self.window,
+            initStatusLabel='Rebuilding caches in database')
+        self.catalog.rebuildCacheTables(pbar=pd)
+
+    def menuCatalogGetSimilar(self, widget):
+        pd = ProgressDialog(parent=self.window,
+            initStatusLabel='Computing similar releases')
+        self.catalog.checkLevenshteinDistances(pbar=pd)
+        for i in range(number):
+            print(str(lds[i][0]) + '\t' +
+                         self.c.formatDiscInfo(lds[i][1]) + ' <-> ' +
+                         self.c.formatDiscInfo(lds[i][2]) + '\n')
+
     def format_comment(self, column, cell, model, it, field):
         row = model.get_value(it, 0)
         cell.set_property('text', 'OK')
@@ -1334,10 +1348,12 @@ class MBCatGtk:
 
         # Rebuild
         submenuitem = gtk.MenuItem('Rebuild')
+        submenuitem.connect('activate', self.menuCatalogRebuild)
         menu.append(submenuitem)
 
         # Similar
         submenuitem = gtk.MenuItem('Similar')
+        submenuitem.connect('activate', self.menuCatalogGetSimilar)
         menu.append(submenuitem)
 
         # Separator
