@@ -1208,15 +1208,6 @@ class Catalog(object):
 
             con.commit()
 
-    @staticmethod
-    def getArtistSortPhrase(release):
-        """Join artist sort names together"""
-        return ''.join([
-                credit if type(credit)==str else \
-                credit['artist']['sort-name'] \
-                for credit in release['artist-credit']
-                ])
-
     def fmtArtist(self, release):
         return ''.join([(cred['artist']['name'] \
             if isinstance(cred, dict) else cred)
@@ -1632,3 +1623,12 @@ def formatQueryCatNo(releaseDict):
             if 'catalog-number' in info else '') \
             for info in releaseDict['label-info-list']])) \
             if 'label-info-list' in releaseDict else ''
+
+def getArtistSortPhrase(release):
+    """Join artist sort names together"""
+    return ''.join([
+            credit if type(credit)==str else \
+            credit['artist']['sort-name'] \
+            for credit in release['artist-credit']
+            ])
+

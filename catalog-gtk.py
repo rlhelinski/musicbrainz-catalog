@@ -713,15 +713,20 @@ def TextEntry(parent, message, default=''):
 
 class UnknownLength: pass
 
+import datetime
 class ProgressDialog:
     """A GTK progress dialog class"""
+
+    _DEFAULT_MAXVAL = 100
+
     def __init__(self, parent,
-            processLabel='Processing',
-            initStepLabe='Doing something',
+            processLabel='Progress',
+            initStatusLabel='Processing...',
             maxval=None, poll=1):
         """Initializes a progress bar with sane defaults."""
         self.window = gtk.Window(type=gtk.WINDOW_TOPLEVEL)
         self.window.set_transient_for(parent)
+        self.window.set_resizable(False)
         self.window.set_position(gtk.WIN_POS_CENTER_ON_PARENT)
         self.maxval = maxval
 
@@ -734,7 +739,7 @@ class ProgressDialog:
         self.update_interval = 1
 
         vbox = gtk.VBox(False, 10)
-        self.status = gtk.Label()
+        self.status = gtk.Label(initStatusLabel)
         self.status.set_width_chars(60)
         vbox.pack_start(self.status)
         self.pbar = gtk.ProgressBar()
@@ -786,11 +791,33 @@ class ProgressDialog:
         self.next_update = self.currval + self.update_interval
         if self.maxval:
             self.pbar.set_fraction(float(self.currval) / self.maxval)
+            self.pbar.set_text('%d / %d : %s' % (self.currval,
+                self.maxval,
+                self.ETA()))
         else:
             if value:
                 self.pbar.set_pulse_step(value)
             self.pbar.pulse()
         self.last_update_time = now
+
+        while gtk.events_pending():
+            gtk.main_iteration()
+
+    @staticmethod
+    def format_time(seconds):
+        """Formats time as the string "HH:MM:SS"."""
+
+        return str(datetime.timedelta(seconds=int(seconds)))
+
+    def ETA(self):
+        if self.currval == 0:
+            return 'ETA:  --:--:--'
+        elif self.finished:
+            return 'Time: %s' % self.format_time(self.seconds_elapsed)
+        else:
+            elapsed = self.seconds_elapsed
+            eta = elapsed * self.maxval / self.currval - elapsed
+            return 'ETA:  %s' % self.format_time(eta)
 
     def set_status(self, status):
         self.status.set_text(status)
@@ -801,6 +828,9 @@ class ProgressDialog:
 
         delta = time.time() - self.last_update_time
         return self._time_sensitive and delta > self.poll
+
+    def finish(self):
+        self.window.destroy()
 
 class MBCatGtk:
     """A GTK interface for managing a MusicBrainz Catalog"""
