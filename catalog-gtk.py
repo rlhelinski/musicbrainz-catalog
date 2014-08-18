@@ -144,6 +144,7 @@ def ReleaseSelectDialog(parent,
     titleCell.set_property('width-chars', 30)
     titleCol = gtk.TreeViewColumn('Title', titleCell)
     titleCol.add_attribute(titleCell, 'text', 2)
+    titleCol.set_resizable(True)
     tv.append_column(titleCol)
 
     formatCell = gtk.CellRendererText()
@@ -152,6 +153,7 @@ def ReleaseSelectDialog(parent,
     formatCell.set_property('width-chars', -1)
     formatCol = gtk.TreeViewColumn('Format', formatCell)
     formatCol.add_attribute(formatCell, 'text', 3)
+    formatCol.set_resizable(True)
     tv.append_column(formatCol)
 
     # make the list store
