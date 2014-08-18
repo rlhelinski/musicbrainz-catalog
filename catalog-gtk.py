@@ -1638,7 +1638,7 @@ class MBCatGtk:
         vbox.pack_end(self.statusbar, False, False, 0)
 
         self.window.add(vbox)
-    
+
         # The final step is to display this newly created widget.
         # and the window
         self.window.show_all()
@@ -1655,9 +1655,9 @@ class MBCatGtk:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=
         'Runs the MusicBrainz-Catalog GTK interface')
-    parser.add_argument('--database', 
+    parser.add_argument('--database',
         help='Specify the path to the catalog database')
-    parser.add_argument('--cache', 
+    parser.add_argument('--cache',
         help='Specify the path to the file cache')
     args = parser.parse_args()
 
