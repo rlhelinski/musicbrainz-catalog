@@ -775,6 +775,8 @@ class ProgressDialog:
 
         self.start_time = self.last_update_time = time.time()
 
+        self._update_gtk()
+
         return self
 
     def update(self, value=None):
@@ -802,6 +804,9 @@ class ProgressDialog:
             self.pbar.pulse()
         self.last_update_time = now
 
+        self._update_gtk()
+
+    def _update_gtk(self):
         while gtk.events_pending():
             gtk.main_iteration()
 
