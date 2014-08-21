@@ -740,7 +740,7 @@ class TaskHandler(threading.Thread):
         self.stopthread.set()
 
 class ProgressDialog:
-    """A GTK progress dialog class"""
+    """A GTK progress dialog class that also manages a TaskHandler"""
 
     _DEFAULT_MAXVAL = 100
 
@@ -755,6 +755,7 @@ class ProgressDialog:
         self.window.set_transient_for(parent)
         self.window.set_resizable(False)
         self.window.set_position(gtk.WIN_POS_CENTER_ON_PARENT)
+        self.window.set_border_width(10)
         self.window.connect('destroy', self.on_destroy)
         self.window.connect('delete_event', self.on_delete)
         self.taskHandler = taskHandler
