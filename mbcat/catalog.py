@@ -227,8 +227,10 @@ class Catalog(object):
             self.digestReleaseXml(releaseId, metaXml, rebuild=rebuild)
             if pbar:
                 pbar.update(pbar.currval + 1)
+            yield True
         if pbar:
             pbar.finish()
+        yield False
 
     def rebuildCacheTables(self, pbar=None):
         """Drop the derived tables in the database and rebuild them"""
@@ -258,7 +260,7 @@ class Catalog(object):
                     pass
 
         # Rebuild
-        self.updateCacheTables(rebuild=True, pbar=pbar)
+        return self.updateCacheTables(rebuild=True, pbar=pbar)
 
     def renameRelease(self, releaseId, newReleaseId):
         self.deleteRelease(releaseId)

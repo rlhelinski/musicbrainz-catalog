@@ -16,6 +16,10 @@ import argparse
 import time
 import webbrowser
 
+import threading
+# Initialize GTK's threading engine
+gtk.gdk.threads_init()
+
 _log = logging.getLogger("mbcat")
 
 # Thanks http://stackoverflow.com/a/8907574/3098007
@@ -717,20 +721,43 @@ def TextEntry(parent, message, default=''):
 class UnknownLength: pass
 
 import datetime
+class TaskHandler(threading.Thread):
+    #Thread event, stops the thread if it is set.
+    stopthread = threading.Event()
+
+    def setup(self, taskFun, progressbar):
+        self.task = taskFun(progressbar)
+        self.progressbar = progressbar
+
+    def run(self):
+        #While the stopthread event isn't set, the thread keeps going on
+        while not self.stopthread.isSet():
+            if not self.task.next():
+                break
+
+    def stop(self):
+        """Stop method, sets the event to terminate the thread's main loop"""
+        self.stopthread.set()
+
 class ProgressDialog:
     """A GTK progress dialog class"""
 
     _DEFAULT_MAXVAL = 100
 
     def __init__(self, parent,
+            taskHandler=None,
             processLabel='Progress',
             initStatusLabel='Processing...',
-            maxval=None, poll=1):
+            maxval=None, poll=1,
+            ):
         """Initializes a progress bar with sane defaults."""
         self.window = gtk.Window(type=gtk.WINDOW_TOPLEVEL)
         self.window.set_transient_for(parent)
         self.window.set_resizable(False)
         self.window.set_position(gtk.WIN_POS_CENTER_ON_PARENT)
+        self.window.connect('destroy', self.on_destroy)
+        self.window.connect('delete_event', self.on_delete)
+        self.taskHandler = taskHandler
         self.maxval = maxval
 
         self.currval = 0
@@ -776,7 +803,7 @@ class ProgressDialog:
 
         self.start_time = self.last_update_time = time.time()
 
-        self._update_gtk()
+        #self._update_gtk()
 
         return self
 
@@ -794,6 +821,9 @@ class ProgressDialog:
         now = time.time()
         self.seconds_elapsed = now - self.start_time
         self.next_update = self.currval + self.update_interval
+
+        # Acquire the gtk global mutex
+        gtk.gdk.threads_enter()
         if self.maxval:
             self.pbar.set_fraction(float(self.currval) / self.maxval)
             self.pbar.set_text('%d / %d : %s' % (self.currval,
@@ -803,11 +833,17 @@ class ProgressDialog:
             if value:
                 self.pbar.set_pulse_step(value)
             self.pbar.pulse()
+        # Releasing the gtk global mutex
+        gtk.gdk.threads_leave()
         self.last_update_time = now
 
-        self._update_gtk()
+        #self._update_gtk()
 
     def _update_gtk(self):
+        """
+        This is a workaround for updating the progressbar widgets when there is
+        a single thread.
+        """
         while gtk.events_pending():
             gtk.main_iteration()
 
@@ -837,7 +873,16 @@ class ProgressDialog:
         delta = time.time() - self.last_update_time
         return self._time_sensitive and delta > self.poll
 
+    def on_delete(self, widget, event, data=None):
+        # Change FALSE to TRUE and the main window will not be destroyed
+        # with a "delete_event".
+        return False
+
+    def on_destroy(self, widget, data=None):
+        self.finish()
+
     def finish(self):
+        self.taskHandler.stop()
         self.window.destroy()
 
 class MBCatGtk:
@@ -983,9 +1028,12 @@ class MBCatGtk:
         self.openDatabase(filename)
 
     def menuCatalogRebuild(self, widget):
+        th = TaskHandler()
         pd = ProgressDialog(parent=self.window,
-            initStatusLabel='Rebuilding caches in database')
-        self.catalog.rebuildCacheTables(pbar=pd)
+            initStatusLabel='Rebuilding caches in database',
+            taskHandler=th)
+        th.setup(self.catalog.rebuildCacheTables, pd)
+        th.start()
 
     def menuCatalogGetSimilar(self, widget):
         pd = ProgressDialog(parent=self.window,
