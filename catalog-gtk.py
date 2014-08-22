@@ -726,13 +726,14 @@ class TaskHandler(threading.Thread):
     stopthread = threading.Event()
 
     def setup(self, taskFun, progressbar):
-        self.task = taskFun(progressbar)
+        self.taskFun = taskFun
         self.progressbar = progressbar
 
     def run(self):
+        task = self.taskFun(self.progressbar)
         #While the stopthread event isn't set, the thread keeps going on
         while not self.stopthread.isSet():
-            if not self.task.next():
+            if not task.next():
                 break
 
     def stop(self):
@@ -793,6 +794,7 @@ class ProgressDialog:
         ...
         >>> pbar.finish()
         """
+        self.currval = 0
 
         if self.maxval is None:
             self.maxval = self._DEFAULT_MAXVAL
@@ -825,7 +827,7 @@ class ProgressDialog:
 
         # Acquire the gtk global mutex
         gtk.gdk.threads_enter()
-        if self.maxval:
+        if self.maxval and value:
             self.pbar.set_fraction(float(self.currval) / self.maxval)
             self.pbar.set_text('%d / %d : %s' % (self.currval,
                 self.maxval,
@@ -839,6 +841,10 @@ class ProgressDialog:
         self.last_update_time = now
 
         #self._update_gtk()
+
+    def step(self, increment=1):
+        """A convenience function for updating to the next increment"""
+        self.update(self.currval + increment)
 
     def _update_gtk(self):
         """
@@ -865,14 +871,16 @@ class ProgressDialog:
             return 'ETA:  %s' % self.format_time(eta)
 
     def set_status(self, status):
+        gtk.gdk.threads_enter()
         self.status.set_text(status)
+        gtk.gdk.threads_leave()
 
     def _need_update(self):
         """Returns whether the ProgressBar should redraw the line."""
         if self.currval >= self.next_update or self.finished: return True
 
         delta = time.time() - self.last_update_time
-        return self._time_sensitive and delta > self.poll
+        return delta > self.poll
 
     def on_delete(self, widget, event, data=None):
         # Change FALSE to TRUE and the main window will not be destroyed
@@ -1031,7 +1039,6 @@ class MBCatGtk:
     def menuCatalogRebuild(self, widget):
         th = TaskHandler()
         pd = ProgressDialog(parent=self.window,
-            initStatusLabel='Rebuilding caches in database',
             taskHandler=th)
         th.setup(self.catalog.rebuildCacheTables, pd)
         th.start()

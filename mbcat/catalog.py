@@ -221,6 +221,7 @@ class Catalog(object):
         """Use the releases table to populate the derived (cache) tables"""
         if pbar:
             pbar.maxval=len(self)
+            pbar.set_status('Building release indexes')
             pbar.start()
         for releaseId in self.getReleaseIds():
             metaXml = self.getReleaseXml(releaseId)
@@ -234,11 +235,16 @@ class Catalog(object):
 
     def rebuildCacheTables(self, pbar=None):
         """Drop the derived tables in the database and rebuild them"""
+        if pbar:
+            pbar.maxval = 15
+            pbar.set_status('Dropping index tables')
+            pbar.start()
         with self._connect() as con:
             cur = con.cursor()
             for tab in ['words', 'trackwords', 'recordings', 'discids',
                     'barcodes', 'formats']:
                 cur.execute('drop table '+tab)
+                pbar.step(1)
             self._createCacheTables(cur)
 
             # Add the columns if they don't exist
@@ -258,6 +264,7 @@ class Catalog(object):
                         ' text')
                 except sqlite3.OperationalError as e:
                     pass
+                pbar.step(1)
 
         # Rebuild
         return self.updateCacheTables(rebuild=True, pbar=pbar)
