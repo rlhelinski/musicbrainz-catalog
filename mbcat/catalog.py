@@ -269,10 +269,16 @@ class Catalog(object):
                         ' text')
                 except sqlite3.OperationalError as e:
                     pass
-                pbar.step(1)
+                if pbar:
+                    pbar.step(1)
+                yield True
 
         # Rebuild
-        return self.updateCacheTables(rebuild=True, pbar=pbar)
+        g = self.updateCacheTables(rebuild=True, pbar=pbar)
+        while g.next():
+            yield True
+
+        yield False
 
     def renameRelease(self, releaseId, newReleaseId):
         self.deleteRelease(releaseId)
