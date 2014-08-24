@@ -243,8 +243,13 @@ class Catalog(object):
             cur = con.cursor()
             for tab in ['words', 'trackwords', 'recordings', 'discids',
                     'barcodes', 'formats']:
-                cur.execute('drop table '+tab)
-                pbar.step(1)
+                try:
+                    cur.execute('drop table '+tab)
+                except sqlite3.OperationalError as e:
+                    pass
+                if pbar:
+                    pbar.step(1)
+                yield True
             self._createCacheTables(cur)
 
             # Add the columns if they don't exist
@@ -676,17 +681,23 @@ class Catalog(object):
 
     def getWordCount(self):
         """Fetch the number of words in the release search word table."""
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select count(word) from words')
-            return cur.fetchone()[0]
+        try:
+            with self._connect() as con:
+                cur = con.cursor()
+                cur.execute('select count(word) from words')
+                return cur.fetchone()[0]
+        except sqlite3.OperationalError:
+            return 0
 
     def getTrackWordCount(self):
         """Fetch the number of words in the track search word table."""
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select count(trackword) from trackwords')
-            return cur.fetchone()[0]
+        try:
+            with self._connect() as con:
+                cur = con.cursor()
+                cur.execute('select count(trackword) from trackwords')
+                return cur.fetchone()[0]
+        except sqlite3.OperationalError:
+            return 0
 
     def getComment(self, releaseId):
         """Get the comment for a release (if any)."""
