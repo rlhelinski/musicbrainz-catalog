@@ -524,91 +524,108 @@ def GroupQueryResultsDialog(parent, catalog, queryResult):
     r = d.run()
     d.destroy()
 
-def QueryResultsDialog(parent, catalog, queryResult):
+class QueryResultsDialog:
     """
-    Display a dialog with a list of tracks for a release.
-    Example:
-    TrackListDialog(gui.window,
-        gui.catalog.getTrackList('1cd1d24c-1705-485c-ae6f-c53e7831b1e4'))
+    Create a window with a list of releases from a WebService query.
+    Allow the user to add any of these releases.
     """
-    d = gtk.MessageDialog(parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL,
-            'Track List')
-    d.set_resizable(True)
-    sw = gtk.ScrolledWindow()
-    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-    d.set_size_request(400, 300)
-    tv = gtk.TreeView()
+    def __init__(self,
+        parent,
+        catalog,
+        queryResult,
+        message='Release results',
+        ):
+        # TODO releaseDictList argument should support metadata returned from a
+        # webservice query
+        self.window = gtk.Window()
+        self.window.set_transient_for(parent)
+        self.window.set_destroy_with_parent(True)
+        self.window.set_resizable(True)
+        self.window.set_border_width(10)
+        self.window.connect('destroy', self.on_destroy)
+        vbox = gtk.VBox(False, 10)
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.window.set_size_request(400, 300)
 
-    authorCell = gtk.CellRendererText()
-    authorCell.set_property('xalign', 0)
-    authorCell.set_property('ellipsize', pango.ELLIPSIZE_END)
-    authorCell.set_property('width-chars', 20)
-    authorCol = gtk.TreeViewColumn('Title', authorCell)
-    authorCol.add_attribute(authorCell, 'text', 1)
-    authorCol.set_resizable(True)
-    tv.append_column(authorCol)
+        # Keep reference to catalog for later
+        self.catalog = catalog
 
-    titleCell = gtk.CellRendererText()
-    titleCell.set_property('xalign', 0)
-    titleCell.set_property('ellipsize', pango.ELLIPSIZE_END)
-    titleCell.set_property('width-chars', 30)
-    titleCol = gtk.TreeViewColumn('Title', titleCell)
-    titleCol.add_attribute(titleCell, 'text', 2)
-    titleCol.set_resizable(True)
-    tv.append_column(titleCol)
+        self.tv = gtk.TreeView()
+        for i, (label, textWidth) in enumerate(
+            [('Artist', 20),
+            ('Title', 30),
+            ('Format', 10),
+            ('Label', 20),
+            ('Catalog #', 20),
+            ('Barcode', 25),
+            ]):
+            cell = gtk.CellRendererText()
+            cell.set_property('xalign', 0)
+            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('width-chars', textWidth)
+            col = gtk.TreeViewColumn(label, cell)
+            col.add_attribute(cell, 'text', i+1)
+            col.set_resizable(True)
+            self.tv.append_column(col)
 
-    formatCell = gtk.CellRendererText()
-    formatCell.set_property('xalign', 0)
-    formatCell.set_property('ellipsize', pango.ELLIPSIZE_END)
-    formatCell.set_property('width-chars', 30)
-    formatCol = gtk.TreeViewColumn('Format', formatCell)
-    formatCol.add_attribute(formatCell, 'text', 3)
-    formatCol.set_resizable(True)
-    tv.append_column(formatCol)
+        # make the list store
+        resultListStore = gtk.ListStore(str, str, str, str, str, str, str)
+        for release in queryResult['release-list']:
+            resultListStore.append((
+                release['id'],
+                mbcat.catalog.formatQueryArtist(release),
+                release['title'],
+                mbcat.catalog.formatQueryMedia(release),
+                mbcat.catalog.formatQueryRecordLabel(release),
+                mbcat.catalog.formatQueryCatNo(release),
+                release['barcode'] if 'barcode' in release else '',
+                ))
+        self.tv.set_model(resultListStore)
 
-    formatCell = gtk.CellRendererText()
-    formatCell.set_property('xalign', 0)
-    formatCell.set_property('ellipsize', pango.ELLIPSIZE_END)
-    formatCell.set_property('width-chars', 20)
-    formatCol = gtk.TreeViewColumn('Label', formatCell)
-    formatCol.add_attribute(formatCell, 'text', 4)
-    formatCol.set_resizable(True)
-    tv.append_column(formatCol)
+        sw.add(self.tv)
+        vbox.pack_start(sw, expand=True, fill=True)
 
-    formatCell = gtk.CellRendererText()
-    formatCell.set_property('xalign', 0)
-    formatCell.set_property('ellipsize', pango.ELLIPSIZE_END)
-    formatCell.set_property('width-chars', 20)
-    formatCol = gtk.TreeViewColumn('Catalog #', formatCell)
-    formatCol.add_attribute(formatCell, 'text', 5)
-    formatCol.set_resizable(True)
-    tv.append_column(formatCol)
+        hbox = gtk.HBox(False, 10)
+        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        btn.connect('clicked', self.on_close)
+        hbox.pack_end(btn, expand=False, fill=False)
+        btn = gtk.Button('Add', gtk.STOCK_ADD)
+        btn.connect('clicked', self.add_release)
+        hbox.pack_end(btn, expand=False, fill=False)
+        vbox.pack_end(hbox, expand=False, fill=False)
 
-    # make the list store
-    resultListStore = gtk.ListStore(str, str, str, str, str, str)
-    for release in queryResult['release-list']:
-        resultListStore.append((
-            release['id'],
-            mbcat.catalog.formatQueryArtist(release),
-            release['title'],
-            mbcat.catalog.formatQueryMedia(release),
-            mbcat.catalog.formatQueryRecordLabel(release),
-            mbcat.catalog.formatQueryCatNo(release),
-            ))
-    tv.set_model(resultListStore)
-    tv.expand_all()
+        self.window.add(vbox)
+        self.window.set_title(message)
+        self.window.show_all()
 
-    tv.show_all()
-    sw.add(tv)
-    sw.show()
-    d.vbox.pack_end(sw)
-    d.set_default_response(gtk.RESPONSE_OK)
+    def get_selection(self):
+        model, it = self.tv.get_selection().get_selected()
+        return model.get_value(it, 0) if it else None
 
-    r = d.run()
-    d.destroy()
+    def add_release(self, widget, data=None):
+        entry = self.get_selection()
+        # TODO this procedure needs to be part of the Catalog class?
+        if entry in self.catalog:
+            ErrorDialog(self.window, 'Release already exists')
+            return
+        try:
+            self.catalog.addRelease(entry)
+        except mb.ResponseError as e:
+            ErrorDialog(self.window, str(e) + ". Bad release ID?")
+            return
+
+        _log.info("Added '%s'" % self.catalog.getRelease(entry)['title'])
+
+        self.catalog.getCoverArt(entry)
+        self.makeListStore()
+        self.setSelectedRow(self.getReleaseRow(entry))
+
+    def on_destroy(self, widget, data=None):
+        self.window.destroy()
+
+    def on_close(self, widget):
+        self.on_destroy(widget)
 
 def SelectCollectionDialog(parent, result):
     """
@@ -1125,6 +1142,7 @@ class MBCatGtk:
         entry = ReleaseIDEntry(self.window, 'Enter Release ID')
         if not entry:
             return
+        # TODO this procedure needs to be part of the Catalog class?
         if entry in self.catalog:
             ErrorDialog(self.window, 'Release already exists')
             return
