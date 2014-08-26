@@ -193,39 +193,22 @@ def TrackSelectDialog(parent,
     sw = gtk.ScrolledWindow()
     sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
     d.set_size_request(400, 300)
+
     tv = gtk.TreeView()
-    titleCell = gtk.CellRendererText()
-    titleCell.set_property('xalign', 0)
-    titleCell.set_property('ellipsize', pango.ELLIPSIZE_END)
-    titleCell.set_property('width-chars', 30)
-    titleCol = gtk.TreeViewColumn('Title', titleCell)
-    titleCol.add_attribute(titleCell, 'text', 1)
-    titleCol.set_resizable(True)
-    tv.append_column(titleCol)
-
-    lengthCell = gtk.CellRendererText()
-    lengthCell.set_property('xalign', 0)
-    lengthCell.set_property('ellipsize', pango.ELLIPSIZE_END)
-    lengthCell.set_property('width-chars', -1)
-    lengthCol = gtk.TreeViewColumn('Length', lengthCell)
-    lengthCol.add_attribute(lengthCell, 'text', 2)
-    tv.append_column(lengthCol)
-
-    releaseCell = gtk.CellRendererText()
-    releaseCell.set_property('xalign', 0)
-    releaseCell.set_property('ellipsize', pango.ELLIPSIZE_END)
-    releaseCell.set_property('width-chars', 30)
-    releaseCol = gtk.TreeViewColumn('Appears on', releaseCell)
-    releaseCol.add_attribute(releaseCell, 'text', 3)
-    tv.append_column(releaseCol)
-
-    artistCell = gtk.CellRendererText()
-    artistCell.set_property('xalign', 0)
-    artistCell.set_property('ellipsize', pango.ELLIPSIZE_END)
-    artistCell.set_property('width-chars', 20)
-    artistCol = gtk.TreeViewColumn('Artist', artistCell)
-    artistCol.add_attribute(artistCell, 'text', 4)
-    tv.append_column(artistCol)
+    for i, (label, xalign, textWidth) in enumerate(
+        [('Title', 0, 30),
+        ('Length', 1.0, -1),
+        ('Appears on', 0, 30),
+        ('Artist', 0, 20),
+        ]):
+        cell = gtk.CellRendererText()
+        cell.set_property('xalign', xalign)
+        cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+        cell.set_property('width-chars', textWidth)
+        col = gtk.TreeViewColumn(label, cell)
+        col.add_attribute(cell, 'text', i+1)
+        col.set_resizable(True)
+        tv.append_column(col)
 
     # make the list store
     trackListStore = gtk.ListStore(str, str, str, str, str, str)
@@ -418,20 +401,20 @@ def TrackListDialog(parent, releaseDict):
     sw = gtk.ScrolledWindow()
     sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
     d.set_size_request(400, 300)
+
     tv = gtk.TreeView()
-    titleCell = gtk.CellRendererText()
-    titleCell.set_property('xalign', 0)
-    titleCell.set_property('ellipsize', pango.ELLIPSIZE_END)
-    titleCell.set_property('width-chars', 40)
-    titleCol = gtk.TreeViewColumn('Title', titleCell)
-    titleCol.add_attribute(titleCell, 'text', 1)
-    titleCol.set_resizable(True)
-    tv.append_column(titleCol)
-    lenCell = gtk.CellRendererText()
-    lenCell.set_property('xalign', 1.0)
-    lenCol = gtk.TreeViewColumn('Length', lenCell)
-    lenCol.add_attribute(lenCell, 'text', 2)
-    tv.append_column(lenCol)
+    for i, (label, xalign, textWidth) in enumerate(
+        [('Title', 0, 40),
+        ('Length', 1.0, 2),
+        ]):
+        cell = gtk.CellRendererText()
+        cell.set_property('xalign', xalign)
+        cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+        cell.set_property('width-chars', textWidth)
+        col = gtk.TreeViewColumn(label, cell)
+        col.add_attribute(cell, 'text', i+1)
+        col.set_resizable(True)
+        tv.append_column(col)
 
     # make the list store
     trackTreeStore = gtk.TreeStore(str, str, str)
