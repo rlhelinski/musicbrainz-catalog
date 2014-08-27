@@ -505,7 +505,11 @@ def GroupQueryResultsDialog(parent, catalog, queryResult):
     d.set_default_response(gtk.RESPONSE_OK)
 
     r = d.run()
+    model, it = tv.get_selection().get_selected()
+    id = model.get_value(it, 0) if r == gtk.RESPONSE_OK and it \
+        else None
     d.destroy()
+    return id
 
 class QueryResultsDialog:
     """
@@ -665,11 +669,10 @@ def SelectCollectionDialog(parent, result):
 
     r = d.run()
     model, it = tv.get_selection().get_selected()
+    id = model.get_value(it, 0) if r == gtk.RESPONSE_OK and it \
+        else None
     d.destroy()
-    if r == gtk.RESPONSE_OK and it:
-        return model.get_value(it, 0)
-    else:
-        return None
+    return id
 
 def TextEntry(parent, message, default=''):
     """
