@@ -1323,7 +1323,11 @@ class MBCatGtk:
              limit=self.searchResultsLimit)
         if not results:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
-        GroupQueryResultsDialog(self.window, self.catalog, results)
+        release_group_selected = GroupQueryResultsDialog(self.window,
+            self.catalog, results)
+        if release_group_selected:
+            results = mb.search_releases(rgid=release_group_selected)
+            QueryResultsDialog(self.window, self.catalog, results)
 
     def webserviceRelease(self, widget):
         entry = ReleaseIDEntry(self.window, 'Enter release search terms')
