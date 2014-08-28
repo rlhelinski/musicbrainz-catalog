@@ -731,6 +731,13 @@ class TaskHandler(threading.Thread):
         """Stop method, sets the event to terminate the thread's main loop"""
         self.stopthread.set()
 
+def PassifierTask(pbar):
+    pbar.start()
+    while True:
+        pbar.update()
+        time.sleep(0.1)
+        yield True
+
 class ProgressDialog:
     """A GTK progress dialog class that also manages a TaskHandler"""
 
@@ -1029,16 +1036,17 @@ class MBCatGtk:
 
     def menuCatalogRebuild(self, widget):
         th = TaskHandler()
-        pd = ProgressDialog(parent=self.window,
-            taskHandler=th)
+        pd = ProgressDialog(parent=self.window, taskHandler=th)
         th.setup(self.catalog.rebuildCacheTables, pd)
         th.start()
 
     def menuCatalogGetSimilar(self, widget):
-        pd = ProgressDialog(parent=self.window,
-            initStatusLabel='Computing similar releases')
+        th = TaskHandler()
+        pd = ProgressDialog(parent=self.window, taskHandler=th)
+        #   initStatusLabel='Computing similar releases')
         self.catalog.checkLevenshteinDistances(pbar=pd)
-        for i in range(number):
+        # Need to write a dialog to show this result
+        for i in range(100):
             print(str(lds[i][0]) + '\t' +
                          self.c.formatDiscInfo(lds[i][1]) + ' <-> ' +
                          self.c.formatDiscInfo(lds[i][2]) + '\n')
@@ -1319,8 +1327,13 @@ class MBCatGtk:
         entry = ReleaseIDEntry(self.window, 'Enter release group search terms')
         if not entry:
             return
+        th = TaskHandler()
+        pd = ProgressDialog(parent=self.window, taskHandler=th)
+        th.setup(PassifierTask, pd)
+        th.start()
         results = mb.search_release_groups(releasegroup=entry,
              limit=self.searchResultsLimit)
+        th.stop()
         if not results:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
         release_group_selected = GroupQueryResultsDialog(self.window,
@@ -1392,9 +1405,6 @@ class MBCatGtk:
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_SAVE_AS, self.agr)
         submenuitem.set_sensitive(False) # should be enabled when opened
         self.menuCatalogSaveAsItem = submenuitem
-        key, mod = gtk.accelerator_parse('<Control>s')
-        submenuitem.add_accelerator('activate', self.agr, key, mod,
-            gtk.ACCEL_VISIBLE)
         submenuitem.connect('activate', self.menuCatalogSaveAs)
         menu.append(submenuitem)
 
