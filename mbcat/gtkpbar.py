@@ -79,6 +79,7 @@ class TaskHandler(threading.Thread):
         self.window.set_title(processLabel)
         self.window.show_all()
 
+        self.currval = 0
         self.maxval = None
         self.last_update_time = 0
         self.seconds_elapsed = 0
@@ -91,7 +92,7 @@ class TaskHandler(threading.Thread):
         #While the stopthread event isn't setted, the thread keeps going on
         while not self.stopthread.isSet():
             r = self.task_generator.next()
-            if isinstance(r, bool) and not r:
+            if r is False:
                 self.window.destroy()
                 break
             self.update(r)
@@ -103,11 +104,24 @@ class TaskHandler(threading.Thread):
         return delta > self.update_interval
 
     def update(self, value):
-
-        if not self._need_update(): return
-
-        if isinstance(value, int):
+        # The different types of values that can be yielded
+        if isinstance(value, int) and value is not True:
+            self.currval = 0
             self.maxval = value
+            return
+        elif isinstance(value, float):
+            f = value
+        elif value is True:
+            self.currval += 1
+            f = float(self.currval) / self.maxval
+        elif isinstance(value, unicode) or isinstance(value, str):
+            gtk.gdk.threads_enter()
+            self.status.set_text(value)
+            gtk.gdk.threads_leave()
+            return
+
+        # Decide if the GUI needs to be updated
+        if not self._need_update():
             return
 
         now = time.time()
@@ -116,16 +130,24 @@ class TaskHandler(threading.Thread):
         # Acquire the gtk global mutex
         gtk.gdk.threads_enter()
         #Set a random value for the fraction
-        if isinstance(value, float):
-            self.progressbar.set_fraction(value)
-            self.progressbar.set_text('%d / %s : %s' % (value,
-                self.maxval if self.maxval else '?',
-                self.ETA(value)))
-        elif isinstance(value, bool):
-            self.progressbar.pulse()
+        if isinstance(value, float) or self.maxval:
+            self.progressbar.set_fraction(f)
         else:
-            gtk.gdk.threads_leave()
-            raise ValueError('Unsupported type yielded by generator')
+            self.progressbar.pulse()
+
+        # Add text to progressbar
+        if self.maxval:
+                self.progressbar.set_text('%d / %d : %s' % (
+                    self.currval,
+                    self.maxval,
+                    self.ETA(f)))
+        elif isinstance(value, float):
+            self.progressbar.set_text('%f %% : %s' % (
+                value,
+                self.ETA(value)))
+        else:
+            self.progressbar.set_text('%d' % self.currval)
+
         # Release the gtk global mutex
         gtk.gdk.threads_leave()
 

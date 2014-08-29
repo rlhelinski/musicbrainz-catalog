@@ -5,20 +5,20 @@
 from __future__ import print_function
 import logging
 logging.basicConfig(level=logging.INFO)
-import pygtk
-pygtk.require('2.0')
+import threading
+import gobject
 import gtk
 import pango
 import mbcat
 import mbcat.barcode # why does this not automatically import?
+import mbcat.gtkpbar
 import musicbrainzngs as mb
 import argparse
 import time
 import webbrowser
 
-import threading
 # Initialize GTK's threading engine
-gtk.gdk.threads_init()
+gobject.threads_init()
 
 _log = logging.getLogger("mbcat")
 
@@ -709,191 +709,11 @@ def TextEntry(parent, message, default=''):
     else:
         return None
 
-class UnknownLength: pass
-
-import datetime
-class TaskHandler(threading.Thread):
-    #Thread event, stops the thread if it is set.
-    stopthread = threading.Event()
-
-    def setup(self, taskFun, progressbar):
-        self.taskFun = taskFun
-        self.progressbar = progressbar
-
-    def run(self):
-        task = self.taskFun(self.progressbar)
-        #While the stopthread event isn't set, the thread keeps going on
-        while not self.stopthread.isSet():
-            if not task.next():
-                break
-
-    def stop(self):
-        """Stop method, sets the event to terminate the thread's main loop"""
-        self.stopthread.set()
-
-def PassifierTask(pbar):
-    pbar.start()
-    while True:
-        pbar.update()
-        time.sleep(0.1)
-        yield True
-
-class ProgressDialog:
-    """A GTK progress dialog class that also manages a TaskHandler"""
-
-    _DEFAULT_MAXVAL = 100
-
-    def __init__(self, parent,
-            taskHandler=None,
-            processLabel='Progress',
-            initStatusLabel='Processing...',
-            maxval=None, poll=1,
-            ):
-        """Initializes a progress bar with sane defaults."""
-        self.window = gtk.Window(type=gtk.WINDOW_TOPLEVEL)
-        self.window.set_transient_for(parent)
-        self.window.set_resizable(False)
-        self.window.set_position(gtk.WIN_POS_CENTER_ON_PARENT)
-        self.window.set_border_width(10)
-        self.window.connect('destroy', self.on_destroy)
-        self.window.connect('delete_event', self.on_delete)
-        self.taskHandler = taskHandler
-        self.maxval = maxval
-
-        self.currval = 0
-        self.finished = False
-        self.last_update_time = None
-        self.poll = poll
-        self.seconds_elapsed = 0
-        self.start_time = None
-        self.update_interval = 1
-
-        vbox = gtk.VBox(False, 10)
-        self.status = gtk.Label(initStatusLabel)
-        self.status.set_width_chars(60)
-        vbox.pack_start(self.status)
-        self.pbar = gtk.ProgressBar()
-        vbox.pack_start(self.pbar)
-
-        self.window.add(vbox)
-        self.window.set_title(processLabel)
-        self.window.show_all()
-
-        self.start()
-
-    def start(self):
-        """Starts measuring time, and prints the bar at 0%.
-
-        It returns self so you can use it like this:
-        >>> pbar = ProgressBar().start()
-        >>> for i in range(100):
-        ...    # do something
-        ...    pbar.update(i+1)
-        ...
-        >>> pbar.finish()
-        """
-        self.currval = 0
-
-        if self.maxval is None:
-            self.maxval = self._DEFAULT_MAXVAL
-
-        self.next_update = 0
-
-        if self.maxval is not UnknownLength:
-            if self.maxval < 0: raise ValueError('Value out of range')
-
-        self.start_time = self.last_update_time = time.time()
-
-        #self._update_gtk()
-
-        return self
-
-    def update(self, value=None):
-        if value is not None and value is not UnknownLength:
-            if (self.maxval is not UnknownLength
-                and not 0 <= value <= self.maxval):
-
-                raise ValueError('Value out of range')
-
-            self.currval = value
-
-        if not self._need_update(): return
-
-        now = time.time()
-        self.seconds_elapsed = now - self.start_time
-        self.next_update = self.currval + self.update_interval
-
-        # Acquire the gtk global mutex
-        gtk.gdk.threads_enter()
-        if self.maxval and value:
-            self.pbar.set_fraction(float(self.currval) / self.maxval)
-            self.pbar.set_text('%d / %d : %s' % (self.currval,
-                self.maxval,
-                self.ETA()))
-        else:
-            if value:
-                self.pbar.set_pulse_step(value)
-            self.pbar.pulse()
-        # Releasing the gtk global mutex
-        gtk.gdk.threads_leave()
-        self.last_update_time = now
-
-        #self._update_gtk()
-
-    def step(self, increment=1):
-        """A convenience function for updating to the next increment"""
-        self.update(self.currval + increment)
-
-    def _update_gtk(self):
-        """
-        This is a workaround for updating the progressbar widgets when there is
-        a single thread.
-        """
-        while gtk.events_pending():
-            gtk.main_iteration()
-
-    @staticmethod
-    def format_time(seconds):
-        """Formats time as the string "HH:MM:SS"."""
-
-        return str(datetime.timedelta(seconds=int(seconds)))
-
-    def ETA(self):
-        if self.currval == 0:
-            return 'ETA:  --:--:--'
-        elif self.finished:
-            return 'Time: %s' % self.format_time(self.seconds_elapsed)
-        else:
-            elapsed = self.seconds_elapsed
-            eta = elapsed * self.maxval / self.currval - elapsed
-            return 'ETA:  %s' % self.format_time(eta)
-
-    def set_status(self, status):
-        gtk.gdk.threads_enter()
-        self.status.set_text(status)
-        gtk.gdk.threads_leave()
-
-    def _need_update(self):
-        """Returns whether the ProgressBar should redraw the line."""
-        if self.currval >= self.next_update or self.finished: return True
-
-        delta = time.time() - self.last_update_time
-        return delta > self.poll
-
-    def on_delete(self, widget, event, data=None):
-        # Change FALSE to TRUE and the main window will not be destroyed
-        # with a "delete_event".
-        return False
-
-    def on_destroy(self, widget, data=None):
-        self.finish()
-
-    def finish(self):
-        self.taskHandler.stop()
-        self.window.destroy()
 
 class MBCatGtk:
-    """A GTK interface for managing a MusicBrainz Catalog"""
+    """
+    A GTK interface for managing a MusicBrainz Catalog.
+    """
     __name__ = 'MusicBrainz Catalog GTK Gui'
     __version__ = '0.1'
     __copyright__ = 'Ryan Helinski'
@@ -1035,9 +855,8 @@ class MBCatGtk:
         self.openDatabase(filename)
 
     def menuCatalogRebuild(self, widget):
-        th = TaskHandler()
-        pd = ProgressDialog(parent=self.window, taskHandler=th)
-        th.setup(self.catalog.rebuildCacheTables, pd)
+        th = mbcat.gtkpbar.TaskHandler(self.window,
+            self.catalog.rebuildCacheTables())
         th.start()
 
     def menuCatalogGetSimilar(self, widget):
@@ -1327,9 +1146,8 @@ class MBCatGtk:
         entry = ReleaseIDEntry(self.window, 'Enter release group search terms')
         if not entry:
             return
-        th = TaskHandler()
-        pd = ProgressDialog(parent=self.window, taskHandler=th)
-        th.setup(PassifierTask, pd)
+        th = mbcat.gtkpbar.TaskHandler(self.window,
+            mbcat.gtkpbar.DummyTask())
         th.start()
         results = mb.search_release_groups(releasegroup=entry,
              limit=self.searchResultsLimit)

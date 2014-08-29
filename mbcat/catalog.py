@@ -219,26 +219,18 @@ class Catalog(object):
 
     def updateCacheTables(self, rebuild, pbar=None):
         """Use the releases table to populate the derived (cache) tables"""
-        if pbar:
-            pbar.maxval=len(self)
-            pbar.set_status('Building release indexes')
-            pbar.start()
+        yield 'Rebuilding tables...'
+        yield len(self)
         for releaseId in self.getReleaseIds():
             metaXml = self.getReleaseXml(releaseId)
             self.digestReleaseXml(releaseId, metaXml, rebuild=rebuild)
-            if pbar:
-                pbar.update(pbar.currval + 1)
             yield True
-        if pbar:
-            pbar.finish()
         yield False
 
     def rebuildCacheTables(self, pbar=None):
         """Drop the derived tables in the database and rebuild them"""
-        if pbar:
-            pbar.maxval = 15
-            pbar.set_status('Dropping index tables')
-            pbar.start()
+        yield 'Dropping tables...'
+        yield 15
         with self._connect() as con:
             cur = con.cursor()
             for tab in ['words', 'trackwords', 'recordings', 'discids',
@@ -247,8 +239,6 @@ class Catalog(object):
                     cur.execute('drop table '+tab)
                 except sqlite3.OperationalError as e:
                     pass
-                if pbar:
-                    pbar.step(1)
                 yield True
             self._createCacheTables(cur)
 
@@ -269,14 +259,12 @@ class Catalog(object):
                         ' text')
                 except sqlite3.OperationalError as e:
                     pass
-                if pbar:
-                    pbar.step(1)
                 yield True
 
         # Rebuild
-        g = self.updateCacheTables(rebuild=True, pbar=pbar)
-        while g.next():
-            yield True
+        g = self.updateCacheTables(rebuild=True)
+        for r in g:
+            yield r
 
         yield False
 
