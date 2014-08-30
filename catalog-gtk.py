@@ -1148,8 +1148,7 @@ class MBCatGtk:
         entry = TextEntry(self.window, 'Enter release group search terms')
         if not entry:
             return
-        th = mbcat.gtkpbar.TaskHandler(self.window,
-            mbcat.gtkpbar.DummyTask())
+        th = mbcat.gtkpbar.TaskHandler(self.window, mbcat.gtkpbar.DummyTask())
         th.start()
         results = mb.search_release_groups(releasegroup=entry,
              limit=self.searchResultsLimit)
