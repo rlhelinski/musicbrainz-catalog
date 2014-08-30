@@ -525,7 +525,7 @@ class QueryResultsDialog:
         # TODO releaseDictList argument should support metadata returned from a
         # webservice query
         self.window = gtk.Window()
-        self.window.set_transient_for(parent)
+        self.window.set_transient_for(parent.window)
         self.window.set_destroy_with_parent(True)
         self.window.set_resizable(True)
         self.window.set_border_width(10)
@@ -537,6 +537,7 @@ class QueryResultsDialog:
 
         # Keep reference to catalog for later
         self.catalog = catalog
+        self.parent = parent
 
         self.tv = gtk.TreeView()
         for i, (label, textWidth) in enumerate(
@@ -1158,7 +1159,7 @@ class MBCatGtk:
             self.catalog, results)
         if release_group_selected:
             results = mb.search_releases(rgid=release_group_selected)
-            QueryResultsDialog(self.window, self.catalog, results)
+            QueryResultsDialog(self, self.catalog, results)
 
     def webserviceRelease(self, widget):
         entry = ReleaseIDEntry(self.window, 'Enter release search terms')
@@ -1168,7 +1169,7 @@ class MBCatGtk:
              limit=self.searchResultsLimit)
         if not results:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
-        QueryResultsDialog(self.window, self.catalog, results)
+        QueryResultsDialog(self, self.catalog, results)
 
     def webserviceBarcode(self, widget):
         entry = ReleaseIDEntry(self.window, 'Enter search barcode (UPC):')
@@ -1178,7 +1179,7 @@ class MBCatGtk:
              limit=self.searchResultsLimit)
         if not results:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
-        QueryResultsDialog(self.window, self.catalog, results)
+        QueryResultsDialog(self, self.catalog, results)
 
     def webserviceSyncCollection(self, widget):
         """Synchronize with a musicbrainz collection (currently only pushes releases)."""
