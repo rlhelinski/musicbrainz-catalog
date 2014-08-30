@@ -1207,6 +1207,43 @@ class MBCatGtk:
 
         self.catalog.syncCollection(collectionId)
 
+    def readDiscTOC(self, widget):
+        try:
+            import discid
+        except ImportError as e:
+            ErrorDialog('Could not import discid')
+        default_device = discid.get_default_device()
+        # have to bring up a dialog to allow the user to pick a device
+        spec_device = default_device
+        try:
+            disc = discid.read(spec_device)
+        except discid.DiscError as e:
+            ErrorDialog("DiscID calculation failed: " + str(e))
+
+        try:
+            _log.info("Querying MusicBrainz...")
+            result = mb.get_releases_by_discid(disc.id,
+                                               includes=["artists"])
+            _log.info('OK\n')
+        except mb.ResponseError:
+            _log.warning('Disc not found or bad MusicBrainz response.')
+            #askBrowseSubmission()
+        else:
+            if result.get("disc"):
+                QueryResultsDialog(self, self.catalog, result['disc'])
+            elif result.get("cdstub"):
+                for label, key in [
+                        ('CD Stub', 'id'),
+                        ('Artist', 'artist'),
+                        ('Title', 'title'),
+                        ('Barcode', 'barcode')]:
+                    if key in result['cdstub']:
+                        _log.info('%10s: %s\n' %
+                                     (label, result['cdstub'][key]))
+                askBrowseSubmission()
+
+                ErrorDialog('There was only a CD stub.')
+
     def createMenuBar(self, widget):
         # Menu bar
         mb = gtk.MenuBar()
@@ -1405,6 +1442,15 @@ class MBCatGtk:
         menuitem = gtk.MenuItem("Webservice")
         menuitem.set_submenu(menu)
         mb.append(menuitem)
+
+        ## Disc lookup
+        submenuitem = gtk.MenuItem('Disc lookup')
+        submenuitem.connect('activate', self.readDiscTOC)
+        menu.append(submenuitem)
+
+        ## Separator
+        sep = gtk.SeparatorMenuItem()
+        menu.append(sep)
 
         ## Release Group Search
         submenuitem = gtk.MenuItem('Release Group')
