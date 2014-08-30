@@ -595,7 +595,7 @@ class QueryResultsDialog:
         entry = self.get_selection()
         # TODO this procedure needs to be part of the Catalog class?
         if entry in self.catalog:
-            ErrorDialog(self.window, 'Release already exists')
+            ErrorDialog(self.window, 'Release "%s" already exists' % entry)
             return
         try:
             self.catalog.addRelease(entry)
