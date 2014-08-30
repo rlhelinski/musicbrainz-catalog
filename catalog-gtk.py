@@ -1209,17 +1209,27 @@ class MBCatGtk:
         self.catalog.syncCollection(collectionId)
 
     def readDiscTOC(self, widget):
+        def askBrowseSubmission():
+            answer = ConfirmDialog(self.window,
+                'Open browser to Submission URL? [y/N]')
+            if answer:
+                _log.info('Opening web browser.')
+                webbrowser.open(disc.submission_url)
+
         try:
             import discid
         except ImportError as e:
-            ErrorDialog('Could not import discid')
+            ErrorDialog(self.window, 'Could not import discid')
+            return
         default_device = discid.get_default_device()
         # have to bring up a dialog to allow the user to pick a device
-        spec_device = default_device
+        spec_device = TextEntry(self.window, 'Select a device to read:',
+            default_device)
         try:
             disc = discid.read(spec_device)
         except discid.DiscError as e:
-            ErrorDialog("DiscID calculation failed: " + str(e))
+            ErrorDialog(self.window, "DiscID calculation failed: " + str(e))
+            return
 
         try:
             _log.info("Querying MusicBrainz...")
@@ -1228,7 +1238,7 @@ class MBCatGtk:
             _log.info('OK\n')
         except mb.ResponseError:
             _log.warning('Disc not found or bad MusicBrainz response.')
-            #askBrowseSubmission()
+            askBrowseSubmission()
         else:
             if result.get("disc"):
                 QueryResultsDialog(self, self.catalog, result['disc'])
@@ -1243,7 +1253,8 @@ class MBCatGtk:
                                      (label, result['cdstub'][key]))
                 askBrowseSubmission()
 
-                ErrorDialog('There was only a CD stub.')
+                ErrorDialog(self.window, 'There was only a CD stub.')
+                return
 
     def createMenuBar(self, widget):
         # Menu bar
