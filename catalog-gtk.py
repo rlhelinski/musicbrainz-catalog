@@ -23,7 +23,7 @@ gobject.threads_init()
 _log = logging.getLogger("mbcat")
 
 # Thanks http://stackoverflow.com/a/8907574/3098007
-def ReleaseIDEntry(parent, message, default='', textVisible=True):
+def TextEntry(parent, message, default='', textVisible=True):
     """
     Display a dialog with a text entry.
     Returns the text, or None if canceled.
@@ -248,7 +248,7 @@ def ReleaseSearchDialog(parent,
         catalog,
         message='Enter search terms or release ID',
         default=''):
-    entry = ReleaseIDEntry(parent, message, default)
+    entry = TextEntry(parent, message, default)
     if not entry:
         return
     if len(entry) == 36:
@@ -268,7 +268,7 @@ def BarcodeSearchDialog(parent,
         catalog,
         message='Enter barcode (UPC):',
         default=''):
-    entry = ReleaseIDEntry(parent, message, default)
+    entry = TextEntry(parent, message, default)
     if not entry:
         return
 
@@ -296,7 +296,7 @@ def TrackSearchDialog(parent,
         catalog,
         message='Enter search terms',
         default=''):
-    entry = ReleaseIDEntry(parent, message, default)
+    entry = TextEntry(parent, message, default)
     if not entry:
         return
     if len(entry) == 36:
@@ -676,7 +676,7 @@ def SelectCollectionDialog(parent, result):
     d.destroy()
     return id
 
-def TextEntry(parent, message, default=''):
+def TextViewEntry(parent, message, default=''):
     """
     Display a dialog with a text entry.
     Returns the text, or None if canceled.
@@ -954,7 +954,7 @@ class MBCatGtk:
         self.updateStatusBar()
 
     def addRelease(self, widget):
-        entry = ReleaseIDEntry(self.window, 'Enter Release ID')
+        entry = TextEntry(self.window, 'Enter Release ID')
         if not entry:
             return
         # TODO this procedure needs to be part of the Catalog class?
@@ -1007,7 +1007,7 @@ class MBCatGtk:
             return
 
         relTitle = self.catalog.getRelease(releaseId)['title']
-        newRelId = ReleaseIDEntry(self.window,
+        newRelId = TextEntry(self.window,
             'Enter release ID to replace %s\n"%s"' % (releaseId, relTitle))
         if newRelId in self.catalog:
             ErrorDialog(self.window, 'New release ID already exists')
@@ -1050,11 +1050,11 @@ class MBCatGtk:
         for event in lendEvents:
             _log.info(str(event) + '\n')
 
-        borrower = ReleaseIDEntry(self.window, "Borrower (leave empty to return): ")
+        borrower = TextEntry(self.window, "Borrower (leave empty to return): ")
         if not borrower:
             return
 
-        date = ReleaseIDEntry(self.window,
+        date = TextEntry(self.window,
             "Lend date  (" + mbcat.dateFmtUsr + ") (leave empty for today): ")
         if not date:
             date = time.time()
@@ -1070,7 +1070,7 @@ class MBCatGtk:
             ErrorDialog(self.window, 'Release is not checked out.')
             return
 
-        date = ReleaseIDEntry(self.window,
+        date = TextEntry(self.window,
             "Return date (" + mbcat.dateFmtUsr +
             ") (leave empty for today): ")
         if not date:
@@ -1081,7 +1081,7 @@ class MBCatGtk:
     def editComment(self, widget):
         releaseId = self.getSelection()
         oldcomment = self.catalog.getComment(releaseId)
-        newcomment = TextEntry(self.window, 'Edit Release Comments', oldcomment if oldcomment is not None else '')
+        newcomment = TextViewEntry(self.window, 'Edit Release Comments', oldcomment if oldcomment is not None else '')
         if newcomment is not None:
             self.catalog.setComment(releaseId, newcomment)
 
@@ -1094,7 +1094,7 @@ class MBCatGtk:
 
     def listen(self, widget):
         releaseId = self.getSelection()
-        dateStr = TextEntry(self.window,
+        dateStr = TextViewEntry(self.window,
             'Enter listen date (' + mbcat.dateFmtUsr + ')',
             time.strftime(mbcat.dateFmtStr))
         if dateStr:
@@ -1145,7 +1145,7 @@ class MBCatGtk:
         self.setSelectedRow(self.getReleaseRow(releaseId))
 
     def webserviceReleaseGroup(self, widget):
-        entry = ReleaseIDEntry(self.window, 'Enter release group search terms')
+        entry = TextEntry(self.window, 'Enter release group search terms')
         if not entry:
             return
         th = mbcat.gtkpbar.TaskHandler(self.window,
@@ -1163,7 +1163,7 @@ class MBCatGtk:
             QueryResultsDialog(self, self.catalog, results)
 
     def webserviceRelease(self, widget):
-        entry = ReleaseIDEntry(self.window, 'Enter release search terms')
+        entry = TextEntry(self.window, 'Enter release search terms')
         if not entry:
             return
         results = mb.search_releases(release=entry,
@@ -1173,26 +1173,27 @@ class MBCatGtk:
         QueryResultsDialog(self, self.catalog, results)
 
     def webserviceBarcode(self, widget):
-        entry = ReleaseIDEntry(self.window, 'Enter search barcode (UPC):')
+        entry = TextEntry(self.window, 'Enter search barcode (UPC):')
         if not entry:
             return
         results = mb.search_releases(barcode=entry,
              limit=self.searchResultsLimit)
         if not results:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
+            return
         QueryResultsDialog(self, self.catalog, results)
 
     def webserviceSyncCollection(self, widget):
         """Synchronize with a musicbrainz collection (currently only pushes releases)."""
         if not self.catalog.prefs.username:
-            username = ReleaseIDEntry('Enter username:')
+            username = TextEntry('Enter username:')
             self.catalog.prefs.username = username
             self.catalog.prefs.save()
         else:
             username = self.catalog.prefs.username
 
         # Input the password.
-        password = ReleaseIDEntry(self.window,
+        password = TextEntry(self.window,
             "Password for '%s': " % username,
             textVisible=False)
         if not password:
