@@ -605,9 +605,10 @@ class QueryResultsDialog:
 
         _log.info("Added '%s'" % self.catalog.getRelease(entry)['title'])
 
+        # TODO clean this up, too many references to parent, need a method
         self.catalog.getCoverArt(entry)
-        self.makeListStore()
-        self.setSelectedRow(self.getReleaseRow(entry))
+        self.parent.makeListStore()
+        self.parent.setSelectedRow(self.parent.getReleaseRow(entry))
 
     def on_destroy(self, widget, data=None):
         self.window.destroy()
