@@ -716,18 +716,27 @@ class Catalog(object):
             (existingDates+[date],releaseId))
         self.conn.commit()
 
-    def getLendEvents(self, releaseId):
-        self.curs.execute('select lent from releases where id=?', (releaseId,))
-        return self.curs.fetchall()[0][0]
+    def getCheckOutEvents(self, releaseId):
+        # TODO should use sqlite3.Row as the conn.row_factory for these fetches
+        self.curs.execute('select borrower,date from checkout_events where '
+            'release=?', (releaseId,))
+        return self.curs.fetchall()
 
-    def addLendEvent(self, releaseId, event):
-        # Some precursory error checking
-        if not isinstance(event, mbcat.extradata.CheckOutEvent) and \
-            not isinstance(event, mbcat.extradata.CheckInEvent):
-            raise ValueError ('Wrong type for lend event')
-        existingEvents = self.getLendEvents(releaseId)
-        self.curs.execute('update releases set lent=? where id=?',
-            (existingEvents+[event],releaseId))
+    def getCheckInEvents(self, releaseId):
+        # TODO should use sqlite3.Row as the conn.row_factory for these fetches
+        self.curs.execute('select date from checkin_events where '
+            'release=?', (releaseId,))
+        return self.curs.fetchall()
+
+    def addCheckOutEvent(self, releaseId, borrower, date):
+        self.curs.execute('insert into checkout_events '
+            '(borrower, date, release) values (?,?,?)',
+            (borrower, date, releaseId))
+        self.conn.commit()
+
+    def addCheckInEvent(self, releaseId, date):
+        self.curs.execute('insert into checkin_events (date,release) '
+            'where release=?', (date, releaseId))
         self.conn.commit()
 
     def getRating(self, releaseId):

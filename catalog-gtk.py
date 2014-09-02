@@ -1055,20 +1055,22 @@ class MBCatGtk:
     def checkOut(self, widget):
         releaseId = self.getSelection()
 
-        lendEvents = self.catalog.getLendEvents(releaseId)
-        for event in lendEvents:
+        checkOutEvents = self.catalog.getCheckOutEvents(releaseId)
+        checkInEvents = self.catalog.getCheckInEvents(releaseId)
+        for event in checkOutEvents:
+            _log.info(str(event) + '\n')
+        for event in checkInEvents:
             _log.info(str(event) + '\n')
 
-        borrower = TextEntry(self.window, "Borrower (leave empty to return): ")
+        borrower = TextEntry(self.window, "Borrower: ")
         if not borrower:
             return
 
         date = TextEntry(self.window,
-            "Lend date  (" + mbcat.dateFmtUsr + ") (leave empty for today): ")
-        if not date:
-            date = time.time()
-        self.catalog.addLendEvent(releaseId,
-            mbcat.extradata.CheckOutEvent(borrower, date))
+            "Lend date  (" + mbcat.dateFmtUsr + "): ",
+            default=time.strftime(mbcat.dateFmtStr))
+        self.catalog.addCheckOutEvent(releaseId, borrower,
+            time.strftime('%s', time.strptime(date, mbcat.dateFmtStr)))
 
     def checkIn(self, widget):
         releaseId = self.getSelection()
