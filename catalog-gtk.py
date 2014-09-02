@@ -686,6 +686,7 @@ def TextViewEntry(parent, message, default=''):
             gtk.MESSAGE_QUESTION,
             gtk.BUTTONS_OK_CANCEL,
             message)
+    d.set_size_request(400,300)
     d.set_resizable(True)
     sw = gtk.ScrolledWindow()
     sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -694,7 +695,6 @@ def TextViewEntry(parent, message, default=''):
     sw.add(textview)
     textbuffer.set_text(default)
     textview.set_wrap_mode(gtk.WRAP_WORD)
-    #entry.set_width_chars(80)
     sw.show()
     textview.show()
     d.vbox.pack_end(sw)
