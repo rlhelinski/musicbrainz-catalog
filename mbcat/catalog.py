@@ -14,7 +14,6 @@ import mbcat.userprefs
 import mbcat.utils
 import mbcat.extradata
 import shutil
-import zipfile
 from datetime import datetime
 from collections import defaultdict
 import progressbar
@@ -374,6 +373,7 @@ class Catalog(object):
 
     def saveZip(self, zipName='catalog.zip', pbar=None):
         """Exports the database as a ZIP archive"""
+        import zipfile
 
         _log.info('Saving ZIP file for catalog to \'%s\'' % zipName)
 
@@ -407,6 +407,7 @@ class Catalog(object):
 
     def loadZip(self, zipName='catalog.zip', pbar=None):
         """Imports the data from a ZIP archive into the database"""
+        import zipfile
 
         _log.info('Loading ZIP file into catalog from \'%s\'' % zipName)
 
