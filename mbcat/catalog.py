@@ -21,6 +21,7 @@ import logging
 _log = logging.getLogger("mbcat")
 import zlib
 import sqlite3
+import itertools
 
 # For remembering user decision to overwrite existing data
 # TODO remove this with writeXml()
@@ -747,35 +748,38 @@ class Catalog(object):
         self.conn.commit()
 
     def getPurchases(self, releaseId):
-        self.curs.execute('select purchases from releases where id=?',
-                (releaseId,))
-        result = self.curs.fetchone()
-        return result[0] if result else []
+        self.curs.execute('select date,price,vendor from purchases '
+            'where release=?', (releaseId,))
+        return self.curs.fetchall()
 
-    def addPurchase(self, releaseId, purchaseObj):
-        # Some precursory error checking
-        if not isinstance(purchaseObj, mbcat.extradata.PurchaseEvent):
-            raise ValueError ('Wrong type for purchase event')
-        # TODO this is the wrong function to call?
-        existingEvents = self.getLendEvents(releaseId)
-        self.curs.execute('update releases set purchases=? where id=?',
-            (existingEvents+[purchaseObj],releaseId))
+    def addPurchase(self, releaseId, date, price, vendor):
+        # Some error checking
+        if not isinstance(date, str) and not isinstance(date, unicode):
+            raise ValueError ('Wrong type for date')
+        if not isinstance(price, str) and not isinstance(price, unicode):
+            raise ValueError ('Wrong type for date')
+        if not isinstance(vendor, str) and not isinstance(vendor, unicode):
+            raise ValueError ('Wrong type for date')
+
+        self.curs.execute('insert into purchases (date,price,vendor,release) '
+            'values (?,?,?,?)', (date,price,vendor,releaseId))
         self.conn.commit()
 
     def getListenDates(self, releaseId):
-        self.curs.execute('select listened from releases where id=?',
-                (releaseId,))
-        return self.curs.fetchall()[0][0]
+        self.curs.execute('select listened_date from listened_dates '
+            'where release=?', (releaseId,))
+        # chain flattens whatever list of column lists that come back
+        return itertools.chain.from_iterable(self.curs.fetchall())
 
     def addListenDate(self, releaseId, date):
         # Some precursory error checking
         if not isinstance(date, float):
             raise ValueError ('Wrong type for date argument')
-        existingDates = self.getListenDates(releaseId)
-        self.curs.execute('update releases set listened=? where id=?',
-            (existingDates+[date],releaseId))
+        self.curs.execute('insert into listened_dates (listened_date, release) '
+            'values (?,?)', (date,releaseId))
         self.conn.commit()
 
+    @mbcat.utils.deprecated
     def getExtraData(self, releaseId):
         """Put together all of the metadata added by mbcat. This might be
         removed in a later release, only need it when upgrading from 0.1."""

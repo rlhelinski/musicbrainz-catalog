@@ -1102,8 +1102,9 @@ class MBCatGtk:
             self.catalog.setCopyCount(releaseId, newcount)
 
     def listen(self, widget):
+        # TODO this needs its own dialog that displays the current listening dates
         releaseId = self.getSelection()
-        dateStr = TextViewEntry(self.window,
+        dateStr = TextEntry(self.window,
             'Enter listen date (' + mbcat.dateFmtUsr + ')',
             time.strftime(mbcat.dateFmtStr))
         if dateStr:
@@ -1122,8 +1123,7 @@ class MBCatGtk:
         if not info:
             return
 
-        pe = mbcat.extradata.PurchaseEvent(info['date'], info['price'], info['vendor'])
-        self.catalog.addPurchase(releaseId, pe)
+        self.catalog.addPurchase(releaseId, info['date'], info['price'], info['vendor'])
 
     def rateRelease(self, widget):
         releaseId = self.getSelection()
