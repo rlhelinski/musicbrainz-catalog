@@ -876,15 +876,24 @@ class MBCatGtk:
         row = model.get_value(it, 0)
         cell.set_property('text', 'OK')
 
+    def menu_release_items_set_sensitive(self, sens=True):
+        """Make menu items specific to releases active."""
+        for menuitem in self.menu_release_items:
+            menuitem.set_sensitive(sens)
+
     def on_row_activate(self, treeview, path, column):
         model, it = treeview.get_selection().get_selected()
         relId = model.get_value(it, 0)
         webbrowser.open(self.catalog.releaseUrl + relId)
 
     def on_row_select(self, treeview):
+        self.menu_release_items_set_sensitive(True)
         model, it = treeview.get_selection().get_selected()
         relId = model.get_value(it, 0)
         print (relId+' selected')
+
+    def on_unselect_all(self, treeview):
+        self.menu_release_items_set_sensitive(False)
 
     def getSelection(self):
         """Returns the selected release ID or None"""
@@ -1347,6 +1356,7 @@ class MBCatGtk:
         menu = gtk.Menu()
         menuitem = gtk.MenuItem("_Release")
         menuitem.set_submenu(menu)
+        self.menu_release_items = [menuitem]
 
         ## Add
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_ADD)
@@ -1356,6 +1366,7 @@ class MBCatGtk:
             gtk.ACCEL_VISIBLE)
         submenuitem.connect('activate', self.addRelease)
         menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
 
         ## Delete
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_REMOVE)
@@ -1365,26 +1376,31 @@ class MBCatGtk:
             gtk.ACCEL_VISIBLE)
         submenuitem.connect('activate', self.deleteRelease)
         menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
 
         ## Switch
         submenuitem = gtk.MenuItem('_Switch')
         submenuitem.connect('activate', self.switchRelease)
         menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
 
         ## Cover Art
         submenuitem = gtk.MenuItem('Get Cover Art')
         submenuitem.connect('activate', self.getCoverArt)
         menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
 
         ## Refresh
         submenuitem = gtk.MenuItem('_Refresh')
         submenuitem.connect('activate', self.refreshRelease)
         menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
 
         ## Track List
         submenuitem = gtk.MenuItem('Track List')
         submenuitem.connect('activate', self.showTrackList)
         menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
 
         ## Separator
         sep = gtk.SeparatorMenuItem()
@@ -1394,38 +1410,46 @@ class MBCatGtk:
         submenuitem = gtk.MenuItem('Check Out')
         submenuitem.connect('activate', self.checkOut)
         menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
 
         ## Check In
         submenuitem = gtk.MenuItem('Check In')
         submenuitem.connect('activate', self.checkIn)
         menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
 
         ## Comment
         submenuitem = gtk.MenuItem('Comment')
         submenuitem.connect('activate', self.editComment)
         menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
 
         ## Count
         submenuitem = gtk.MenuItem('Count')
         submenuitem.connect('activate', self.changeCount)
         menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
 
         ## Listen
         submenuitem = gtk.MenuItem('Listen')
         submenuitem.connect('activate', self.listen)
         menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
 
         ## Purchase Info
         submenuitem = gtk.MenuItem('Purchase Info')
         submenuitem.connect('activate', self.purchaseInfo)
         menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
 
         ## Rate
         submenuitem = gtk.MenuItem('_Rate')
         submenuitem.connect('activate', self.rateRelease)
         menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
 
         mb.append(menuitem)
+        self.menu_release_items_set_sensitive(False)
 
         # Search menu
         menu = gtk.Menu()
@@ -1543,6 +1567,7 @@ class MBCatGtk:
 
         self.treeview.connect('row-activated', self.on_row_activate)
         self.treeview.connect('cursor-changed', self.on_row_select)
+        self.treeview.connect('unselect-all', self.on_unselect_all)
         self.scrolledwindow = gtk.ScrolledWindow()
         self.scrolledwindow.add(self.treeview)
 
