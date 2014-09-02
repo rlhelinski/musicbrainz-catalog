@@ -22,13 +22,6 @@ _log = logging.getLogger("mbcat")
 import zlib
 import sqlite3
 
-def recLengthAsString(recLength):
-    if not recLength:
-        return '?:??'
-    # convert milli-seconds to seconds
-    length = float(recLength)/1000
-    return ('%d:%02d' % (length/60, length%60))
-
 # For remembering user decision to overwrite existing data
 # TODO remove this with writeXml()
 overWriteAll = False
@@ -1549,6 +1542,13 @@ class Catalog(object):
         self.curs.execute('select format from releases where id=?',
             (releaseId,))
         return self.curs.fetchone()[0]
+
+def recLengthAsString(recLength):
+    if not recLength:
+        return '?:??'
+    # convert milli-seconds to seconds
+    length = float(recLength)/1000
+    return ('%d:%02d' % (length/60, length%60))
 
 def getMediumLen(medium):
     try:
