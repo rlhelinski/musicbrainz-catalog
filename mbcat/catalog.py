@@ -20,57 +20,8 @@ from collections import defaultdict
 import progressbar
 import logging
 _log = logging.getLogger("mbcat")
-# for compatibility with Python 3
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 import zlib
-
 import sqlite3
-# Problem: pickle dumps takes unicode strings but returns binary strings
-def listAdapter(l):
-    return buffer(pickle.dumps(l))
-
-def listConverter(s):
-    return pickle.loads(s)
-
-sqlite3.register_adapter(list, listAdapter)
-sqlite3.register_converter(str("list"), listConverter)
-
-def sql_list_append(cursor, table_name, key_column, key, value, list_column='releases'):
-    """Append to a list in an SQL table."""
-    cursor.execute('select '+list_column+' from '+table_name+\
-            ' where '+key_column+' = ?', (key,))
-    row = cursor.fetchall()
-    if not row:
-        relList = [value]
-    else:
-        relList = row[0][0]
-        if value not in relList:
-            relList.append(value)
-
-    cursor.execute(('replace' if row else 'insert')+
-            ' into '+table_name+'('+key_column+', '+list_column+') '
-            'values (?, ?)', (key, relList))
-
-def sql_list_remove(cursor, table_name, key_column, key, value, list_column='releases'):
-    """Remove an item from a list in an SQL table."""
-    cursor.execute('select '+list_column+' from '+table_name+\
-            ' where '+key_column+' = ?', (key,))
-    row = cursor.fetchall()
-    if row:
-        relList = row[0][0]
-        relList.remove(value)
-
-        if relList:
-            cursor.execute('replace into %s (%s, releases) values (?, ?)' % \
-                    (table_name, key_column),
-                    (key, relList))
-        else:
-            cursor.execute('delete from %s where %s=?' % \
-                    (table_name, key_column),
-                    (key,))
 
 def recLengthAsString(recLength):
     if not recLength:
@@ -80,6 +31,7 @@ def recLengthAsString(recLength):
     return ('%d:%02d' % (length/60, length%60))
 
 # For remembering user decision to overwrite existing data
+# TODO remove this with writeXml()
 overWriteAll = False
 
 # Have to give an identity for musicbrainzngs
@@ -123,11 +75,6 @@ class Catalog(object):
         'asin',
         'format',
         'metatime',
-        'purchases',
-        'added',
-        'lent',
-        'listened',
-        'digital',
         'count',
         'comment',
         'rating'
@@ -181,15 +128,15 @@ class Catalog(object):
                 "asin TEXT, "+\
                 "format TEXT, "+\
                 "metatime FLOAT, "+\
-                # now all the extra data
-                "purchases LIST, "+\
-                "added LIST, "+\
-                "lent LIST, "+\
-                "listened LIST, "+\
-                "digital LIST, "+\
-                "count INT, "+\
+                ## now all the extra data
+                #"purchases LIST, "+\ # OK
+                #"added LIST, "+\ # OK
+                #"lent LIST, "+\ # OK
+                #"listened LIST, "+\ # OK
+                #"digital LIST, "+\
+                "count INT DEFAULT 1, "+\
                 "comment TEXT, "+\
-                "rating INT)")
+                "rating INT DEFAULT 0)")
 
             self._createCacheTables(cur)
 
@@ -197,25 +144,71 @@ class Catalog(object):
 
     def _createCacheTables(self, cur):
         # tables that map specific things to a list of releases
-        for columnName in [
-                'word',
-                'trackword',
-                'discid',
-                'barcode',
-                'format'
+        for columnName, columnType in [
+                ('word', 'TEXT'),
+                # integer for dates
+                ('added_date', 'INTEGER'),
+                ('listened_date', 'INTEGER'),
                 ]:
 
             cur.execute('CREATE TABLE '+columnName+'s('+\
-                    columnName+' '+
-                    ('INT' if columnName is 'barcode' else 'TEXT')+\
-                    ' PRIMARY KEY, releases list)')
+                columnName+' '+columnType+', release TEXT, '
+                'FOREIGN KEY(release) REFERENCES releases(id) '
+                'ON DELETE CASCADE)')
 
         cur.execute('CREATE TABLE recordings ('
-            'recording TEXT PRIMARY KEY, '
+            'id TEXT, '
             'title TEXT, '
             'length INTEGER, '
-            'releases list)')
+            'release TEXT, '
+            'FOREIGN KEY(release) REFERENCES releases(id) '
+            'ON DELETE CASCADE)')
 
+        cur.execute('CREATE TABLE trackwords('
+            'trackword TEXT, recording TEXT, '
+            'FOREIGN KEY(recording) REFERENCES recordings(id) '
+            'ON DELETE CASCADE)')
+
+        cur.execute('CREATE TABLE discids ('
+            'discid TEXT, '
+            'release TEXT, '
+            'FOREIGN KEY(release) REFERENCES releases(id) '
+            'ON DELETE CASCADE)')
+
+        cur.execute('CREATE TABLE purchases ('
+            'date TEXT, '
+            'price FLOAT, '
+            'vendor TEXT, '
+            'release TEXT, '
+            'FOREIGN KEY(release) REFERENCES releases(id) '
+            'ON DELETE CASCADE)')
+
+        # checkout, checkin (lent out, returned) tables
+        cur.execute('CREATE TABLE checkout_events ('
+            'borrower TEXT, '
+            'date INTEGER, '
+            'release TEXT, '
+            'FOREIGN KEY(release) REFERENCES releases(id) '
+            'ON DELETE CASCADE)')
+
+        cur.execute('CREATE TABLE checkin_events ('
+            'date INTEGER, '
+            'release TEXT, '
+            'FOREIGN KEY(release) REFERENCES releases(id) '
+            'ON DELETE CASCADE)')
+
+        # Digital copy table
+        cur.execute('CREATE TABLE digital ('
+            'release TEXT, '
+            'format TEXT, '
+            'path TEXT, '
+            'FOREIGN KEY(release) REFERENCES releases(id) '
+            'ON DELETE CASCADE)')
+
+        # Indexes for speed (it's all about performance...)
+        cur.execute('create unique index release_id on releases (id);')
+        for col in ['sortstring', 'catno', 'barcode', 'asin']:
+            cur.execute('create index release_'+col+' on releases ('+col+');')
 
     def updateCacheTables(self, rebuild, pbar=None):
         """Use the releases table to populate the derived (cache) tables"""
@@ -242,7 +235,7 @@ class Catalog(object):
                 yield True
             self._createCacheTables(cur)
 
-            # Add the columns if they don't exist
+            # Add these columns to releases if they don't exist
             for column in [
                 'artist',
                 'title',
@@ -308,7 +301,8 @@ class Catalog(object):
         return releaseXml
 
     def getRelease(self, releaseId):
-        """Return a release's musicbrainz-ngs dictionary"""
+        """Return a release's musicbrainz-ngs dictionary. 
+        For convenience, only the value of the 'release' key is returned. """
 
         releaseXml = self.getReleaseXml(releaseId)
         # maybe it would be better to store the release as a serialized dict in
@@ -461,11 +455,12 @@ class Catalog(object):
                 pbar.finish()
 
     @staticmethod
-    def processWords(words, field, d):
+    def processWords(field, d):
         if field in d:
-            words.update(re.findall(r"[\w'.]+", d[field].lower(), re.UNICODE))
+            return re.findall(r"[\w'.]+", d[field].lower(), re.UNICODE)
         elif field != 'disambiguation':
-            _log.warning('Missing field from release '+relId+': '+field)
+            _log.warning('Release '+relId+' is missing the '+field+' field')
+        return set()
 
     @staticmethod
     def getReleaseWords(rel):
@@ -473,11 +468,11 @@ class Catalog(object):
         relId = rel['id']
 
         for field in ['title', 'artist-credit-phrase', 'disambiguation']:
-            mbcat.Catalog.processWords(words, field, rel)
+            words.update(mbcat.Catalog.processWords(field, rel))
         for credit in rel['artist-credit']:
             for field in ['sort-name', 'disambiguation', 'name']:
                 if field in credit:
-                    mbcat.Catalog.processWords(words, field, credit)
+                    words.update(mbcat.Catalog.processWords(field, credit))
 
         return words
 
@@ -489,29 +484,41 @@ class Catalog(object):
             for track in medium['track-list']:
                 yield track
 
-    def digestTrackWords(self, rel, cur, actionFun=sql_list_append):
-        releaseTrackWords = set()
-        relId = rel['id']
+    @staticmethod
+    def _addRelTableRow(cursor, table_name, key_column, key, release_id):
+        cursor.execute('insert into '+table_name+' (key_column, release) '
+            'values ('+key+', '+release_id+')')
+
+    def digestTrackWords(self, rel, cur):
+        """
+        Digest all of the words in the track titles of a release.
+        """
 
         for track in mbcat.Catalog.getReleaseTracks(rel):
             if 'recording' in track and 'title' in track['recording']:
-                trackWords = set()
-                mbcat.Catalog.processWords(trackWords, 'title',
-                    track['recording'])
-                for word in trackWords:
-                    actionFun(cur, 'trackwords', 'trackword',
-                        word, track['recording']['id'])
-                releaseTrackWords = releaseTrackWords.union(trackWords)
-                actionFun(cur, 'recordings', 'recording',
-                    track['recording']['id'], relId)
-                cur.execute('update recordings set title=?,length=? '
-                    'where recording=?', (track['recording']['title'],
-                        track['recording']['length'] if
-                            'length' in track['recording'] else -1,
-                        track['recording']['id']))
+                # Add recording and reference the release
+                cur.execute('insert into recordings '
+                    '(id, title, length, release) values (?,?,?,?)', 
+                    (track['recording']['id'], track['recording']['title'],
+                    track['recording']['length'], rel['id']))
+                for word in mbcat.Catalog.processWords('title',
+                    track['recording']):
+                    # Reference each word to this recording
+                    cur.execute('insert into trackwords '
+                        '(trackword, recording) values (?,?)', 
+                        (word, track['recording']['id']))
 
     def unDigestTrackWords(self, rel, cur):
-        self.digestTrackWords(rel, cur, actionFun=sql_list_remove)
+        """
+        Undo what digestTrackWords() does.
+        """
+        cur.execute('select recording from recordings where release=?', 
+            (rel['id'],))
+        for recordingId in cur:
+            cur.execute('delete from trackwords where recording=?', 
+                (recordingId,))
+        # Should do this in its own function
+        cur.execute('delete from recordings where release=?', (rel['id'],))
 
     @mbcat.utils.deprecated
     def mapWordsToRelease(self, words, releaseId):
@@ -789,6 +796,7 @@ class Catalog(object):
         # Some precursory error checking
         if not isinstance(purchaseObj, mbcat.extradata.PurchaseEvent):
             raise ValueError ('Wrong type for purchase event')
+        # TODO this is the wrong function to call?
         existingEvents = self.getLendEvents(releaseId)
         with self._connect() as con:
             cur = con.cursor()
@@ -1089,7 +1097,7 @@ class Catalog(object):
 
     def digestReleaseXml(self, releaseId, metaXml, rebuild=False):
         """Update the appropriate data structes for a new release."""
-        relDict = self.getReleaseDictFromXml(metaXml)
+        relDict = self.getReleaseDictFromXml(metaXml) # parse the XML
 
         exists = releaseId in self
         now = time.time()
@@ -1097,14 +1105,15 @@ class Catalog(object):
         with self._connect() as con:
             cur = con.cursor()
 
+            cur.execute('insert into added_dates '
+                '(added_date, release) values (?, ?)',
+                (now, releaseId))
             if not exists:
                 # Update releases table
                 newColumns = [
                     'id',
                     'meta',
                     'metatime',
-                    'added',
-                    'count',
                     ]
 
                 try:
@@ -1117,8 +1126,6 @@ class Catalog(object):
                             releaseId,
                             buffer(zlib.compress(metaXml)),
                             now,
-                            [now],
-                            1, # set count to 1 for now
                             )
                     )
                 except sqlite3.IntegrityError as e:
@@ -1136,18 +1143,25 @@ class Catalog(object):
                         )
                     )
 
+            # Whether the release already existed or not
             metaColumns = [
-                ('sortstring', self.getSortStringFromRelease(relDict['release'])),
-                ('artist', mbcat.catalog.getArtistSortPhrase(relDict['release'])),
+                ('sortstring', self.getSortStringFromRelease(
+                    relDict['release'])),
+                ('artist', mbcat.catalog.getArtistSortPhrase(
+                    relDict['release'])),
                 ('title', relDict['release']['title']),
-                ('date', (relDict['release']['date'] if 'date' in relDict['release'] else '')),
-                ('country', (relDict['release']['country'] if 'country' in relDict['release'] else '')),
+                ('date', (relDict['release']['date'] \
+                    if 'date' in relDict['release'] else '')),
+                ('country', (relDict['release']['country'] \
+                    if 'country' in relDict['release'] else '')),
                 ('label', self.fmtLabel(relDict['release'])),
                 ('catno', self.fmtCatNo(relDict['release'])),
-                ('barcode', (relDict['release']['barcode'] if 'barcode' in relDict['release'] else '')),
-                ('asin', (relDict['release']['asin'] if 'asin' in relDict['release'] else '')),
-                ('format', mbcat.formats.getReleaseFormat(relDict['release'])\
-                    .name()),
+                ('barcode', (relDict['release']['barcode'] \
+                    if 'barcode' in relDict['release'] else '')),
+                ('asin', (relDict['release']['asin'] \
+                    if 'asin' in relDict['release'] else '')),
+                ('format', mbcat.formats.getReleaseFormat(
+                    relDict['release']).name()),
                 ]
 
             cur.execute('update releases set '+\
@@ -1159,34 +1173,24 @@ class Catalog(object):
             # Update words table
             rel_words = self.getReleaseWords(relDict['release'])
             for word in rel_words:
-                sql_list_append(cur, 'words', 'word', word, releaseId)
+                cur.execute('insert into words (word,release) values (?,?)',
+                    (word, releaseId))
 
             # Update words -> (word, recordings) and
             # recordings -> (recording, releases)
             self.digestTrackWords(relDict['release'], cur)
 
-            # Update barcodes -> (barcode, releases)
-            if 'barcode' in relDict['release'] and \
-                    relDict['release']['barcode']:
-                sql_list_append(cur, 'barcodes', 'barcode',
-                        relDict['release']['barcode'], releaseId)
-
             # Update discids -> (discid, releases)
             for medium in relDict['release']['medium-list']:
                 for disc in medium['disc-list']:
-                    sql_list_append(cur, 'discids', 'discid', disc['id'],
-                            releaseId)
-
-            # Update formats -> (format, releases)
-            fmt = mbcat.formats.getReleaseFormat(relDict['release'])\
-                .name()
-            sql_list_append(cur, 'formats', 'format', fmt, releaseId)
-
-            con.commit()
+                    cur.execute('insert into discids '
+                        '(discid, release) values (?,?)',
+                        (disc['id'], releaseId))
 
     def unDigestRelease(self, releaseId, delete=True):
         """Remove all references to a release from the data structures.
-        Optionally, leave the release in the releases table. """
+        Optionally, leave the release in the releases table.
+        See also: digestReleaseXml()"""
         relDict = self.getRelease(releaseId)
 
         with self._connect() as con:
@@ -1199,28 +1203,17 @@ class Catalog(object):
             # Update words table
             rel_words = self.getReleaseWords(relDict)
             for word in rel_words:
-                sql_list_remove(cur, 'words', 'word', word, releaseId)
+                cur.execute('delete from words where release=?', (releaseId,))
 
             # Update words -> (word, recordings) and
             # recordings -> (recording, releases)
             self.unDigestTrackWords(relDict, cur)
 
-            # Update barcodes -> (barcode, releases)
-            if 'barcode' in relDict and relDict['barcode']:
-                sql_list_remove(cur, 'barcodes', 'barcode', relDict['barcode'],
-                        releaseId)
-
             # Update discids -> (discid, releases)
             for medium in relDict['medium-list']:
                 for disc in medium['disc-list']:
-                    sql_list_remove(cur, 'discids', 'discid', disc['id'],
-                            releaseId)
-
-            # Update formats -> (format, releases)
-            fmt = mbcat.formats.getReleaseFormat(relDict).name()
-            sql_list_remove(cur, 'formats', 'format', fmt, releaseId)
-
-            con.commit()
+                    cur.execute('delete from discids where discid=?',
+                        (disc['id'],))
 
     def fmtArtist(self, release):
         return ''.join([(cred['artist']['name'] \
@@ -1241,6 +1234,7 @@ class Catalog(object):
             (info['catalog-number'] if 'catalog-number' in info else '')
             for info in rel['label-info-list']])
 
+    # TODO move this to a Digital class
     def getArtistPathVariations(self, release):
         return set([
                 # the non-sorting-friendly string
@@ -1253,6 +1247,7 @@ class Catalog(object):
                 mbcat.catalog.getArtistSortPhrase(release)
                 ])
 
+    # TODO move this to a Digital class
     @staticmethod
     def getTitlePathVariations(release):
         s = set()
@@ -1262,6 +1257,7 @@ class Catalog(object):
             s.add(release['title']+' ('+release['disambiguation']+')')
         return s
 
+    # TODO move this to a Digital class
     def getPathAlNumPrefixes(self, path):
         """Returns a set of prefixes used for directory balancing"""
         return set([
@@ -1271,6 +1267,7 @@ class Catalog(object):
                 (path[0]+'/'+path[0:2]).lower(), # used by Wikimedia
                 ])
 
+    # TODO move this to a Digital class
     def getDigitalPathVariations(self, root, release):
         for artistName in self.getArtistPathVariations(release):
             for prefix in self.getPathAlNumPrefixes(artistName):
@@ -1281,6 +1278,7 @@ class Catalog(object):
                 else:
                     _log.debug(artistPath+' does not exist')
 
+    # TODO move this to a Digital class
     def searchDigitalPaths(self, releaseId='', pbar=None):
         """Search for files for a release in all locations and with variations
         """
@@ -1310,6 +1308,7 @@ class Catalog(object):
         if releaseId and not self.extraIndex[relId].digitalPaths:
             _log.warning('No digital paths found for '+releaseId)
 
+    # TODO move this to a Digital class
     def getDigitalPath(self, releaseId, pathSpec=None):
         """Returns the file path for a release given a specific release ID and
         a path specification string (mbcat.digital)."""
@@ -1318,6 +1317,7 @@ class Catalog(object):
         return mbcat.digital.DigitalPath(pathSpec).\
                 toString(self.getRelease(releaseId))
 
+    # TODO move this to a Digital class
     def fixDigitalPath(self, releaseId, digitalPathRoot=None):
         """This function moves a digital path to the correct location, which is
         specified by a path root string"""
