@@ -146,6 +146,8 @@ class Catalog(object):
         self.conn.commit()
 
     def _createCacheTables(self):
+        """Add the release-derived tables to the database.
+        This method does not commit its changes."""
         # tables that map specific things to a list of releases
         for columnName, columnType in [
                 ('word', 'TEXT'),
@@ -222,6 +224,8 @@ class Catalog(object):
             metaXml = self.getReleaseXml(releaseId)
             self.digestReleaseXml(releaseId, metaXml, rebuild=rebuild)
             yield True
+        yield 'Committing changes...'
+        self.conn.commit()
         yield False
 
     def rebuildCacheTables(self, pbar=None):
@@ -439,6 +443,7 @@ class Catalog(object):
 
                 if pbar:
                     pbar.update(pbar.currval + 1)
+            self.conn.commit()
             if pbar:
                 pbar.finish()
 
@@ -1133,6 +1138,7 @@ class Catalog(object):
     def unDigestRelease(self, releaseId, delete=True):
         """Remove all references to a release from the data structures.
         Optionally, leave the release in the releases table.
+        This function does not commit its changes to the connection.
         See also: digestReleaseXml()"""
         relDict = self.getRelease(releaseId)
 
@@ -1299,10 +1305,12 @@ class Catalog(object):
 
         metaXml = self.fetchReleaseMetaXml(releaseId)
         self.digestReleaseXml(releaseId, metaXml)
+        self.conn.commit()
 
     def deleteRelease(self, releaseId):
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
         self.unDigestRelease(releaseId)
+        self.conn.commit()
 
     def refreshAllMetaData(self, olderThan=0, pbar=None):
         for releaseId in self.loadReleaseIds(pbar):
