@@ -132,12 +132,6 @@ class Catalog(object):
             "asin TEXT, "+\
             "format TEXT, "+\
             "metatime FLOAT, "+\
-            ## now all the extra data
-            #"purchases LIST, "+\ # OK
-            #"added LIST, "+\ # OK
-            #"lent LIST, "+\ # OK
-            #"listened LIST, "+\ # OK
-            #"digital LIST, "+\
             "count INT DEFAULT 1, "+\
             "comment TEXT, "+\
             "rating INT DEFAULT 0)")
