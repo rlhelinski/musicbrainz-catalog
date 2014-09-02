@@ -97,7 +97,7 @@ class Catalog(object):
         self.conn = self._connection()
         # This connection and cursor should be enough for most work. You might
         # need a second cursor if you, for example, have a double-nested 'for'
-        # loop:
+        # loop where you are cross-referencing things:
         # 
         # myconn = self._connection()
         # mycur = myconn.cursor()
@@ -105,7 +105,7 @@ class Catalog(object):
         # mycur.execute('second query')
         # for first in self.curs:
         #     for second in mycur:
-        #         "do something"
+        #         "do something with 'first' and 'second'"
         self.curs = self.conn.cursor()
 
     def _connection(self):
