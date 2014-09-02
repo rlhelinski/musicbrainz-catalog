@@ -1332,12 +1332,12 @@ class Catalog(object):
                 if 'format' not in medium or not medium['format']:
                     _log.warning("No format for a medium of " + releaseId)
 
+    # TODO maybe cover art tasks should be in another class
     def _getCoverArtPath(self, releaseId):
         return os.path.join(self.cachePath, releaseId[0], releaseId[0:2],
                 releaseId, 'cover.jpg')
 
     def getCoverArt(self, releaseId, maxage=60*60):
-        release = self.getRelease(releaseId)
         imgPath = self._getCoverArtPath(releaseId)
         if os.path.isfile(imgPath) and os.path.getmtime(imgPath) > \
                 time.time() - maxage:
@@ -1352,9 +1352,12 @@ class Catalog(object):
             _log.warning('No cover art for ' + releaseId +
                     ' available from Cover Art Archive')
 
-            if 'asin' in release:
+            # TODO can a release have more than one ASIN? If so, we'd need a
+            # separate DB table
+            asin = self.getReleaseASIN(releaseId)
+            if asin:
                 _log.info('Trying to fetch cover art from Amazon instead')
-                mbcat.amazonservices.saveImage(release['asin'],
+                mbcat.amazonservices.saveImage(asin,
                         mbcat.amazonservices.AMAZON_SERVER["amazon.com"],
                         imgPath)
             else:
@@ -1550,6 +1553,12 @@ class Catalog(object):
         self.curs.execute('select format from releases where id=?',
             (releaseId,))
         return self.curs.fetchone()[0]
+
+    def getReleaseASIN(self, releaseId):
+        self.curs.execute('select asin from releases where id=?',
+            (releaseId,))
+        cols = self.curs.fetchone()
+        return cols[0] if cols else None
 
 def recLengthAsString(recLength):
     if not recLength:
