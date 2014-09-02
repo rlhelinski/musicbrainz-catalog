@@ -98,7 +98,7 @@ class Catalog(object):
         # This connection and cursor should be enough for most work. You might
         # need a second cursor if you, for example, have a double-nested 'for'
         # loop where you are cross-referencing things:
-        # 
+        #
         # myconn = self._connection()
         # mycur = myconn.cursor()
         # self.curs.execute('first query')
@@ -305,7 +305,7 @@ class Catalog(object):
         return releaseXml
 
     def getRelease(self, releaseId):
-        """Return a release's musicbrainz-ngs dictionary. 
+        """Return a release's musicbrainz-ngs dictionary.
         For convenience, only the value of the 'release' key is returned. """
 
         releaseXml = self.getReleaseXml(releaseId)
