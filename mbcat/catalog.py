@@ -124,7 +124,7 @@ class Catalog(object):
             "sortstring TEXT, "+\
             "artist TEXT, "+\
             "title TEXT, "+\
-            "date TEXT, "+\
+            "date FLOAT, "+\
             "country TEXT, "+\
             "label TEXT, "+\
             "catno TEXT, "+\
@@ -147,8 +147,8 @@ class Catalog(object):
         for columnName, columnType in [
                 ('word', 'TEXT'),
                 # integer for dates
-                ('added_date', 'INTEGER'),
-                ('listened_date', 'INTEGER'),
+                ('added_date', 'FLOAT'),
+                ('listened_date', 'FLOAT'),
                 ]:
 
             self.curs.execute('CREATE TABLE '+columnName+'s('+\
@@ -176,7 +176,7 @@ class Catalog(object):
             'ON DELETE CASCADE)')
 
         self.curs.execute('CREATE TABLE purchases ('
-            'date TEXT, '
+            'date FLOAT, '
             'price FLOAT, '
             'vendor TEXT, '
             'release TEXT, '
@@ -186,13 +186,13 @@ class Catalog(object):
         # checkout, checkin (lent out, returned) tables
         self.curs.execute('CREATE TABLE checkout_events ('
             'borrower TEXT, '
-            'date INTEGER, '
+            'date FLOAT, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
             'ON DELETE CASCADE)')
 
         self.curs.execute('CREATE TABLE checkin_events ('
-            'date INTEGER, '
+            'date FLOAT, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
             'ON DELETE CASCADE)')
