@@ -101,48 +101,59 @@ class Catalog(object):
         _log.info('Using \'%s\' for the catalog database' % self.dbPath)
         _log.info('Using \'%s\' for the file cache path' % self.cachePath)
 
-    def _connect(self):
-        # Let's try here for now, just need to make sure we disconnect when this
-        # object is deleted.
+        # Open and retain a connection to the database
+        self.conn = self._connection()
+        # This connection and cursor should be enough for most work. You might
+        # need a second cursor if you, for example, have a double-nested 'for'
+        # loop:
+        # 
+        # myconn = self._connection()
+        # mycur = myconn.cursor()
+        # self.curs.execute('first query')
+        # mycur.execute('second query')
+        # for first in self.curs:
+        #     for second in mycur:
+        #         "do something"
+        self.curs = self.conn.cursor()
+
+    def _connection(self):
+        # this connection should be closed when this object is deleted
         return sqlite3.connect(self.dbPath,
                 detect_types=sqlite3.PARSE_DECLTYPES)
 
     def _createTables(self):
         """Create the SQL tables for the catalog. Database is assumed empty."""
-        with self._connect() as con:
-            cur = con.cursor()
+        self.curs.execute("CREATE TABLE releases("+\
+            "id TEXT PRIMARY KEY, "+\
+            # metadata from musicbrainz
+            # TODO maybe store a dict instead of the XML?
+            "meta BLOB, "+\
+            "sortstring TEXT, "+\
+            "artist TEXT, "+\
+            "title TEXT, "+\
+            "date TEXT, "+\
+            "country TEXT, "+\
+            "label TEXT, "+\
+            "catno TEXT, "+\
+            "barcode TEXT, "+\
+            "asin TEXT, "+\
+            "format TEXT, "+\
+            "metatime FLOAT, "+\
+            ## now all the extra data
+            #"purchases LIST, "+\ # OK
+            #"added LIST, "+\ # OK
+            #"lent LIST, "+\ # OK
+            #"listened LIST, "+\ # OK
+            #"digital LIST, "+\
+            "count INT DEFAULT 1, "+\
+            "comment TEXT, "+\
+            "rating INT DEFAULT 0)")
 
-            cur.execute("CREATE TABLE releases("+\
-                "id TEXT PRIMARY KEY, "+\
-                # metadata from musicbrainz
-                # TODO maybe store a dict instead of the XML?
-                "meta BLOB, "+\
-                "sortstring TEXT, "+\
-                "artist TEXT, "+\
-                "title TEXT, "+\
-                "date TEXT, "+\
-                "country TEXT, "+\
-                "label TEXT, "+\
-                "catno TEXT, "+\
-                "barcode TEXT, "+\
-                "asin TEXT, "+\
-                "format TEXT, "+\
-                "metatime FLOAT, "+\
-                ## now all the extra data
-                #"purchases LIST, "+\ # OK
-                #"added LIST, "+\ # OK
-                #"lent LIST, "+\ # OK
-                #"listened LIST, "+\ # OK
-                #"digital LIST, "+\
-                "count INT DEFAULT 1, "+\
-                "comment TEXT, "+\
-                "rating INT DEFAULT 0)")
+        self._createCacheTables()
 
-            self._createCacheTables(cur)
+        self.conn.commit()
 
-            con.commit()
-
-    def _createCacheTables(self, cur):
+    def _createCacheTables(self):
         # tables that map specific things to a list of releases
         for columnName, columnType in [
                 ('word', 'TEXT'),
@@ -151,12 +162,12 @@ class Catalog(object):
                 ('listened_date', 'INTEGER'),
                 ]:
 
-            cur.execute('CREATE TABLE '+columnName+'s('+\
+            self.curs.execute('CREATE TABLE '+columnName+'s('+\
                 columnName+' '+columnType+', release TEXT, '
                 'FOREIGN KEY(release) REFERENCES releases(id) '
                 'ON DELETE CASCADE)')
 
-        cur.execute('CREATE TABLE recordings ('
+        self.curs.execute('CREATE TABLE recordings ('
             'id TEXT, '
             'title TEXT, '
             'length INTEGER, '
@@ -164,18 +175,18 @@ class Catalog(object):
             'FOREIGN KEY(release) REFERENCES releases(id) '
             'ON DELETE CASCADE)')
 
-        cur.execute('CREATE TABLE trackwords('
+        self.curs.execute('CREATE TABLE trackwords('
             'trackword TEXT, recording TEXT, '
             'FOREIGN KEY(recording) REFERENCES recordings(id) '
             'ON DELETE CASCADE)')
 
-        cur.execute('CREATE TABLE discids ('
+        self.curs.execute('CREATE TABLE discids ('
             'discid TEXT, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
             'ON DELETE CASCADE)')
 
-        cur.execute('CREATE TABLE purchases ('
+        self.curs.execute('CREATE TABLE purchases ('
             'date TEXT, '
             'price FLOAT, '
             'vendor TEXT, '
@@ -184,21 +195,21 @@ class Catalog(object):
             'ON DELETE CASCADE)')
 
         # checkout, checkin (lent out, returned) tables
-        cur.execute('CREATE TABLE checkout_events ('
+        self.curs.execute('CREATE TABLE checkout_events ('
             'borrower TEXT, '
             'date INTEGER, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
             'ON DELETE CASCADE)')
 
-        cur.execute('CREATE TABLE checkin_events ('
+        self.curs.execute('CREATE TABLE checkin_events ('
             'date INTEGER, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
             'ON DELETE CASCADE)')
 
         # Digital copy table
-        cur.execute('CREATE TABLE digital ('
+        self.curs.execute('CREATE TABLE digital ('
             'release TEXT, '
             'format TEXT, '
             'path TEXT, '
@@ -206,9 +217,10 @@ class Catalog(object):
             'ON DELETE CASCADE)')
 
         # Indexes for speed (it's all about performance...)
-        cur.execute('create unique index release_id on releases (id);')
+        self.curs.execute('create unique index release_id on releases (id);')
         for col in ['sortstring', 'catno', 'barcode', 'asin']:
-            cur.execute('create index release_'+col+' on releases ('+col+');')
+            self.curs.execute('create index release_'+col+\
+                ' on releases ('+col+');')
 
     def updateCacheTables(self, rebuild, pbar=None):
         """Use the releases table to populate the derived (cache) tables"""
@@ -224,35 +236,34 @@ class Catalog(object):
         """Drop the derived tables in the database and rebuild them"""
         yield 'Dropping tables...'
         yield 15
-        with self._connect() as con:
-            cur = con.cursor()
-            for tab in ['words', 'trackwords', 'recordings', 'discids',
-                    'barcodes', 'formats']:
-                try:
-                    cur.execute('drop table '+tab)
-                except sqlite3.OperationalError as e:
-                    pass
-                yield True
-            self._createCacheTables(cur)
 
-            # Add these columns to releases if they don't exist
-            for column in [
-                'artist',
-                'title',
-                'date',
-                'country',
-                'label',
-                'catno',
-                'barcode',
-                'asin',
-                'format',
-                ]:
-                try:
-                    cur.execute('alter table releases add column '+column+\
-                        ' text')
-                except sqlite3.OperationalError as e:
-                    pass
-                yield True
+        for tab in ['words', 'trackwords', 'recordings', 'discids',
+                'barcodes', 'formats']:
+            try:
+                self.curs.execute('drop table '+tab)
+            except sqlite3.OperationalError as e:
+                pass
+            yield True
+        self._createCacheTables()
+
+        # Add these columns to releases if they don't exist
+        for column in [
+            'artist',
+            'title',
+            'date',
+            'country',
+            'label',
+            'catno',
+            'barcode',
+            'asin',
+            'format',
+            ]:
+            try:
+                self.curs.execute('alter table releases add column '+column+\
+                    ' text')
+            except sqlite3.OperationalError as e:
+                pass
+            yield True
 
         # Rebuild
         g = self.updateCacheTables(rebuild=True)
@@ -266,12 +277,10 @@ class Catalog(object):
         self.addRelease(newReleaseId, olderThan=60)
 
     def getReleaseIds(self):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select id from releases')
-            listOfTuples = cur.fetchall()
-            # return all of the tuples as a list
-            return list(sum(listOfTuples, ()))
+        self.curs.execute('select id from releases')
+        listOfTuples = self.curs.fetchall()
+        # return all of the tuples as a list
+        return list(sum(listOfTuples, ()))
 
     @staticmethod
     def getReleaseDictFromXml(metaxml):
@@ -291,13 +300,12 @@ class Catalog(object):
     def getReleaseXml(self, releaseId):
         """Return a release's musicbrainz XML metadata"""
 
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select meta from releases where id = ?', (releaseId,))
-            try:
-                releaseXml = zlib.decompress(cur.fetchone()[0])
-            except TypeError:
-                raise KeyError ('release %s not found' % releaseId)
+        self.curs.execute('select meta from releases where id = ?',
+            (releaseId,))
+        try:
+            releaseXml = zlib.decompress(self.curs.fetchone()[0])
+        except TypeError:
+            raise KeyError ('release %s not found' % releaseId)
         return releaseXml
 
     def getRelease(self, releaseId):
@@ -313,56 +321,42 @@ class Catalog(object):
         return metadata['release']
 
     def getReleaseIdsByFormat(self, fmt):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select releases from formats where format = ?',
-                    (fmt,))
-            return cur.fetchall()[0][0]
+        self.curs.execute('select releases from formats where format = ?',
+            (fmt,))
+        return self.curs.fetchall()[0][0]
 
     def getFormats(self):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select format from formats')
-            return [t[0] for t in cur.fetchall()]
+        self.curs.execute('select format from formats')
+        return [t[0] for t in self.curs.fetchall()]
 
     def barCodeLookup(self, barcode):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select releases from barcodes where barcode = ?',
-                    (barcode,))
-            result = cur.fetchall()
-            if not result:
-                raise KeyError('Barcode not found')
-            return result[0][0]
+        self.curs.execute('select releases from barcodes where barcode = ?',
+                (barcode,))
+        result = self.curs.fetchall()
+        if not result:
+            raise KeyError('Barcode not found')
+        return result[0][0]
 
     def __len__(self):
         """Return the number of releases in the catalog."""
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select count(id) from releases')
-            return cur.fetchone()[0]
+        self.curs.execute('select count(id) from releases')
+        return self.curs.fetchone()[0]
 
     def __contains__(self, releaseId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select count(id) from releases where id=?',
-                    (releaseId,))
-            count = cur.fetchone()[0]
+        self.curs.execute('select count(id) from releases where id=?',
+                (releaseId,))
+        count = self.curs.fetchone()[0]
         return count > 0
 
     def getCopyCount(self, releaseId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select count from releases where id=?',
-                    (releaseId,))
-            return cur.fetchone()[0]
+        self.curs.execute('select count from releases where id=?',
+                (releaseId,))
+        return self.curs.fetchone()[0]
 
     def setCopyCount(self, releaseId, count):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('update releases set count=? where id=?',
-                    (count, releaseId))
-            con.commit()
+        self.curs.execute('update releases set count=? where id=?',
+                (count, releaseId))
+        self.conn.commit()
 
     def loadReleaseIds(self, pbar=None):
         fileList = os.listdir(self.rootPath)
@@ -489,7 +483,7 @@ class Catalog(object):
         cursor.execute('insert into '+table_name+' (key_column, release) '
             'values ('+key+', '+release_id+')')
 
-    def digestTrackWords(self, rel, cur):
+    def digestTrackWords(self, rel):
         """
         Digest all of the words in the track titles of a release.
         """
@@ -497,28 +491,29 @@ class Catalog(object):
         for track in mbcat.Catalog.getReleaseTracks(rel):
             if 'recording' in track and 'title' in track['recording']:
                 # Add recording and reference the release
-                cur.execute('insert into recordings '
+                self.curs.execute('insert into recordings '
                     '(id, title, length, release) values (?,?,?,?)', 
                     (track['recording']['id'], track['recording']['title'],
                     track['recording']['length'], rel['id']))
                 for word in mbcat.Catalog.processWords('title',
                     track['recording']):
                     # Reference each word to this recording
-                    cur.execute('insert into trackwords '
+                    self.curs.execute('insert into trackwords '
                         '(trackword, recording) values (?,?)', 
                         (word, track['recording']['id']))
 
-    def unDigestTrackWords(self, rel, cur):
+    def unDigestTrackWords(self, rel):
         """
         Undo what digestTrackWords() does.
         """
-        cur.execute('select recording from recordings where release=?', 
+        self.curs.execute('select id from recordings where release=?', 
             (rel['id'],))
-        for recordingId in cur:
-            cur.execute('delete from trackwords where recording=?', 
-                (recordingId,))
+        for recordingId in self.curs:
+            self.curs.execute('delete from trackwords where recording=?', 
+                (recordingId[0],))
         # Should do this in its own function
-        cur.execute('delete from recordings where release=?', (rel['id'],))
+        self.curs.execute('delete from recordings where release=?',
+            (rel['id'],))
 
     @mbcat.utils.deprecated
     def mapWordsToRelease(self, words, releaseId):
@@ -533,29 +528,27 @@ class Catalog(object):
     def _search(self, query, table='words', keycolumn='word'):
         query_words = query.lower().split(' ')
         matches = set()
-        with self._connect() as con:
-            cur = con.cursor()
-            for word in query_words:
-                cur.execute('select releases from %s where %s = ?' % \
-                        (table, keycolumn),
-                        (word,))
-                # get the record, there should be one or none
-                fetched = cur.fetchone()
-                # if the word is in the table
-                if fetched:
-                    # for the first word
-                    if word == query_words[0]:
-                        # use the whole set of releases that have this word
-                        matches = set(fetched[0])
-                    else:
-                        # intersect the releases that have this word with the
-                        # current release set
-                        matches = matches & set(fetched[0])
+        for word in query_words:
+            self.curs.execute('select releases from %s where %s = ?' % \
+                    (table, keycolumn),
+                    (word,))
+            # get the record, there should be one or none
+            fetched = self.curs.fetchone()
+            # if the word is in the table
+            if fetched:
+                # for the first word
+                if word == query_words[0]:
+                    # use the whole set of releases that have this word
+                    matches = set(fetched[0])
                 else:
-                    # this word is not contained in any releases and therefore
-                    # no releases match
-                    matches = set()
-                    break
+                    # intersect the releases that have this word with the
+                    # current release set
+                    matches = matches & set(fetched[0])
+            else:
+                # this word is not contained in any releases and therefore
+                # no releases match
+                matches = set()
+                break
 
         return matches
 
@@ -563,12 +556,11 @@ class Catalog(object):
         return self._search(query, table='trackwords', keycolumn='trackword')
 
     def recordingGetReleases(self, recordingId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select releases from recordings where recording = ?',
-                    (recordingId,))
-            # get the record, there should be one or none
-            fetched = cur.fetchone()
+        self.curs.execute(
+            'select releases from recordings where recording = ?',
+            (recordingId,))
+        # get the record, there should be one or none
+        fetched = self.curs.fetchone()
 
         # remember that the field is a list type
         return fetched[0]
@@ -593,28 +585,22 @@ class Catalog(object):
             if seconds else '?:??')
 
     def formatRecordingInfo(self, recordingId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select title,length from recordings '
-                'where recording=?', (recordingId,))
-            recordingRow = cur.fetchall()[0]
+        self.curs.execute('select title,length from recordings '
+            'where recording=?', (recordingId,))
+        recordingRow = self.curs.fetchall()[0]
 
         return '%s: %s (%s)' % (recordingId, recordingRow[0],
             mbcat.Catalog.formatRecordingLength(recordingRow[1]))
 
     def getRecordingTitle(self, recordingId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select title from recordings '
-                'where recording=?', (recordingId,))
-            return cur.fetchone()[0]
+        self.curs.execute('select title from recordings '
+            'where recording=?', (recordingId,))
+        return self.curs.fetchone()[0]
 
     def getRecordingLength(self, recordingId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select length from recordings '
-                'where recording=?', (recordingId,))
-            return cur.fetchone()[0]
+        self.curs.execute('select length from recordings '
+            'where recording=?', (recordingId,))
+        return self.curs.fetchone()[0]
 
     @staticmethod
     def getSortStringFromRelease(release):
@@ -629,19 +615,18 @@ class Catalog(object):
     def getReleaseSortStr(self, releaseId):
         """Return a string by which a release can be sorted."""
 
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select sortstring from releases where id = ?',
-                    (releaseId,))
-            sortstring = cur.fetchone()[0]
+        self.curs.execute('select sortstring from releases where id = ?',
+                (releaseId,))
+        sortstring = self.curs.fetchone()[0]
 
-            if not sortstring:
-                # cache it for next time
-                sortstring = self.getSortStringFromRelease(
-                        self.getRelease(releaseId))
-                cur.execute('update releases set sortstring=? where id=?',
-                        (sortstring, releaseId))
-                cur.commit()
+        # TODO isn't this done while digesting XML?
+        if not sortstring:
+            # cache it for next time
+            sortstring = self.getSortStringFromRelease(
+                    self.getRelease(releaseId))
+            self.curs.execute('update releases set sortstring=? where id=?',
+                    (sortstring, releaseId))
+            self.curs.commit()
 
         return sortstring
 
@@ -683,59 +668,46 @@ class Catalog(object):
     def getWordCount(self):
         """Fetch the number of words in the release search word table."""
         try:
-            with self._connect() as con:
-                cur = con.cursor()
-                cur.execute('select count(word) from words')
-                return cur.fetchone()[0]
+            self.curs.execute('select count(word) from words')
+            return self.curs.fetchone()[0]
         except sqlite3.OperationalError:
             return 0
 
     def getTrackWordCount(self):
         """Fetch the number of words in the track search word table."""
         try:
-            with self._connect() as con:
-                cur = con.cursor()
-                cur.execute('select count(trackword) from trackwords')
-                return cur.fetchone()[0]
+            self.curs.execute('select count(trackword) from trackwords')
+            return self.curs.fetchone()[0]
         except sqlite3.OperationalError:
             return 0
 
     def getComment(self, releaseId):
         """Get the comment for a release (if any)."""
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select comment from releases where id=?',
-                (releaseId,))
-            return cur.fetchone()[0]
+        self.curs.execute('select comment from releases where id=?',
+            (releaseId,))
+        return self.curs.fetchone()[0]
 
     def setComment(self, releaseId, comment):
         """Set the comment for a release."""
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('update releases set comment=? where id=?',
-                (comment, releaseId))
-            con.commit()
+        self.curs.execute('update releases set comment=? where id=?',
+            (comment, releaseId))
+        self.conn.commit()
 
     def getDigitalPaths(self, releaseId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select digital from releases where id=?',
-                    (releaseId,))
-            return cur.fetchall()[0][0]
+        self.curs.execute('select digital from releases where id=?',
+                (releaseId,))
+        return self.curs.fetchall()[0][0]
 
     def addDigitalPath(self, releaseId, path):
         existingPaths = self.getDigitalPaths(releaseId)
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('update releases set digital=? where id=?',
-                    (existingPaths+[path],releaseId))
-            con.commit()
+        self.curs.execute('update releases set digital=? where id=?',
+                (existingPaths+[path],releaseId))
+        self.conn.commit()
 
     def getAddedDates(self, releaseId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select added from releases where id=?', (releaseId,))
-            return cur.fetchall()[0][0]
+        self.curs.execute('select added from releases where id=?',
+            (releaseId,))
+        return self.curs.fetchall()[0][0]
 
     def addAddedDate(self, releaseId, date):
         # input error checking
@@ -746,17 +718,13 @@ class Catalog(object):
                 raise ValueError('Date object must be a floating-point number')
 
         existingDates = self.getAddedDates(releaseId)
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('update releases set added=? where id=?',
-                (existingDates+[date],releaseId))
-            con.commit()
+        self.curs.execute('update releases set added=? where id=?',
+            (existingDates+[date],releaseId))
+        self.conn.commit()
 
     def getLendEvents(self, releaseId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select lent from releases where id=?', (releaseId,))
-            return cur.fetchall()[0][0]
+        self.curs.execute('select lent from releases where id=?', (releaseId,))
+        return self.curs.fetchall()[0][0]
 
     def addLendEvent(self, releaseId, event):
         # Some precursory error checking
@@ -764,33 +732,26 @@ class Catalog(object):
             not isinstance(event, mbcat.extradata.CheckInEvent):
             raise ValueError ('Wrong type for lend event')
         existingEvents = self.getLendEvents(releaseId)
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('update releases set lent=? where id=?',
-                (existingEvents+[event],releaseId))
-            con.commit()
+        self.curs.execute('update releases set lent=? where id=?',
+            (existingEvents+[event],releaseId))
+        self.conn.commit()
 
     def getRating(self, releaseId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select rating from releases where id=?', (releaseId,))
-            result = cur.fetchall()
+        self.curs.execute('select rating from releases where id=?',
+            (releaseId,))
+        result = self.curs.fetchall()
         return result[0][0] if result else None
 
     def setRating(self, releaseId, rating):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('update releases set rating=? where id=?',
-                    (rating, releaseId))
-            con.commit()
+        self.curs.execute('update releases set rating=? where id=?',
+                (rating, releaseId))
+        self.conn.commit()
 
     def getPurchases(self, releaseId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select purchases from releases where id=?',
-                    (releaseId,))
-            result = cur.fetchone()
-            return result[0] if result else []
+        self.curs.execute('select purchases from releases where id=?',
+                (releaseId,))
+        result = self.curs.fetchone()
+        return result[0] if result else []
 
     def addPurchase(self, releaseId, purchaseObj):
         # Some precursory error checking
@@ -798,39 +759,31 @@ class Catalog(object):
             raise ValueError ('Wrong type for purchase event')
         # TODO this is the wrong function to call?
         existingEvents = self.getLendEvents(releaseId)
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('update releases set purchases=? where id=?',
-                (existingEvents+[purchaseObj],releaseId))
-            con.commit()
+        self.curs.execute('update releases set purchases=? where id=?',
+            (existingEvents+[purchaseObj],releaseId))
+        self.conn.commit()
 
     def getListenDates(self, releaseId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select listened from releases where id=?',
-                    (releaseId,))
-            return cur.fetchall()[0][0]
+        self.curs.execute('select listened from releases where id=?',
+                (releaseId,))
+        return self.curs.fetchall()[0][0]
 
     def addListenDate(self, releaseId, date):
         # Some precursory error checking
         if not isinstance(date, float):
             raise ValueError ('Wrong type for date argument')
         existingDates = self.getListenDates(releaseId)
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('update releases set listened=? where id=?',
-                (existingDates+[date],releaseId))
-            con.commit()
+        self.curs.execute('update releases set listened=? where id=?',
+            (existingDates+[date],releaseId))
+        self.conn.commit()
 
     def getExtraData(self, releaseId):
         """Put together all of the metadata added by mbcat. This might be
         removed in a later release, only need it when upgrading from 0.1."""
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select purchases,added,lent,listened,digital,count,'
-                    'comment,rating from releases where id=?', (releaseId,))
-            purchases,added,lent,listened,digital,count,comment,rating = \
-                    cur.fetchall()[0]
+        self.curs.execute('select purchases,added,lent,listened,digital,count,'
+                'comment,rating from releases where id=?', (releaseId,))
+        purchases,added,lent,listened,digital,count,comment,rating = \
+                self.curs.fetchall()[0]
 
         ed = mbcat.extradata.ExtraData(releaseId)
         ed.purchases = purchases
@@ -844,27 +797,26 @@ class Catalog(object):
 
         return ed
 
+    @mbcat.utils.deprecated
     def digestExtraData(self, releaseId, ed):
         """Take an ExtraData object and update the metadata in the catalog for
         a release"""
         # TODO there is no attempt to merge information that already exists in
         # the database
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('update releases set '+\
-                    'purchases=?, added=?, lent=?, listened=?, digital=?, '+\
-                    'comment=?, rating=? where id=?',
-                    (ed.purchases,
-                    ed.addDates,
-                    ed.lendEvents,
-                    ed.listenEvents,
-                    ed.digitalPaths,
-                    # TODO no place for count yet in extradata
-                    ed.comment,
-                    ed.rating,
-                    # don't forget the 'where' clause
-                    releaseId))
-            con.commit()
+        self.curs.execute('update releases set '+\
+                'purchases=?, added=?, lent=?, listened=?, digital=?, '+\
+                'comment=?, rating=? where id=?',
+                (ed.purchases,
+                ed.addDates,
+                ed.lendEvents,
+                ed.listenEvents,
+                ed.digitalPaths,
+                # TODO no place for count yet in extradata
+                ed.comment,
+                ed.rating,
+                # don't forget the 'where' clause
+                releaseId))
+        self.conn.commit()
 
     def report(self):
         """Print some statistics about the catalog as a sanity check."""
@@ -1102,90 +1054,87 @@ class Catalog(object):
         exists = releaseId in self
         now = time.time()
 
-        with self._connect() as con:
-            cur = con.cursor()
-
-            cur.execute('insert into added_dates '
-                '(added_date, release) values (?, ?)',
-                (now, releaseId))
-            if not exists:
-                # Update releases table
-                newColumns = [
-                    'id',
-                    'meta',
-                    'metatime',
-                    ]
-
-                try:
-                    cur.execute('insert into releases (' + \
-                            ','.join(newColumns) + \
-                            ') values (' + \
-                            ','.join(['?']*len(newColumns)) + \
-                            ')',
-                            (
-                            releaseId,
-                            buffer(zlib.compress(metaXml)),
-                            now,
-                            )
-                    )
-                except sqlite3.IntegrityError as e:
-                    _log.error('Release already exists in catalog.')
-            elif not rebuild:
-                # Remove references to this release from the words, barcodes,
-                # etc. tables so we can add the correct ones later
-                self.unDigestRelease(releaseId, delete=False)
-                cur.execute('update releases set meta=?,sortstring=?,'
-                        'metatime=? where id=?',
-                        (buffer(zlib.compress(metaXml)),
-                        self.getSortStringFromRelease(relDict['release']),
-                        now,
-                        releaseId
-                        )
-                    )
-
-            # Whether the release already existed or not
-            metaColumns = [
-                ('sortstring', self.getSortStringFromRelease(
-                    relDict['release'])),
-                ('artist', mbcat.catalog.getArtistSortPhrase(
-                    relDict['release'])),
-                ('title', relDict['release']['title']),
-                ('date', (relDict['release']['date'] \
-                    if 'date' in relDict['release'] else '')),
-                ('country', (relDict['release']['country'] \
-                    if 'country' in relDict['release'] else '')),
-                ('label', self.fmtLabel(relDict['release'])),
-                ('catno', self.fmtCatNo(relDict['release'])),
-                ('barcode', (relDict['release']['barcode'] \
-                    if 'barcode' in relDict['release'] else '')),
-                ('asin', (relDict['release']['asin'] \
-                    if 'asin' in relDict['release'] else '')),
-                ('format', mbcat.formats.getReleaseFormat(
-                    relDict['release']).name()),
+        self.curs.execute('insert into added_dates '
+            '(added_date, release) values (?, ?)',
+            (now, releaseId))
+        if not exists:
+            # Update releases table
+            newColumns = [
+                'id',
+                'meta',
+                'metatime',
                 ]
 
-            cur.execute('update releases set '+\
-                ','.join([key+'=?' for key,val in metaColumns])+\
-                ' where id=?',
-                [val for key,val in metaColumns] + [releaseId]
+            try:
+                self.curs.execute('insert into releases (' + \
+                        ','.join(newColumns) + \
+                        ') values (' + \
+                        ','.join(['?']*len(newColumns)) + \
+                        ')',
+                        (
+                        releaseId,
+                        buffer(zlib.compress(metaXml)),
+                        now,
+                        )
+                )
+            except sqlite3.IntegrityError as e:
+                _log.error('Release already exists in catalog.')
+        elif not rebuild:
+            # Remove references to this release from the words, barcodes,
+            # etc. tables so we can add the correct ones later
+            self.unDigestRelease(releaseId, delete=False)
+            self.curs.execute('update releases set meta=?,sortstring=?,'
+                    'metatime=? where id=?',
+                    (buffer(zlib.compress(metaXml)),
+                    self.getSortStringFromRelease(relDict['release']),
+                    now,
+                    releaseId
+                    )
                 )
 
-            # Update words table
-            rel_words = self.getReleaseWords(relDict['release'])
-            for word in rel_words:
-                cur.execute('insert into words (word,release) values (?,?)',
-                    (word, releaseId))
+        # Whether the release already existed or not
+        metaColumns = [
+            ('sortstring', self.getSortStringFromRelease(
+                relDict['release'])),
+            ('artist', mbcat.catalog.getArtistSortPhrase(
+                relDict['release'])),
+            ('title', relDict['release']['title']),
+            ('date', (relDict['release']['date'] \
+                if 'date' in relDict['release'] else '')),
+            ('country', (relDict['release']['country'] \
+                if 'country' in relDict['release'] else '')),
+            ('label', self.fmtLabel(relDict['release'])),
+            ('catno', self.fmtCatNo(relDict['release'])),
+            ('barcode', (relDict['release']['barcode'] \
+                if 'barcode' in relDict['release'] else '')),
+            ('asin', (relDict['release']['asin'] \
+                if 'asin' in relDict['release'] else '')),
+            ('format', mbcat.formats.getReleaseFormat(
+                relDict['release']).name()),
+            ]
 
-            # Update words -> (word, recordings) and
-            # recordings -> (recording, releases)
-            self.digestTrackWords(relDict['release'], cur)
+        self.curs.execute('update releases set '+\
+            ','.join([key+'=?' for key,val in metaColumns])+\
+            ' where id=?',
+            [val for key,val in metaColumns] + [releaseId]
+            )
 
-            # Update discids -> (discid, releases)
-            for medium in relDict['release']['medium-list']:
-                for disc in medium['disc-list']:
-                    cur.execute('insert into discids '
-                        '(discid, release) values (?,?)',
-                        (disc['id'], releaseId))
+        # Update words table
+        rel_words = self.getReleaseWords(relDict['release'])
+        for word in rel_words:
+            self.curs.execute('insert into words (word,release) values (?,?)',
+                (word, releaseId))
+
+        # Update words -> (word, recordings) and
+        # recordings -> (recording, releases)
+        self.digestTrackWords(relDict['release'])
+
+        # Update discids -> (discid, releases)
+        for medium in relDict['release']['medium-list']:
+            for disc in medium['disc-list']:
+                self.curs.execute('insert into discids '
+                    '(discid, release) values (?,?)',
+                    (disc['id'], releaseId))
 
     def unDigestRelease(self, releaseId, delete=True):
         """Remove all references to a release from the data structures.
@@ -1193,27 +1142,26 @@ class Catalog(object):
         See also: digestReleaseXml()"""
         relDict = self.getRelease(releaseId)
 
-        with self._connect() as con:
-            cur = con.cursor()
+        if delete:
+            # Update releases table
+            self.curs.execute('delete from releases where id = ?',
+                (releaseId,))
 
-            if delete:
-                # Update releases table
-                cur.execute('delete from releases where id = ?', (releaseId,))
+        # Update words table
+        rel_words = self.getReleaseWords(relDict)
+        for word in rel_words:
+            self.curs.execute('delete from words where release=?',
+                (releaseId,))
 
-            # Update words table
-            rel_words = self.getReleaseWords(relDict)
-            for word in rel_words:
-                cur.execute('delete from words where release=?', (releaseId,))
+        # Update words -> (word, recordings) and
+        # recordings -> (recording, releases)
+        self.unDigestTrackWords(relDict)
 
-            # Update words -> (word, recordings) and
-            # recordings -> (recording, releases)
-            self.unDigestTrackWords(relDict, cur)
-
-            # Update discids -> (discid, releases)
-            for medium in relDict['medium-list']:
-                for disc in medium['disc-list']:
-                    cur.execute('delete from discids where discid=?',
-                        (disc['id'],))
+        # Update discids -> (discid, releases)
+        for medium in relDict['medium-list']:
+            for disc in medium['disc-list']:
+                self.curs.execute('delete from discids where discid=?',
+                    (disc['id'],))
 
     def fmtArtist(self, release):
         return ''.join([(cred['artist']['name'] \
@@ -1337,11 +1285,9 @@ class Catalog(object):
                 shutil.move(path, correctPath)
 
     def getMetaTime(self, releaseId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select metatime from releases where id = ?',
-                (releaseId,))
-            return cur.fetchone()
+        self.curs.execute('select metatime from releases where id = ?',
+            (releaseId,))
+        return self.curs.fetchone()
 
     def addRelease(self, releaseId, olderThan=0):
         """
@@ -1540,7 +1486,8 @@ class Catalog(object):
                 stream.write(
                     rec['title'] +
                     ' '*(60-len(rec['title'])) +
-                    ('%6s' % recLengthAsString(rec['length'] if 'length' in rec else None)) + '\n')
+                    ('%6s' % recLengthAsString(rec['length'] 
+                        if 'length' in rec else None)) + '\n')
 
     def getTrackList(self, releaseId):
         """
@@ -1555,7 +1502,8 @@ class Catalog(object):
                 l.append((
                     rec['id'],
                     rec['title'],
-                    recLengthAsString(rec['length'] if 'length' in rec else None)))
+                    recLengthAsString(rec['length'] \
+                        if 'length' in rec else None)))
         return l
 
     basicColumns = [
@@ -1578,36 +1526,28 @@ class Catalog(object):
         If you need to get all the releases, this will be
 
         """
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select '+','.join(self.basicColumns)+\
-                ' from releases'+\
-                ((' where '+','.join(
-                    key+'=?' for key in filt.keys()
-                    )) if filt else ''),
-                filt.values())
-            return cur
+        self.curs.execute('select '+','.join(self.basicColumns)+\
+            ' from releases'+\
+            ((' where '+','.join(
+                key+'=?' for key in filt.keys()
+                )) if filt else ''),
+            filt.values())
+        return self.curs
 
     def getReleaseTitle(self, releaseId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select title from releases where id=?',
-                (releaseId,))
-            return cur.fetchone()[0]
+        self.curs.execute('select title from releases where id=?',
+            (releaseId,))
+        return self.curs.fetchone()[0]
 
     def getReleaseArtist(self, releaseId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select artist from releases where id=?',
-                (releaseId,))
-            return cur.fetchone()[0]
+        self.curs.execute('select artist from releases where id=?',
+            (releaseId,))
+        return self.curs.fetchone()[0]
 
     def getReleaseFormat(self, releaseId):
-        with self._connect() as con:
-            cur = con.cursor()
-            cur.execute('select format from releases where id=?',
-                (releaseId,))
-            return cur.fetchone()[0]
+        self.curs.execute('select format from releases where id=?',
+            (releaseId,))
+        return self.curs.fetchone()[0]
 
 def getMediumLen(medium):
     try:
