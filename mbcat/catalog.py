@@ -1151,19 +1151,22 @@ class Catalog(object):
                 +(' (%s)' % relDict['disambiguation'] \
                 if 'disambiguation' in relDict else '')
 
-    def fmtArtist(self, release):
+    @staticmethod
+    def fmtArtist(release):
         return ''.join([(cred['artist']['name'] \
             if isinstance(cred, dict) else cred)
             for cred in release['artist-credit']])
 
-    def fmtLabel(self, rel):
+    @staticmethod
+    def fmtLabel(rel):
         if 'label-info-list' not in rel:
             return ''
         return ', '.join([
             (info['label']['name'] if 'label' in info else '')
             for info in rel['label-info-list']])
 
-    def fmtCatNo(self, rel):
+    @staticmethod
+    def fmtCatNo(rel):
         if 'label-info-list' not in rel:
             return ''
         return ', '.join([
@@ -1171,7 +1174,8 @@ class Catalog(object):
             for info in rel['label-info-list']])
 
     # TODO move this to a Digital class
-    def getArtistPathVariations(self, release):
+    @staticmethod
+    def getArtistPathVariations(release):
         return set([
                 # the non-sorting-friendly string
                 release['artist-credit-phrase'],
@@ -1194,7 +1198,8 @@ class Catalog(object):
         return s
 
     # TODO move this to a Digital class
-    def getPathAlNumPrefixes(self, path):
+    @staticmethod
+    def getPathAlNumPrefixes(path):
         """Returns a set of prefixes used for directory balancing"""
         return set([
                 '', # in case nothing is used
@@ -1325,7 +1330,8 @@ class Catalog(object):
                     _log.warning("No format for a medium of " + releaseId)
 
     # TODO maybe cover art tasks should be in another class
-    def _getCoverArtPath(self, releaseId):
+    @staticmethod
+    def _getCoverArtPath(releaseId):
         return os.path.join(self.cachePath, releaseId[0], releaseId[0:2],
                 releaseId, 'cover.jpg')
 
