@@ -936,6 +936,10 @@ class MBCatGtk:
                 match_func, (0, releaseID))
         return self.releaseList.get_path(result_iter)[0]
 
+    def refreshView(self, widget):
+        self.makeListStore()
+        self.updateStatusBar()
+
     def toggleStatusBar(self, widget):
         if widget.active:
             self.statusbar.show()
@@ -1351,6 +1355,11 @@ class MBCatGtk:
         for name in self.formatNames:
             action = self.actiongroup.get_action(name)
             subsubmenu.append(action.create_menu_item())
+
+        ## Refresh
+        submenuitem = gtk.MenuItem('Refresh')
+        submenuitem.connect('activate', self.refreshView)
+        menu.append(submenuitem)
 
         mb.append(menuitem)
 
