@@ -1079,7 +1079,7 @@ class Catalog(object):
                 relDict['release'])),
             ('artist', mbcat.catalog.getArtistSortPhrase(
                 relDict['release'])),
-            ('title', relDict['release']['title']),
+            ('title', self.fmtTitle(relDict['release'])),
             ('date', (relDict['release']['date'] \
                 if 'date' in relDict['release'] else '')),
             ('country', (relDict['release']['country'] \
@@ -1144,6 +1144,12 @@ class Catalog(object):
             for disc in medium['disc-list']:
                 self.curs.execute('delete from discids where discid=?',
                     (disc['id'],))
+
+    @staticmethod
+    def fmtTitle(relDict):
+        return relDict['title'] \
+                +(' (%s)' % relDict['disambiguation'] \
+                if 'disambiguation' in relDict else '')
 
     def fmtArtist(self, release):
         return ''.join([(cred['artist']['name'] \
