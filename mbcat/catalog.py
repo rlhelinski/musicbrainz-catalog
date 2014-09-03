@@ -1280,7 +1280,8 @@ class Catalog(object):
     def getMetaTime(self, releaseId):
         self.curs.execute('select metatime from releases where id = ?',
             (releaseId,))
-        return self.curs.fetchone()[0]
+        r = self.curs.fetchone()
+        return r[0] if r else 0
 
     def addRelease(self, releaseId, olderThan=0):
         """
