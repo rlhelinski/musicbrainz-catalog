@@ -337,20 +337,6 @@ class Catalog(object):
                 (count, releaseId))
         self.conn.commit()
 
-    def loadReleaseIds(self, pbar=None):
-        fileList = os.listdir(self.rootPath)
-
-        if pbar:
-            pbar.start()
-        if len(fileList) > 0:
-            for releaseId in fileList:
-                if len(releaseId) == 36:
-                    if pbar:
-                        pbar.update(pbar.currval + 1)
-                    yield releaseId
-            if pbar:
-                pbar.finish()
-
     def saveZip(self, zipName='catalog.zip', pbar=None):
         """Exports the database as a ZIP archive"""
         import zipfile
