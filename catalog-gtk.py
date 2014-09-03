@@ -857,8 +857,10 @@ class MBCatGtk:
         self.openDatabase(filename)
 
     def menuCatalogRebuild(self, widget):
+        # Need a new Catalog object for this new thread
+        c = mbcat.catalog.Catalog(self.catalog.dbPath, self.catalog.cachePath)
         th = mbcat.gtkpbar.TaskHandler(self.window,
-            self.catalog.rebuildCacheTables())
+            c.rebuildCacheTables())
         th.start()
 
     def menuCatalogGetSimilar(self, widget):

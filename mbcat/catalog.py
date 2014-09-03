@@ -94,8 +94,11 @@ class Catalog(object):
         _log.info('Using \'%s\' for the catalog database' % self.dbPath)
         _log.info('Using \'%s\' for the file cache path' % self.cachePath)
 
+        self._connect()
+
+    def _connect(self):
         # Open and retain a connection to the database
-        self.conn = self._connection()
+        self.conn = self._get_connection()
         # This connection and cursor should be enough for most work. You might
         # need a second cursor if you, for example, have a double-nested 'for'
         # loop where you are cross-referencing things:
@@ -109,7 +112,7 @@ class Catalog(object):
         #         "do something with 'first' and 'second'"
         self.curs = self.conn.cursor()
 
-    def _connection(self):
+    def _get_connection(self):
         # this connection should be closed when this object is deleted
         return sqlite3.connect(self.dbPath,
                 detect_types=sqlite3.PARSE_DECLTYPES)
@@ -240,6 +243,8 @@ class Catalog(object):
 
     def rebuildCacheTables(self, pbar=None):
         """Drop the derived tables in the database and rebuild them"""
+        # Get our own connection and cursor for this thread
+        self._connect()
         yield 'Dropping tables...'
         yield 15
 
