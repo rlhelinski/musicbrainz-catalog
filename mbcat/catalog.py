@@ -210,6 +210,9 @@ class Catalog(object):
         for col in ['sortstring', 'catno', 'barcode', 'asin']:
             self.curs.execute('create index release_'+col+\
                 ' on releases ('+col+')')
+        self.curs.execute('create index word_index on words (word)')
+        self.curs.execute('create index trackword_index '
+            'on trackwords (trackword)')
 
     def updateCacheTables(self, rebuild, pbar=None):
         """Use the releases table to populate the derived (cache) tables"""
