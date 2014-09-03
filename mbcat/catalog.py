@@ -136,17 +136,20 @@ class Catalog(object):
             "comment TEXT, "
             "rating INT DEFAULT 0)")
 
+        # Indexes for speed (it's all about performance...)
+        cursor.execute('create unique index release_id on releases (id)')
+        for col in ['sortstring', 'catno', 'barcode', 'asin']:
+            cursor.execute('create index release_'+col+\
+                ' on releases ('+col+')')
+
+        self._createMetaTables()
+
         self._createCacheTables()
 
         self.conn.commit()
 
-    def _createCacheTables(self):
-        """Add the release-derived tables to the database.
-        This method does not commit its changes."""
-        # tables that map specific things to a list of releases
+    def _createMetaTables(self):
         for columnName, columnType in [
-                ('word', 'TEXT'),
-                # integer for dates
                 ('added_date', 'FLOAT'),
                 ('listened_date', 'FLOAT'),
                 ]:
@@ -155,25 +158,6 @@ class Catalog(object):
                 columnName+' '+columnType+', release TEXT, '
                 'FOREIGN KEY(release) REFERENCES releases(id) '
                 'ON DELETE CASCADE)')
-
-        self.curs.execute('CREATE TABLE recordings ('
-            'id TEXT, '
-            'title TEXT, '
-            'length INTEGER, '
-            'release TEXT, '
-            'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON DELETE CASCADE)')
-
-        self.curs.execute('CREATE TABLE trackwords('
-            'trackword TEXT, recording TEXT, '
-            'FOREIGN KEY(recording) REFERENCES recordings(id) '
-            'ON DELETE CASCADE)')
-
-        self.curs.execute('CREATE TABLE discids ('
-            'discid TEXT, '
-            'release TEXT, '
-            'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON DELETE CASCADE)')
 
         self.curs.execute('CREATE TABLE purchases ('
             'date FLOAT, '
@@ -205,11 +189,39 @@ class Catalog(object):
             'FOREIGN KEY(release) REFERENCES releases(id) '
             'ON DELETE CASCADE)')
 
+    def _createCacheTables(self):
+        """Add the release-derived tables to the database.
+        This method does not commit its changes."""
+        # tables that map specific things to a list of releases
+        for columnName, columnType in [
+                ('word', 'TEXT'),
+                ]:
+
+            self.curs.execute('CREATE TABLE '+columnName+'s('+\
+                columnName+' '+columnType+', release TEXT, '
+                'FOREIGN KEY(release) REFERENCES releases(id) '
+                'ON DELETE CASCADE)')
+
+        self.curs.execute('CREATE TABLE recordings ('
+            'id TEXT, '
+            'title TEXT, '
+            'length INTEGER, '
+            'release TEXT, '
+            'FOREIGN KEY(release) REFERENCES releases(id) '
+            'ON DELETE CASCADE)')
+
+        self.curs.execute('CREATE TABLE trackwords('
+            'trackword TEXT, recording TEXT, '
+            'FOREIGN KEY(recording) REFERENCES recordings(id) '
+            'ON DELETE CASCADE)')
+
+        self.curs.execute('CREATE TABLE discids ('
+            'discid TEXT, '
+            'release TEXT, '
+            'FOREIGN KEY(release) REFERENCES releases(id) '
+            'ON DELETE CASCADE)')
+
         # Indexes for speed (it's all about performance...)
-        self.curs.execute('create unique index release_id on releases (id)')
-        for col in ['sortstring', 'catno', 'barcode', 'asin']:
-            self.curs.execute('create index release_'+col+\
-                ' on releases ('+col+')')
         self.curs.execute('create index word_index on words (word)')
         self.curs.execute('create index trackword_index '
             'on trackwords (trackword)')
@@ -239,6 +251,14 @@ class Catalog(object):
             except sqlite3.OperationalError as e:
                 pass
             yield True
+
+        for index in ['word_index', 'trackword_index']:
+            try:
+                self.curs.execute('drop index if exists '+index)
+            except sqlite3.OperationalError as e:
+                pass
+            yield True
+
         self._createCacheTables()
 
         # Rebuild
