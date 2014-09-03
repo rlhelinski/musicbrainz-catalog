@@ -116,24 +116,24 @@ class Catalog(object):
 
     def _createTables(self):
         """Create the SQL tables for the catalog. Database is assumed empty."""
-        self.curs.execute("CREATE TABLE releases("+\
-            "id TEXT PRIMARY KEY, "+\
-            # metadata from musicbrainz
-            # TODO maybe store a dict instead of the XML?
-            "meta BLOB, "+\
-            "sortstring TEXT, "+\
-            "artist TEXT, "+\
-            "title TEXT, "+\
-            "date FLOAT, "+\
-            "country TEXT, "+\
-            "label TEXT, "+\
-            "catno TEXT, "+\
-            "barcode TEXT, "+\
-            "asin TEXT, "+\
-            "format TEXT, "+\
-            "metatime FLOAT, "+\
-            "count INT DEFAULT 1, "+\
-            "comment TEXT, "+\
+        # TODO maybe store the metadata dict from musicbrainz instead of the XML?
+        self.curs.execute("CREATE TABLE releases("
+            "id TEXT PRIMARY KEY, "
+            "meta BLOB, "
+            "sortstring TEXT, "
+            "artist TEXT, "
+            "title TEXT, "
+            # This date is for printing, so we will keep it in a string
+            "date TEXT, "
+            "country TEXT, "
+            "label TEXT, "
+            "catno TEXT, "
+            "barcode TEXT, "
+            "asin TEXT, "
+            "format TEXT, "
+            "metatime FLOAT, "
+            "count INT DEFAULT 1, "
+            "comment TEXT, "
             "rating INT DEFAULT 0)")
 
         self._createCacheTables()
