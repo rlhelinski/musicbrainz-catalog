@@ -231,8 +231,9 @@ class Catalog(object):
         yield 'Dropping tables...'
         yield 15
 
-        for tab in ['words', 'trackwords', 'recordings', 'discids',
-                'barcodes', 'formats']:
+        for tab in ['words', 'trackwords', 'recordings', 'discids']:
+            # Note: the added_dates, listened_dates, and purchases tables are
+            # not transient.
             try:
                 self.curs.execute('drop table '+tab)
             except sqlite3.OperationalError as e:
