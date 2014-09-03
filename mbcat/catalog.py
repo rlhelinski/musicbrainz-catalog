@@ -249,6 +249,8 @@ class Catalog(object):
         yield False
 
     def renameRelease(self, releaseId, newReleaseId):
+        # TODO this does not update purchases, checkout_events, checkin_events,
+        # digital
         self.deleteRelease(releaseId)
         self.addRelease(newReleaseId, olderThan=60)
 
