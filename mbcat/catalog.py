@@ -276,7 +276,7 @@ class Catalog(object):
         return metadata
 
     def getReleaseXml(self, releaseId):
-        """Return a release's musicbrainz XML metadata"""
+        """Return a release's musicbrainz XML metadata from the local cache"""
 
         self.curs.execute('select meta from releases where id = ?',
             (releaseId,))
@@ -288,7 +288,8 @@ class Catalog(object):
 
     def getRelease(self, releaseId):
         """Return a release's musicbrainz-ngs dictionary.
-        For convenience, only the value of the 'release' key is returned. """
+        For convenience, only the value of the 'release' key is returned.
+        This function should be used sparingly."""
 
         releaseXml = self.getReleaseXml(releaseId)
         # maybe it would be better to store the release as a serialized dict in
