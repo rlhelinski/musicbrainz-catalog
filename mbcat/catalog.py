@@ -28,7 +28,7 @@ import itertools
 overWriteAll = False
 
 # Have to give an identity for musicbrainzngs
-__version__ = '0.2'
+__version__ = '0.3'
 
 mb.set_useragent(
     "musicbrainz-catalog",
