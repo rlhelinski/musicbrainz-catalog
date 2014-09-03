@@ -487,7 +487,8 @@ class Catalog(object):
                 self.curs.execute('insert into recordings '
                     '(id, title, length, release) values (?,?,?,?)', 
                     (track['recording']['id'], track['recording']['title'],
-                    track['recording']['length'], rel['id']))
+                    track['recording']['length'] \
+                    if 'length' in track['recording'] else None, rel['id']))
                 for word in mbcat.Catalog.processWords('title',
                     track['recording']):
                     # Reference each word to this recording
