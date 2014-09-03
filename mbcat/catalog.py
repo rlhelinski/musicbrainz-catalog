@@ -241,25 +241,6 @@ class Catalog(object):
             yield True
         self._createCacheTables()
 
-        # Add these columns to releases if they don't exist
-        for column in [
-            'artist',
-            'title',
-            'date',
-            'country',
-            'label',
-            'catno',
-            'barcode',
-            'asin',
-            'format',
-            ]:
-            try:
-                self.curs.execute('alter table releases add column '+column+\
-                    ' text')
-            except sqlite3.OperationalError as e:
-                pass
-            yield True
-
         # Rebuild
         g = self.updateCacheTables(rebuild=True)
         for r in g:
