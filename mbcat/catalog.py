@@ -300,17 +300,16 @@ class Catalog(object):
         return metadata['release']
 
     def getReleaseIdsByFormat(self, fmt):
-        self.curs.execute('select releases from formats where format = ?',
-            (fmt,))
-        return self.curs.fetchall()[0][0]
+        self.curs.execute('select id from releases where format=?', (fmt,))
+        return itertools.chain.from_iterable(self.curs.fetchall())
 
     def getFormats(self):
-        self.curs.execute('select format from formats')
-        return [t[0] for t in self.curs.fetchall()]
+        self.curs.execute('select distinct format from releases')
+        return itertools.chain.from_iterable(self.curs.fetchall())
 
+    # TODO rename to getReleaseByBarCode
     def barCodeLookup(self, barcode):
-        self.curs.execute('select releases from barcodes where barcode = ?',
-                (barcode,))
+        self.curs.execute('select id from releases where barcode=?', (barcode,))
         result = self.curs.fetchall()
         if not result:
             raise KeyError('Barcode not found')
@@ -330,6 +329,7 @@ class Catalog(object):
     def getCopyCount(self, releaseId):
         self.curs.execute('select count from releases where id=?',
                 (releaseId,))
+        # TODO error not handled if release does not exist
         return self.curs.fetchone()[0]
 
     def setCopyCount(self, releaseId, count):
@@ -627,6 +627,7 @@ class Catalog(object):
         of releases.
         """
 
+        # TODO use 'SELECT id FROM releases ORDER BY sortstring' instead
         if matchFormat:
             try:
                 sortedList = self.getSortedList(\
@@ -650,7 +651,7 @@ class Catalog(object):
     def getWordCount(self):
         """Fetch the number of words in the release search word table."""
         try:
-            self.curs.execute('select count(word) from words')
+            self.curs.execute('select count(distinct word) from words')
             return self.curs.fetchone()[0]
         except sqlite3.OperationalError:
             return 0
@@ -658,7 +659,7 @@ class Catalog(object):
     def getTrackWordCount(self):
         """Fetch the number of words in the track search word table."""
         try:
-            self.curs.execute('select count(trackword) from trackwords')
+            self.curs.execute('select count(distinct trackword) from trackwords')
             return self.curs.fetchone()[0]
         except sqlite3.OperationalError:
             return 0
@@ -680,10 +681,10 @@ class Catalog(object):
                 (releaseId,))
         return self.curs.fetchall()[0][0]
 
-    def addDigitalPath(self, releaseId, path):
+    def addDigitalPath(self, releaseId, format, path):
         existingPaths = self.getDigitalPaths(releaseId)
-        self.curs.execute('update releases set digital=? where id=?',
-                (existingPaths+[path],releaseId))
+        self.curs.execute('insert into digital (release, format, path) '
+                'values (?,?,?)', (releaseId, format, path))
         self.conn.commit()
 
     def getAddedDates(self, releaseId):
@@ -1282,7 +1283,7 @@ class Catalog(object):
     def getMetaTime(self, releaseId):
         self.curs.execute('select metatime from releases where id = ?',
             (releaseId,))
-        return self.curs.fetchone()
+        return self.curs.fetchone()[0]
 
     def addRelease(self, releaseId, olderThan=0):
         """
@@ -1311,6 +1312,10 @@ class Catalog(object):
         for releaseId in self.loadReleaseIds(pbar):
             _log.info("Refreshing %s", releaseId)
             self.addRelease(releaseId, olderThan)
+            # NOTE Could delay commit in addRelease and commit once here, but
+            # fetching from web is slow, so this extra delay might be
+            # acceptable. Also, partial refreshes will be committed as they
+            # progress.
 
     def checkReleases(self):
         """
