@@ -206,10 +206,10 @@ class Catalog(object):
             'ON DELETE CASCADE)')
 
         # Indexes for speed (it's all about performance...)
-        self.curs.execute('create unique index release_id on releases (id);')
+        self.curs.execute('create unique index release_id on releases (id)')
         for col in ['sortstring', 'catno', 'barcode', 'asin']:
             self.curs.execute('create index release_'+col+\
-                ' on releases ('+col+');')
+                ' on releases ('+col+')')
 
     def updateCacheTables(self, rebuild, pbar=None):
         """Use the releases table to populate the derived (cache) tables"""
