@@ -1199,6 +1199,17 @@ class MBCatGtk:
             return
         QueryResultsDialog(self, self.catalog, results)
 
+    def webserviceCatNo(self, widget):
+        entry = TextEntry(self.window, 'Enter search catalog number:')
+        if not entry:
+            return
+        results = mb.search_releases(catno=entry,
+             limit=self.searchResultsLimit)
+        if not results:
+            ErrorDialog(self.window, 'No results found for "%s"' % entry)
+            return
+        QueryResultsDialog(self, self.catalog, results)
+
     def webserviceSyncCollection(self, widget):
         """Synchronize with a musicbrainz collection (currently only pushes releases)."""
         if not self.catalog.prefs.username:
@@ -1513,6 +1524,11 @@ class MBCatGtk:
         ## Barcode Search
         submenuitem = gtk.MenuItem('Barcode (UPC)')
         submenuitem.connect('activate', self.webserviceBarcode)
+        menu.append(submenuitem)
+
+        ## Catalog # Search
+        submenuitem = gtk.MenuItem('Catalog Number')
+        submenuitem.connect('activate', self.webserviceCatNo)
         menu.append(submenuitem)
 
         ## Separator
