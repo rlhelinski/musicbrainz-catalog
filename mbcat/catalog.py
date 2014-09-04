@@ -1310,8 +1310,7 @@ class Catalog(object):
                     _log.warning("No format for a medium of " + releaseId)
 
     # TODO maybe cover art tasks should be in another class
-    @staticmethod
-    def _getCoverArtPath(releaseId):
+    def _getCoverArtPath(self, releaseId):
         return os.path.join(self.cachePath, releaseId[0], releaseId[0:2],
                 releaseId, 'cover.jpg')
 
