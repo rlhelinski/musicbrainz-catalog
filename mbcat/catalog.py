@@ -23,10 +23,6 @@ import zlib
 import sqlite3
 import itertools
 
-# For remembering user decision to overwrite existing data
-# TODO remove this with writeXml()
-overWriteAll = False
-
 # Have to give an identity for musicbrainzngs
 __version__ = '0.3'
 
@@ -1010,49 +1006,6 @@ class Catalog(object):
                 'media', 'labels', 'recordings'])
         mb.set_parser()
         return xml
-
-    @mbcat.utils.deprecated
-    def writeXml(self, releaseId, metaData):
-        global overWriteAll
-
-        xmlPath = self._get_xml_path(releaseId)
-
-        if not os.path.isdir(os.path.dirname(xmlPath)):
-            os.mkdir(os.path.dirname(xmlPath))
-
-        if (os.path.isfile(xmlPath) and not overWriteAll):
-            print(xmlPath, "already exists. Continue? [y/a/N] ", end="")
-            response = sys.stdin.readline().strip()
-            if (not response or response[0] not in ['y', 'a']):
-                return 1
-            elif (response[0] == 'a'):
-                overWriteAll = True
-
-        _log.info("Writing metadata to '%s'", xmlPath)
-        xmlf = open(xmlPath, 'wb')
-        xml_writer = wsxml.MbXmlWriter()
-        xml_writer.write(xmlf, metaData)
-        xmlf.close()
-
-        return 0
-
-    @mbcat.utils.deprecated
-    def fixMeta(self, discId, releaseId):
-        results_meta = self.fetchReleaseMetaXml(releaseId)
-
-        self.writeXml(discId, results_meta)
-
-    @mbcat.utils.deprecated
-    def loadMetaData(self, releaseId):
-        """Load metadata from disk"""
-        xmlPath = self._get_xml_path(releaseId)
-        if (not os.path.isfile(xmlPath)):
-            _log.error("No XML metadata for %s", releaseId)
-            return None
-        with open(xmlPath, 'r') as xmlf:
-            metaxml = xmlf.read()
-
-        return self.getReleaseDictFromXml(metaxml)['release']
 
     def digestReleaseXml(self, releaseId, metaXml, rebuild=False):
         """Update the appropriate data structes for a new release."""
