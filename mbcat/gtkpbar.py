@@ -58,6 +58,7 @@ class TaskHandler(threading.Thread):
         super(TaskHandler, self).__init__()
         self.task_generator = task_generator
 
+        gtk.gdk.threads_enter()
         # Create progressbar window
         self.window = gtk.Window(type=gtk.WINDOW_TOPLEVEL)
         self.window.set_transient_for(parent)
@@ -78,6 +79,8 @@ class TaskHandler(threading.Thread):
         self.window.add(vbox)
         self.window.set_title(processLabel)
         self.window.show_all()
+
+        gtk.gdk.threads_leave()
 
         self.currval = 0
         self.maxval = None
@@ -169,7 +172,9 @@ class TaskHandler(threading.Thread):
     def stop(self):
         """Stop method, sets the event to terminate the thread's main loop"""
         self.stopthread.set()
+        gtk.gdk.threads_enter()
         self.window.destroy()
+        gtk.gdk.threads_leave()
 
     def on_delete(self, widget, event, data=None):
         # Change FALSE to TRUE and the main window will not be destroyed
