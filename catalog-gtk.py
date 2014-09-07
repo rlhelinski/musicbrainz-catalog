@@ -260,6 +260,7 @@ def ReleaseSearchDialog(parent,
         # Have to ask the user which release they mean
         return ReleaseSelectDialog(parent, catalog, releaseIdList=matches)
     elif len(matches) == 1:
+        _log.info('Only one release result found')
         return matches[0]
     else:
         ErrorDialog(parent, 'No matches found for "%s"' % entry)
@@ -925,6 +926,7 @@ class MBCatGtk:
         actualRow = min(len(self.releaseList), row)
         self.treeview.get_selection().select_path(actualRow)
         self.treeview.scroll_to_cell(actualRow, use_align=True, row_align=0.5)
+        self.on_row_select(self.treeview)
 
     def getReleaseRow(self, releaseID):
         def match_func(model, iter, data):
