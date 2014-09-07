@@ -936,6 +936,8 @@ class MBCatGtk:
         result_iter = search(self.releaseList,
                 self.releaseList.iter_children(None),
                 match_func, (0, releaseID))
+        if not result_iter:
+            return None
         return self.releaseList.get_path(result_iter)[0]
 
     def refreshView(self, widget):
