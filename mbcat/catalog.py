@@ -139,10 +139,10 @@ class Catalog(object):
             "rating INT DEFAULT 0)")
 
         # Indexes for speed (it's all about performance...)
-        cursor.execute('create unique index release_id on releases (id)')
+        self.curs.execute('create unique index release_id on releases(id)')
         for col in ['sortstring', 'catno', 'barcode', 'asin']:
-            cursor.execute('create index release_'+col+\
-                ' on releases ('+col+')')
+            self.curs.execute('create index release_'+col+\
+                ' on releases('+col+')')
 
         self._createMetaTables()
 
