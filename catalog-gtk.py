@@ -551,6 +551,7 @@ class QueryResultsDialog:
             ('Title', 30),
             ('Format', 10),
             ('Label', 20),
+            ('Country', 4),
             ('Catalog #', 20),
             ('Barcode', 25),
             ]):
@@ -564,7 +565,7 @@ class QueryResultsDialog:
             self.tv.append_column(col)
 
         # make the list store
-        resultListStore = gtk.ListStore(str, str, str, str, str, str, str)
+        resultListStore = gtk.ListStore(str, str, str, str, str, str, str, str)
         for release in queryResult['release-list']:
             resultListStore.append((
                 release['id'],
@@ -572,6 +573,7 @@ class QueryResultsDialog:
                 release['title'],
                 mbcat.catalog.formatQueryMedia(release),
                 mbcat.catalog.formatQueryRecordLabel(release),
+                release['country'] if 'country' in release else '',
                 mbcat.catalog.formatQueryCatNo(release),
                 release['barcode'] if 'barcode' in release else '',
                 ))

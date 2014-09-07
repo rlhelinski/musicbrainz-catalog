@@ -1361,6 +1361,11 @@ class Catalog(object):
             (releaseId,))
         return self.curs.fetchone()[0]
 
+    def getReleaseCountry(self, releaseId):
+        self.curs.execute('select country from releases where id=?',
+            (releaseId,))
+        return self.curs.fetchone()[0]
+
     def getReleaseArtist(self, releaseId):
         self.curs.execute('select artist from releases where id=?',
             (releaseId,))
