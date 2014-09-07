@@ -1433,7 +1433,8 @@ class MBCatGtk:
         menu.append(submenuitem)
 
         # Rebuild
-        submenuitem = gtk.MenuItem('Rebuild')
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_EXECUTE)
+        submenuitem.get_children()[0].set_label('Rebuild Indexes')
         submenuitem.connect('activate', self.menuCatalogRebuild)
         menu.append(submenuitem)
 
@@ -1536,25 +1537,29 @@ class MBCatGtk:
         self.menu_release_items.append(submenuitem)
 
         ## Switch
-        submenuitem = gtk.MenuItem('_Switch')
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_CONVERT)
+        submenuitem.get_children()[0].set_label('_Switch')
         submenuitem.connect('activate', self.switchRelease)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
 
         ## Cover Art
-        submenuitem = gtk.MenuItem('Get Cover Art')
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_REFRESH)
+        submenuitem.get_children()[0].set_label('Get Cover Art')
         submenuitem.connect('activate', self.getCoverArt)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
 
         ## Refresh
-        submenuitem = gtk.MenuItem('_Refresh')
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_REFRESH)
+        submenuitem.get_children()[0].set_label('_Refresh')
         submenuitem.connect('activate', self.refreshRelease)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
 
         ## Track List
-        submenuitem = gtk.MenuItem('Track List')
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_INDEX)
+        submenuitem.get_children()[0].set_label('Track List')
         submenuitem.connect('activate', self.showTrackList)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
@@ -1576,7 +1581,8 @@ class MBCatGtk:
         self.menu_release_items.append(submenuitem)
 
         ## Comment
-        submenuitem = gtk.MenuItem('Comment')
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_EDIT)
+        submenuitem.get_children()[0].set_label('Comment')
         submenuitem.connect('activate', self.editComment)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
@@ -1636,7 +1642,8 @@ class MBCatGtk:
         mb.append(menuitem)
 
         ## Disc lookup
-        submenuitem = gtk.MenuItem('Disc lookup')
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_CDROM)
+        submenuitem.get_children()[0].set_label('Disc lookup')
         submenuitem.connect('activate', self.readDiscTOC)
         menu.append(submenuitem)
 
