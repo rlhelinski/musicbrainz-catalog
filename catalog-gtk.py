@@ -863,6 +863,7 @@ class MBCatGtk:
         th = mbcat.gtkpbar.TaskHandler(self.window,
             c.rebuildCacheTables())
         th.start()
+        # TODO figure out how to cause a refresh here
 
     def menuCatalogGetSimilar(self, widget):
         th = TaskHandler()

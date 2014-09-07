@@ -558,6 +558,7 @@ class Catalog(object):
         # remember that the field is a list type
         return fetched[0]
 
+    @mbcat.utils.deprecated
     def formatDiscInfo(self, releaseId):
         release = self.getRelease(releaseId)
         return ' '.join( [
