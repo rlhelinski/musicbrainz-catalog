@@ -959,6 +959,7 @@ class MBCatGtk:
 
     def selectFormat(self, action, current):
         text = self.formatNames[action.get_current_value()]
+        sel = self.getSelection()
         if text != 'All':
             fmt = mbcat.formats.getFormatObj(text).name()
             #print ('Filtering formats: '+text+', '+fmt)
@@ -967,6 +968,10 @@ class MBCatGtk:
             self.filt = {}
         self.makeListStore()
         self.updateStatusBar()
+
+        row = self.getReleaseRow(sel)
+        if row:
+            self.setSelectedRow(row)
 
     def addRelease(self, widget):
         entry = TextEntry(self.window, 'Enter Release ID')
