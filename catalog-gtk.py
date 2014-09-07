@@ -726,8 +726,9 @@ class MBCatGtk:
     columnWidths = [30, 45, 16, 2, 37, 23, 16, 16, 16]
     numFields = ['Barcode', 'ASIN']
 
-    formatNames = ['All', 'Digital', 'CD', '7" Vinyl', '12" Vinyl']
-    formatLabels = ['_All', '_Digital', '_CD', '_7" Vinyl', '_12" Vinyl']
+    formatNames = ['All', 'Digital', 'CD', '7" Vinyl', '12" Vinyl', 'Unknown']
+    formatLabels = ['_All', '_Digital', '_CD', '_7" Vinyl', '_12" Vinyl',
+        '_Unknown']
 
     maxAge = 60
     searchResultsLimit = 100
@@ -965,7 +966,7 @@ class MBCatGtk:
         if text != 'All':
             fmt = mbcat.formats.getFormatObj(text).name()
             #print ('Filtering formats: '+text+', '+fmt)
-            self.filt = {'format': fmt}
+            self.filt = {'sortformat': fmt}
         else:
             self.filt = {}
         self.makeListStore()

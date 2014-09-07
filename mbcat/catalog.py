@@ -64,6 +64,7 @@ class Catalog(object):
         'barcode',
         'asin',
         'format',
+        'sortformat',
         'metatime',
         'count',
         'comment',
@@ -131,6 +132,7 @@ class Catalog(object):
             "barcode TEXT, "
             "asin TEXT, "
             "format TEXT, "
+            "sortformat TEXT, "
             "metatime FLOAT, "
             "count INT DEFAULT 1, "
             "comment TEXT, "
@@ -322,11 +324,11 @@ class Catalog(object):
         return metadata['release']
 
     def getReleaseIdsByFormat(self, fmt):
-        self.curs.execute('select id from releases where format=?', (fmt,))
+        self.curs.execute('select id from releases where sortformat=?', (fmt,))
         return itertools.chain.from_iterable(self.curs.fetchall())
 
     def getFormats(self):
-        self.curs.execute('select distinct format from releases')
+        self.curs.execute('select distinct sortformat from releases')
         return itertools.chain.from_iterable(self.curs.fetchall())
 
     # TODO rename to getReleaseByBarCode
@@ -902,6 +904,8 @@ class Catalog(object):
             ('asin', (relDict['release']['asin'] \
                 if 'asin' in relDict['release'] else '')),
             ('format', formatReleaseFormat(relDict['release'])),
+            ('sortformat', mbcat.formats.getReleaseFormat(
+                relDict['release']).name()),
             ]
 
         self.curs.execute('update releases set '+\
