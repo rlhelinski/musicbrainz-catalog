@@ -563,6 +563,9 @@ class QueryResultsDialog:
             col.add_attribute(cell, 'text', i+1)
             col.set_resizable(True)
             self.tv.append_column(col)
+        self.tv.connect('row-activated', self.on_row_activate)
+        self.tv.connect('cursor-changed', self.on_row_select)
+        self.tv.connect('unselect-all', self.on_unselect_all)
 
         # make the list store
         resultListStore = gtk.ListStore(str, str, str, str, str, str, str, str)
@@ -582,6 +585,7 @@ class QueryResultsDialog:
         sw.add(self.tv)
         vbox.pack_start(sw, expand=True, fill=True)
 
+        # Buttons
         hbox = gtk.HBox(False, 10)
         btn = gtk.Button('Close', gtk.STOCK_CLOSE)
         btn.connect('clicked', self.on_close)
@@ -590,6 +594,10 @@ class QueryResultsDialog:
         btn.connect('clicked', self.add_release)
         hbox.pack_end(btn, expand=False, fill=False)
         vbox.pack_end(hbox, expand=False, fill=False)
+
+        # Info on the selected row
+        self.selInfo = gtk.Label()
+        vbox.pack_end(self.selInfo, expand=False)
 
         self.window.add(vbox)
         self.window.set_title(message)
@@ -617,6 +625,20 @@ class QueryResultsDialog:
         self.catalog.getCoverArt(entry)
         self.parent.makeListStore()
         self.parent.setSelectedRow(self.parent.getReleaseRow(entry))
+
+    def on_row_activate(self, treeview, path, column):
+        model, it = treeview.get_selection().get_selected()
+        relId = model.get_value(it, 0)
+        webbrowser.open(self.catalog.releaseUrl + relId)
+
+    def on_row_select(self, treeview):
+        model, it = treeview.get_selection().get_selected()
+        relId = model.get_value(it, 0)
+        self.selInfo.set_text(relId)
+        _log.info(relId+' selected')
+
+    def on_unselect_all(self, treeview):
+        self.selInfo.set_text('')
 
     def on_destroy(self, widget, data=None):
         self.window.destroy()
