@@ -452,10 +452,7 @@ def TrackListDialog(parent, releaseDict):
 
 def GroupQueryResultsDialog(parent, catalog, queryResult):
     """
-    Display a dialog with a list of tracks for a release.
-    Example:
-    TrackListDialog(gui.window,
-        gui.catalog.getTrackList('1cd1d24c-1705-485c-ae6f-c53e7831b1e4'))
+    Display a dialog with a list of release groups for a query result.
     """
     d = gtk.MessageDialog(parent,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
@@ -648,10 +645,7 @@ class QueryResultsDialog:
 
 def SelectCollectionDialog(parent, result):
     """
-    Display a dialog with a list of tracks for a release.
-    Example:
-    TrackListDialog(gui.window,
-        gui.catalog.getTrackList('1cd1d24c-1705-485c-ae6f-c53e7831b1e4'))
+    Display a dialog with a list of collections from a query.
     """
     d = gtk.MessageDialog(parent,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
