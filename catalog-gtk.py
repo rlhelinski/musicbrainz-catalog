@@ -1031,13 +1031,13 @@ class MBCatGtk:
         releaseId = self.getSelection()
         row = self.getSelectedRow()
 
-        # Ask the user to specify a release
         if not releaseId:
-            releaseId = ReleaseSearchDialog(self.window, self.catalog)
-        if not releaseId or releaseId not in self.catalog:
+            # Should never get here
+            ErrorDialog(parent, 'Select a release first')
             return
 
         relTitle = self.catalog.getRelease(releaseId)['title']
+        # Ask the user to specify a release to which to switch
         newRelId = TextEntry(self.window,
             'Enter release ID to replace %s\n"%s"' % (releaseId, relTitle))
         if newRelId in self.catalog:

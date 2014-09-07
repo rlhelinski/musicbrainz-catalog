@@ -274,11 +274,17 @@ class Catalog(object):
 
         yield False
 
-    def renameRelease(self, releaseId, newReleaseId):
+    def renameRelease(self, oldReleaseId, newReleaseId):
         # TODO this does not update purchases, checkout_events, checkin_events,
         # digital
-        self.deleteRelease(releaseId)
-        self.addRelease(newReleaseId, olderThan=60)
+        # Record the new release ID in the added_dates table
+        self.curs.execute('insert into added_dates (date, release) '
+            'values (?,?)', (time.time(), newReleaseId))
+        # Replace the release ID with the new one
+        # this will cascade to all appropriate table references
+        self.curs.execute('update releases set id=? where id=?',
+            (newReleaseId, oldReleaseId))
+        self.addRelease(newReleaseId)
 
     def getReleaseIds(self):
         self.curs.execute('select id from releases')
@@ -497,18 +503,20 @@ class Catalog(object):
                         '(trackword, recording) values (?,?)', 
                         (word, track['recording']['id']))
 
-    def unDigestTrackWords(self, rel):
+    def unDigestTrackWords(self, relId):
         """
         Undo what digestTrackWords() does.
         """
+        # Query for recordings for this release ID
         self.curs.execute('select id from recordings where release=?', 
-            (rel['id'],))
+            (relId,))
+        # Fetch the results
         for recordingId in self.curs:
             self.curs.execute('delete from trackwords where recording=?', 
                 (recordingId[0],))
-        # Should do this in its own function
-        self.curs.execute('delete from recordings where release=?',
-            (rel['id'],))
+        # Then, delete the rows in the recordings table referencing this
+        # release ID
+        self.curs.execute('delete from recordings where release=?', (relId,))
 
     @mbcat.utils.deprecated
     def mapWordsToRelease(self, words, releaseId):
@@ -951,13 +959,10 @@ class Catalog(object):
 
         # Update words -> (word, recordings) and
         # recordings -> (recording, releases)
-        self.unDigestTrackWords(relDict)
+        self.unDigestTrackWords(releaseId)
 
         # Update discids -> (discid, releases)
-        for medium in relDict['medium-list']:
-            for disc in medium['disc-list']:
-                self.curs.execute('delete from discids where discid=?',
-                    (disc['id'],))
+        self.curs.execute('delete from discids where release=?', (releaseId,))
 
     @staticmethod
     def fmtTitle(relDict):
