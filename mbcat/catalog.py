@@ -151,15 +151,17 @@ class Catalog(object):
         self.conn.commit()
 
     def _createMetaTables(self):
-        for columnName, columnType in [
-                ('added_date', 'FLOAT'),
-                ('listened_date', 'FLOAT'),
-                ]:
+        self.curs.execute('CREATE TABLE added_dates('
+            'date FLOAT, '
+            'release TEXT, '
+            'FOREIGN KEY(release) REFERENCES releases(id)'
+            ')')
 
-            self.curs.execute('CREATE TABLE '+columnName+'s('+\
-                columnName+' '+columnType+', release TEXT, '
-                'FOREIGN KEY(release) REFERENCES releases(id) '
-                'ON DELETE CASCADE)')
+        self.curs.execute('CREATE TABLE listened_dates('
+            'date FLOAT, '
+            'release TEXT, '
+            'FOREIGN KEY(release) REFERENCES releases(id) '
+            'ON UPDATE CASCADE ON DELETE CASCADE)')
 
         self.curs.execute('CREATE TABLE purchases ('
             'date FLOAT, '
@@ -767,7 +769,7 @@ class Catalog(object):
         self.conn.commit()
 
     def getListenDates(self, releaseId):
-        self.curs.execute('select listened_date from listened_dates '
+        self.curs.execute('select date from listened_dates '
             'where release=?', (releaseId,))
         # chain flattens whatever list of column lists that come back
         return itertools.chain.from_iterable(self.curs.fetchall())
@@ -776,7 +778,7 @@ class Catalog(object):
         # Some precursory error checking
         if not isinstance(date, float):
             raise ValueError ('Wrong type for date argument')
-        self.curs.execute('insert into listened_dates (listened_date, release) '
+        self.curs.execute('insert into listened_dates (date, release) '
             'values (?,?)', (date,releaseId))
         self.conn.commit()
 
@@ -847,7 +849,7 @@ class Catalog(object):
         now = time.time()
 
         self.curs.execute('insert into added_dates '
-            '(added_date, release) values (?, ?)',
+            '(date, release) values (?, ?)',
             (now, releaseId))
         if not exists:
             # Update releases table
