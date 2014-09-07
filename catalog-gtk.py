@@ -1008,6 +1008,7 @@ class MBCatGtk:
 
     def setSelectedRow(self, row):
         """Selects and scrolls to a row in the TreeView"""
+        # Limit the range of the row input
         actualRow = min(len(self.releaseList), row)
         self.treeview.get_selection().select_path(actualRow)
         self.treeview.scroll_to_cell(actualRow, use_align=True, row_align=0.5)
@@ -1037,6 +1038,10 @@ class MBCatGtk:
     def refreshView(self, widget):
         self.makeListStore()
         self.updateStatusBar()
+
+    def scrollToSelected(self, widget):
+        row = self.getSelectedRow()
+        self.treeview.scroll_to_cell(row, use_align=True, row_align=0.5)
 
     def toggleStatusBar(self, widget):
         if widget.active:
@@ -1495,6 +1500,12 @@ class MBCatGtk:
         ## Refresh
         submenuitem = gtk.MenuItem('Refresh')
         submenuitem.connect('activate', self.refreshView)
+        menu.append(submenuitem)
+
+        ## Refresh
+        submenuitem = gtk.MenuItem('Scroll to Selected')
+        submenuitem.connect('activate', self.scrollToSelected)
+        self.menu_release_items.append(submenuitem)
         menu.append(submenuitem)
 
         mb.append(menuitem)
