@@ -303,7 +303,7 @@ def TrackSearchDialog(parent,
         matches = [mbcat.utils.getReleaseIdFromInput(input)]
     else: # assume that a search query was entered
         matches = list(catalog._search(entry, table='trackwords',
-            keycolumn='trackword'))
+            keycolumn='trackword', outcolumn='recording'))
     if len(matches) > 1:
         # Have to ask the user which release they mean
         return TrackSelectDialog(parent, catalog, trackIdList=matches)

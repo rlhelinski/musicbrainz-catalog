@@ -518,25 +518,26 @@ class Catalog(object):
                 self.wordMap[word] = [releaseId]
 
     # TODO this is used externally, but has an underscore prefix
-    def _search(self, query, table='words', keycolumn='word'):
+    def _search(self, query, table='words', keycolumn='word',
+            outcolumn='release'):
         query_words = query.lower().split(' ')
         matches = set()
         for word in query_words:
-            self.curs.execute('select releases from %s where %s = ?' % \
-                    (table, keycolumn),
+            self.curs.execute('select %s from %s where %s = ?' % \
+                    (outcolumn, table, keycolumn),
                     (word,))
             # get the record, there should be one or none
-            fetched = self.curs.fetchone()
+            fetched = itertools.chain.from_iterable(self.curs)
             # if the word is in the table
             if fetched:
                 # for the first word
                 if word == query_words[0]:
                     # use the whole set of releases that have this word
-                    matches = set(fetched[0])
+                    matches = set(fetched)
                 else:
                     # intersect the releases that have this word with the
                     # current release set
-                    matches = matches & set(fetched[0])
+                    matches = matches & set(fetched)
             else:
                 # this word is not contained in any releases and therefore
                 # no releases match
@@ -550,13 +551,9 @@ class Catalog(object):
 
     def recordingGetReleases(self, recordingId):
         self.curs.execute(
-            'select releases from recordings where recording = ?',
+            'select release from recordings where id = ?',
             (recordingId,))
-        # get the record, there should be one or none
-        fetched = self.curs.fetchone()
-
-        # remember that the field is a list type
-        return fetched[0]
+        return itertools.chain.from_iterable(self.curs)
 
     @mbcat.utils.deprecated
     def formatDiscInfo(self, releaseId):
@@ -588,12 +585,12 @@ class Catalog(object):
 
     def getRecordingTitle(self, recordingId):
         self.curs.execute('select title from recordings '
-            'where recording=?', (recordingId,))
+            'where id=?', (recordingId,))
         return self.curs.fetchone()[0]
 
     def getRecordingLength(self, recordingId):
         self.curs.execute('select length from recordings '
-            'where recording=?', (recordingId,))
+            'where id=?', (recordingId,))
         return self.curs.fetchone()[0]
 
     @staticmethod
