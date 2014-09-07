@@ -742,9 +742,11 @@ class DetailPane(gtk.HBox):
         self.catalog = catalog
 
         self.coverart = gtk.Image()
+        self.coverart.set_size_request(self.imgpx, self.imgpx)
         self.pack_start(self.coverart, expand=False, fill=False)
 
         self.sw = gtk.ScrolledWindow()
+        #self.sw.set_size_request(self.imgpx, self.imgpx)
         self.sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 
         self.tv = gtk.TreeView()
@@ -769,10 +771,13 @@ class DetailPane(gtk.HBox):
     def update(self, releaseId):
         self.coverart.hide()
         self.coverart.set_from_file(self.catalog._getCoverArtPath(releaseId))
-        self.pixbuf = self.coverart.get_pixbuf()
-        resized = self.pixbuf.scale_simple(self.imgpx,self.imgpx,
-            gtk.gdk.INTERP_BILINEAR)
-        self.coverart.set_from_pixbuf(resized)
+        try:
+            self.pixbuf = self.coverart.get_pixbuf()
+            resized = self.pixbuf.scale_simple(self.imgpx,self.imgpx,
+                gtk.gdk.INTERP_BILINEAR)
+            self.coverart.set_from_pixbuf(resized)
+        except ValueError:
+            pass
         self.coverart.show()
 
         releaseDict = self.catalog.getRelease(releaseId)
