@@ -635,7 +635,7 @@ class QueryResultsDialog:
         model, it = treeview.get_selection().get_selected()
         relId = model.get_value(it, 0)
         self.selInfo.set_text(relId)
-        _log.info(relId+' selected')
+        _log.info('Release '+relId+' selected')
 
     def on_unselect_all(self, treeview):
         self.selInfo.set_text('')
@@ -924,7 +924,7 @@ class MBCatGtk:
         self.menu_release_items_set_sensitive(True)
         model, it = treeview.get_selection().get_selected()
         relId = model.get_value(it, 0)
-        print (relId+' selected')
+        _log.info('Release '+relId+' selected')
 
     def on_unselect_all(self, treeview):
         self.menu_release_items_set_sensitive(False)
@@ -984,6 +984,7 @@ class MBCatGtk:
             self.statusbar.hide()
 
     def updateStatusBar(self):
+        # TODO use this push/pop action better
         self.statusbar.pop(self.context_id)
         msg = ('%d total releases, %d release words, %d track words, '+\
             'showing %d releases') % \
@@ -1289,7 +1290,7 @@ class MBCatGtk:
             ErrorDialog(self.window, 'Could not import discid')
             return
         default_device = discid.get_default_device()
-        # have to bring up a dialog to allow the user to pick a device
+        # bring up a dialog to allow the user to specify a device
         spec_device = TextEntry(self.window, 'Select a device to read:',
             default_device)
         try:
@@ -1308,6 +1309,8 @@ class MBCatGtk:
             askBrowseSubmission()
         else:
             if result.get("disc"):
+                _log.info('Showing query results for disc ID "%s"'\
+                    %result['disc']['id'])
                 QueryResultsDialog(self, self.catalog, result['disc'])
             elif result.get("cdstub"):
                 for label, key in [
