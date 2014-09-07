@@ -848,10 +848,10 @@ class Catalog(object):
         exists = releaseId in self
         now = time.time()
 
-        self.curs.execute('insert into added_dates '
-            '(date, release) values (?, ?)',
-            (now, releaseId))
         if not exists:
+            self.curs.execute('insert into added_dates '
+                '(date, release) values (?, ?)',
+                (now, releaseId))
             # Update releases table
             newColumns = [
                 'id',
