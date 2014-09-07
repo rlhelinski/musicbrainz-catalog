@@ -308,7 +308,12 @@ def TrackSearchDialog(parent,
         # Have to ask the user which release they mean
         return TrackSelectDialog(parent, catalog, trackIdList=matches)
     elif len(matches) == 1:
-        return matches[0]
+        _log.info('Only one track result found')
+        releases = list(catalog.recordingGetReleases(matches[0]))
+        if len(releases) > 1:
+            return TrackSelectDialog(parent, catalog, trackIdList=matches)
+        else:
+            return releases[0]
     else:
         ErrorDialog(parent, 'No matches found for "%s"' % entry)
 
