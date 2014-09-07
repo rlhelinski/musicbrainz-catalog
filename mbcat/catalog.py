@@ -16,6 +16,7 @@ import mbcat.extradata
 import shutil
 from datetime import datetime
 from collections import defaultdict
+from collections import Counter
 import progressbar
 import logging
 _log = logging.getLogger("mbcat")
@@ -900,8 +901,7 @@ class Catalog(object):
                 if 'barcode' in relDict['release'] else '')),
             ('asin', (relDict['release']['asin'] \
                 if 'asin' in relDict['release'] else '')),
-            ('format', mbcat.formats.getReleaseFormat(
-                relDict['release']).name()),
+            ('format', formatReleaseFormat(relDict['release'])),
             ]
 
         self.curs.execute('update releases set '+\
@@ -1412,3 +1412,14 @@ def getArtistSortPhrase(release):
             for credit in release['artist-credit']
             ])
 
+# TODO maybe this should live in mbcat.formats
+def formatReleaseFormat(release):
+    """Return a string representing the media that are part of a release"""
+    if 'medium-list' not in release:
+        return '[unknown]'
+    format_counter = Counter(medium['format'] \
+        if 'format' in medium else '[unknown]' \
+        for medium in release['medium-list'])
+    return ' + '.join([
+            ((('%d\u00d7' % count) if count > 1 else '') + fmt) \
+            for fmt, count in format_counter.most_common()])
