@@ -169,7 +169,7 @@ class Catalog(object):
             'vendor TEXT, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON DELETE CASCADE)')
+            'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         # checkout, checkin (lent out, returned) tables
         self.curs.execute('CREATE TABLE checkout_events ('
@@ -177,13 +177,13 @@ class Catalog(object):
             'date FLOAT, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON DELETE CASCADE)')
+            'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         self.curs.execute('CREATE TABLE checkin_events ('
             'date FLOAT, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON DELETE CASCADE)')
+            'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         # Digital copy table
         self.curs.execute('CREATE TABLE digital ('
@@ -191,7 +191,7 @@ class Catalog(object):
             'format TEXT, '
             'path TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON DELETE CASCADE)')
+            'ON DELETE CASCADE ON UPDATE CASCADE)')
 
     def _createCacheTables(self):
         """Add the release-derived tables to the database.
@@ -204,7 +204,7 @@ class Catalog(object):
             self.curs.execute('CREATE TABLE '+columnName+'s('+\
                 columnName+' '+columnType+', release TEXT, '
                 'FOREIGN KEY(release) REFERENCES releases(id) '
-                'ON DELETE CASCADE)')
+                'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         self.curs.execute('CREATE TABLE recordings ('
             'id TEXT, '
@@ -212,18 +212,18 @@ class Catalog(object):
             'length INTEGER, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON DELETE CASCADE)')
+            'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         self.curs.execute('CREATE TABLE trackwords('
             'trackword TEXT, recording TEXT, '
             'FOREIGN KEY(recording) REFERENCES recordings(id) '
-            'ON DELETE CASCADE)')
+            'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         self.curs.execute('CREATE TABLE discids ('
             'discid TEXT, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON DELETE CASCADE)')
+            'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         # Indexes for speed (it's all about performance...)
         self.curs.execute('create index word_index on words (word)')
