@@ -741,6 +741,65 @@ def TextViewEntry(parent, message, default=''):
     else:
         return None
 
+class DetailPane(gtk.HBox):
+    imgpx = 258
+    def __init__(self, catalog):
+        gtk.HBox.__init__(self, False, 0)
+        self.catalog = catalog
+
+        self.coverart = gtk.Image()
+        self.pack_start(self.coverart, expand=False, fill=False)
+
+        self.sw = gtk.ScrolledWindow()
+        self.sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+
+        self.tv = gtk.TreeView()
+        for i, (label, xalign, textWidth) in enumerate(
+            [('Title', 0, 40),
+            ('Length', 1.0, 2),
+            ]):
+            cell = gtk.CellRendererText()
+            cell.set_property('xalign', xalign)
+            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('width-chars', textWidth)
+            col = gtk.TreeViewColumn(label, cell)
+            col.add_attribute(cell, 'text', i+1)
+            col.set_resizable(True)
+            self.tv.append_column(col)
+
+        self.tv.show()
+        self.sw.add(self.tv)
+        self.sw.show()
+        self.pack_start(self.sw)
+
+    def update(self, releaseId):
+        self.coverart.hide()
+        self.coverart.set_from_file(self.catalog._getCoverArtPath(releaseId))
+        self.pixbuf = self.coverart.get_pixbuf()
+        resized = self.pixbuf.scale_simple(self.imgpx,self.imgpx,
+            gtk.gdk.INTERP_BILINEAR)
+        self.coverart.set_from_pixbuf(resized)
+        self.coverart.show()
+
+        releaseDict = self.catalog.getRelease(releaseId)
+        # make the list store
+        trackTreeStore = gtk.TreeStore(str, str, str)
+        for medium in releaseDict['medium-list']:
+            parent = trackTreeStore.append(None,
+                ('',
+                medium['format']+' '+medium['position'],
+                mbcat.catalog.recLengthAsString(
+                    mbcat.catalog.getMediumLen(medium)
+                    )))
+            for track in medium['track-list']:
+                trackTreeStore.append(parent,
+                    (track['recording']['id'],
+                    track['recording']['title'],
+                    mbcat.catalog.recLengthAsString(
+                        track['recording']['length'] \
+                        if 'length' in track['recording'] else None)))
+        self.tv.set_model(trackTreeStore)
+        self.tv.expand_all()
 
 class MBCatGtk:
     """
@@ -924,6 +983,8 @@ class MBCatGtk:
         self.menu_release_items_set_sensitive(True)
         model, it = treeview.get_selection().get_selected()
         relId = model.get_value(it, 0)
+        if self.detailpane.get_visible():
+            self.detailpane.update(relId)
         _log.info('Release '+relId+' selected')
 
     def on_unselect_all(self, treeview):
@@ -992,6 +1053,16 @@ class MBCatGtk:
                 self.catalog.getTrackWordCount(),
                 len(self.releaseList))
         self.statusbar.push(self.context_id, msg)
+
+    def toggleDetailPane(self, widget):
+        if widget.active:
+            self.detailpane.show()
+            self.updateDetailPane()
+        else:
+            self.detailpane.hide()
+
+    def updateDetailPane(self):
+        self.detailpane.update(self.getSelection())
 
     def selectFormat(self, action, current):
         text = self.formatNames[action.get_current_value()]
@@ -1329,6 +1400,8 @@ class MBCatGtk:
     def createMenuBar(self, widget):
         # Menu bar
         mb = gtk.MenuBar()
+        self.menu_release_items = []
+
         # Catalog (File) menu
         menu = gtk.Menu()
         menuitem = gtk.MenuItem("_Catalog")
@@ -1384,6 +1457,13 @@ class MBCatGtk:
         menuitem = gtk.MenuItem("_View")
         menuitem.set_submenu(menu)
 
+        ## Show Release Detail Pane
+        submenuitem = gtk.CheckMenuItem('Show Detail Pane')
+        submenuitem.set_active(False)
+        self.menu_release_items.append(submenuitem)
+        submenuitem.connect('activate', self.toggleDetailPane)
+        menu.append(submenuitem)
+
         ## Show Statusbar
         submenuitem = gtk.CheckMenuItem('Show Statusbar')
         submenuitem.set_active(True)
@@ -1423,7 +1503,7 @@ class MBCatGtk:
         menu = gtk.Menu()
         menuitem = gtk.MenuItem("_Release")
         menuitem.set_submenu(menu)
-        self.menu_release_items = [menuitem]
+        self.menu_release_items.append(menuitem)
 
         ## Add
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_ADD)
@@ -1594,6 +1674,7 @@ class MBCatGtk:
 
         mb.append(help)
 
+        mb.show_all()
         widget.pack_start(mb, False, False, 0)
 
     def cellArtist(self, column, cell, model, it, field):
@@ -1672,19 +1753,27 @@ class MBCatGtk:
 
         self.createMenuBar(vbox)
         self.createTreeView()
+        self.treeview.show()
+        self.scrolledwindow.show()
         vbox.pack_start(self.scrolledwindow, True, True, 0)
 
         self.statusbar = gtk.Statusbar()
         self.context_id = self.statusbar.get_context_id('PyGTK')
+        self.statusbar.show()
 
         # This packs the button into the window (a GTK container).
         vbox.pack_end(self.statusbar, False, False, 0)
+
+        # Release detail pane
+        self.detailpane = DetailPane(self.catalog)
+        vbox.pack_end(self.detailpane, False, False, 0)
 
         self.window.add(vbox)
 
         # The final step is to display this newly created widget.
         # and the window
-        self.window.show_all()
+        vbox.show()
+        self.window.show()
 
         self.openDatabase()
 
