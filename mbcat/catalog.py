@@ -1455,7 +1455,7 @@ def recLengthAsString(recLength):
         return '?:??'
     # convert milli-seconds to seconds
     length = float(recLength)/1000
-    return ('%d:%02d' % (length/60, length%60))
+    return ('%d:%02d' % (length/60, round(length%60)))
 
 def getMediumLen(medium):
     try:
