@@ -44,12 +44,12 @@ class ProgressDialog(threading.Thread):
         self.task.stop()
         self.quit()
 
-class LongTask(threading.Thread):
+class ThreadedTask(threading.Thread):
     """This does something that takes a while and keeps track of its own
     progress"""
     
     def __init__(self, denom):
-        super(LongTask, self).__init__()
+        super(ThreadedTask, self).__init__()
         self.denom = denom
         self.numer = 0
 
@@ -59,7 +59,6 @@ class LongTask(threading.Thread):
     def run(self):
         """Run method, this is the code that runs while thread is alive."""
 
-        #While the stopthread event isn't setted, the thread keeps going on
         while not self.stopthread.isSet():
             if self.numer > self.denom:
                 self.stopthread.set()
@@ -67,11 +66,29 @@ class LongTask(threading.Thread):
             time.sleep(1)
             self.numer += 1
 
-        self.stopthread.set()
+        self.stop()
 
     def stop(self):
         """Stop method, sets the event to terminate the thread's main loop"""
         self.stopthread.set()
+
+class MutexTask(ThreadedTask):
+    """This does something that takes a while and keeps track of its own
+    progress.
+    This version is mutually exclusive---only one can run at a time."""
+    one_running = threading.Event()
+
+    def __init__(self, *args):
+        super(MutexTask, self).__init__(*args)
+
+        if self.one_running.isSet():
+            raise Exception('one at a time, please')
+        self.one_running.set()
+
+    def stop(self):
+        """Stop method, sets the event to terminate the thread's main loop"""
+        super(MutexTask, self).stop()
+        self.one_running.clear()
 
 def main_quit(obj):
     """main_quit function, it stops the thread and the gtk's main loop"""
@@ -82,8 +99,10 @@ def main_quit(obj):
     gtk.main_quit()
 
 def run_long_task(widget):
-    t = ProgressDialog(LongTask(10))
-    t.start()
+    t = ProgressDialog(ThreadedTask(10)).start()
+
+def run_mutex_task(widget):
+    t = ProgressDialog(MutexTask(10)).start()
 
 window = gtk.Window()
 vbox = gtk.VBox()
@@ -91,6 +110,9 @@ label = gtk.Label('Hello, world!')
 vbox.pack_start(label)
 button = gtk.Button('Come on, do it!')
 button.connect('clicked', run_long_task)
+vbox.pack_start(button)
+button = gtk.Button('Easy with this one')
+button.connect('clicked', run_mutex_task)
 vbox.pack_start(button)
 window.add(vbox)
 window.connect('destroy', main_quit)
