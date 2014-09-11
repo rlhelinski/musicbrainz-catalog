@@ -1,5 +1,4 @@
 import threading
-from threading import Thread
 import random, time
 import gobject
 import gtk
@@ -49,13 +48,13 @@ class LongTask(threading.Thread):
     """This does something that takes a while and keeps track of its own
     progress"""
     
-    #Thread event, stops the thread if it is set.
-    stopthread = threading.Event()
-
     def __init__(self, denom):
         super(LongTask, self).__init__()
         self.denom = denom
         self.numer = 0
+
+        #Thread event, stops the thread if it is set.
+        self.stopthread = threading.Event()
 
     def run(self):
         """Run method, this is the code that runs while thread is alive."""
