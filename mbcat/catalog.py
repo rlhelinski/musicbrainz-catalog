@@ -275,6 +275,18 @@ class Catalog(object):
 
         yield False
 
+    def vacuum(self):
+        """Vacuum the SQLite3 database. Frees up unused space on disc."""
+        # Get our own connection and cursor for this thread
+        self._connect()
+        yield 'Vacuuming...'
+
+        try:
+            self.curs.execute('vacuum')
+        except sqlite3.OperationalError as e:
+            _log.error(str(e))
+        yield False
+
     def renameRelease(self, oldReleaseId, newReleaseId):
         # TODO this does not update purchases, checkout_events, checkin_events,
         # digital

@@ -945,6 +945,13 @@ class MBCatGtk:
 
         self.openDatabase(filename)
 
+    def menuCatalogVacuum(self, widget):
+        # Need a new Catalog object for this new thread
+        c = mbcat.catalog.Catalog(self.catalog.dbPath, self.catalog.cachePath)
+        th = mbcat.gtkpbar.TaskHandler(self.window,
+            c.vacuum())
+        th.start()
+
     def menuCatalogRebuild(self, widget):
         # Need a new Catalog object for this new thread
         c = mbcat.catalog.Catalog(self.catalog.dbPath, self.catalog.cachePath)
@@ -1430,6 +1437,11 @@ class MBCatGtk:
 
         # Check
         submenuitem = gtk.MenuItem('Check')
+        menu.append(submenuitem)
+
+        # Vacuum
+        submenuitem = gtk.MenuItem('Vacuum')
+        submenuitem.connect('activate', self.menuCatalogVacuum)
         menu.append(submenuitem)
 
         # Rebuild
