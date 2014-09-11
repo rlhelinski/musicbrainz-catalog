@@ -265,6 +265,7 @@ class Catalog(object):
                 pass
             yield True
 
+        # TODO execute vacuum command here
         self._createCacheTables()
 
         # Rebuild
