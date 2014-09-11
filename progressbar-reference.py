@@ -57,7 +57,9 @@ class ThreadedTask(threading.Thread):
         self.stopthread = threading.Event()
 
     def run(self):
-        """Run method, this is the code that runs while thread is alive."""
+        """Run method, this is the code that runs while thread is alive.
+        This is just an example. You can make your own by creating a class
+        that inherits this class and defining your own run() method."""
 
         while not self.stopthread.isSet():
             if self.numer > self.denom:
