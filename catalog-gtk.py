@@ -391,7 +391,7 @@ def ConfirmDialog(parent, message, type=gtk.MESSAGE_QUESTION):
     d.destroy()
     return (r == gtk.RESPONSE_OK)
 
-def TrackListDialog(parent, releaseDict):
+def TrackListDialog(parent, catalog, releaseId):
     """
     Display a dialog with a list of tracks for a release.
     Example:
@@ -424,20 +424,25 @@ def TrackListDialog(parent, releaseDict):
 
     # make the list store
     trackTreeStore = gtk.TreeStore(str, str, str)
-    for medium in releaseDict['medium-list']:
-        parent = trackTreeStore.append(None, 
+    for mediumId,position,format in catalog.curs.execute(
+            'select id,position,format from media '
+            'where release=? order by position',
+            (releaseId,)).fetchall():
+        parent = trackTreeStore.append(None,
             ('',
-            medium['format']+' '+medium['position'], 
+            format+' '+str(position),
             mbcat.catalog.recLengthAsString(
-                mbcat.catalog.getMediumLen(medium)
+                catalog.getMediumLen(mediumId)
                 )))
-        for track in medium['track-list']:
+        for recId,recLength,recPosition,title in catalog.curs.execute(
+                'select id,length,position,title from recordings '
+                'where medium=? order by position',
+                (mediumId,)).fetchall():
             trackTreeStore.append(parent,
-                (track['recording']['id'],
-                track['recording']['title'],
-                mbcat.catalog.recLengthAsString(
-                    track['recording']['length'] \
-                    if 'length' in track['recording'] else None)))
+                (recId,
+                title,
+                mbcat.catalog.recLengthAsString(recLength)
+                ))
     tv.set_model(trackTreeStore)
     tv.expand_all()
 
@@ -1179,7 +1184,7 @@ class MBCatGtk:
 
     def showTrackList(self, widget):
         releaseId = self.getSelection()
-        TrackListDialog(self.window, self.catalog.getRelease(releaseId))
+        TrackListDialog(self.window, self.catalog, releaseId)
 
     def checkOut(self, widget):
         releaseId = self.getSelection()

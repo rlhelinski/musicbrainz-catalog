@@ -23,6 +23,7 @@ _log = logging.getLogger("mbcat")
 import zlib
 import sqlite3
 import itertools
+from uuid import uuid4
 
 # Have to give an identity for musicbrainzngs
 __version__ = '0.3'
@@ -151,6 +152,9 @@ class Catalog(object):
         self.conn.commit()
 
     def _createMetaTables(self):
+        """Add the user (meta) data tables to the database.
+        This method does not commit its changes."""
+
         self.curs.execute('CREATE TABLE added_dates('
             'date FLOAT, '
             'release TEXT, '
@@ -206,12 +210,22 @@ class Catalog(object):
                 'FOREIGN KEY(release) REFERENCES releases(id) '
                 'ON DELETE CASCADE ON UPDATE CASCADE)')
 
-        self.curs.execute('CREATE TABLE recordings ('
+        self.curs.execute('CREATE TABLE media ('
             'id TEXT, '
-            'title TEXT, '
-            'length INTEGER, '
+            'position INTEGER, '
+            'format TEXT, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
+            'ON DELETE CASCADE ON UPDATE CASCADE)')
+
+        self.curs.execute('CREATE TABLE recordings ('
+            'id TEXT, '
+            'length INTEGER, '
+            'number INTEGER, '
+            'position INTEGER, '
+            'title TEXT, '
+            'medium TEXT, '
+            'FOREIGN KEY(medium) REFERENCES media(id) '
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         self.curs.execute('CREATE TABLE trackwords('
@@ -220,9 +234,10 @@ class Catalog(object):
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         self.curs.execute('CREATE TABLE discids ('
-            'discid TEXT, '
-            'release TEXT, '
-            'FOREIGN KEY(release) REFERENCES releases(id) '
+            'id TEXT, '
+            'sectors INTEGER, '
+            'medium TEXT, '
+            'FOREIGN KEY(medium) REFERENCES media(id) '
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         # Indexes for speed (it's all about performance...)
@@ -249,7 +264,7 @@ class Catalog(object):
         yield 'Dropping tables...'
         yield 15
 
-        for tab in ['words', 'trackwords', 'recordings', 'discids']:
+        for tab in ['words', 'trackwords', 'media', 'recordings', 'discids']:
             # Note: the added_dates, listened_dates, and purchases tables are
             # not transient.
             try:
@@ -484,6 +499,7 @@ class Catalog(object):
         return words
 
     @staticmethod
+    @mbcat.utils.deprecated
     def getReleaseTracks(rel):
         # Format of track (recording) title list
         # r['medium-list'][0]['track-list'][0]['recording']['title']
@@ -501,35 +517,62 @@ class Catalog(object):
         Digest all of the words in the track titles of a release.
         """
 
-        for track in mbcat.Catalog.getReleaseTracks(rel):
-            if 'recording' in track and 'title' in track['recording']:
-                # Add recording and reference the release
-                self.curs.execute('insert into recordings '
-                    '(id, title, length, release) values (?,?,?,?)', 
-                    (track['recording']['id'], track['recording']['title'],
-                    track['recording']['length'] \
-                    if 'length' in track['recording'] else None, rel['id']))
-                for word in mbcat.Catalog.processWords('title',
-                    track['recording']):
-                    # Reference each word to this recording
-                    self.curs.execute('insert into trackwords '
-                        '(trackword, recording) values (?,?)', 
-                        (word, track['recording']['id']))
+        # uuid4() returns a random UUID. Need to make sure this row is deleted
+        # before this row needs to be added again.
+        for medium in rel['medium-list']:
+            medium_id = str(uuid4())
+            self.curs.execute('insert into media'
+                '(id,position,format,release) values (?,?,?,?)',
+                (medium_id,
+                medium['position'],
+                medium['format'] if 'format' in medium else '',
+                rel['id']))
+            for disc in medium['disc-list']:
+                self.curs.execute('insert into discids (id, sectors, medium) '
+                    'values (?,?,?)',
+                    (disc['id'], disc['sectors'], medium_id))
+            for track in medium['track-list']:
+                if 'recording' in track:
+                    # Add recording and reference the release
+                    self.curs.execute('insert into recordings '
+                        '(id, title, length, medium) values (?,?,?,?)',
+                        (   track['recording']['id'],
+                            track['recording']['title'],
+                            track['recording']['length'] \
+                            if 'length' in track['recording'] else None,
+                            medium_id)
+                        )
+                    if 'title' in track['recording']:
+                        for word in mbcat.Catalog.processWords('title',
+                            track['recording']):
+                            # Reference each word to this recording
+                            self.curs.execute('insert into trackwords '
+                                '(trackword, recording) values (?,?)',
+                                (word, track['recording']['id']))
 
     def unDigestTrackWords(self, relId):
         """
         Undo what digestTrackWords() does.
         """
         # Query for recordings for this release ID
-        self.curs.execute('select id from recordings where release=?', 
-            (relId,))
-        # Fetch the results
-        for recordingId in self.curs:
-            self.curs.execute('delete from trackwords where recording=?', 
-                (recordingId[0],))
-        # Then, delete the rows in the recordings table referencing this
+        self.curs.execute('select id from media where release=?', (relId,))
+        media = self.curs.fetchall()
+        for mediumId in media:
+            self.curs.execute('delete from discids where medium=?',
+                (mediumId,))
+            self.curs.execute('select id from recordings where medium=?',
+                (mediumId,))
+            # Iterate through the results
+            for recordingId in self.curs:
+                self.curs.execute('delete from trackwords where recording=?',
+                    (recordingId[0],))
+            # Then, delete the rows in the recordings table referencing this
+            # medium ID
+            self.curs.execute( 'delete from recordings where media=?',
+                (mediumId,))
+        # Then, delete the rows in the media table referencing this
         # release ID
-        self.curs.execute('delete from recordings where release=?', (relId,))
+        self.curs.execute('delete from media where release=?', (relId,))
 
     @mbcat.utils.deprecated
     def mapWordsToRelease(self, words, releaseId):
@@ -573,8 +616,15 @@ class Catalog(object):
         return self._search(query, table='trackwords', keycolumn='trackword')
 
     def recordingGetReleases(self, recordingId):
+# need a join?
+#> select discids.discid, releases.id from discids inner join releases on discids.release=releases.id;
         self.curs.execute(
-            'select release from recordings where id = ?',
+            #'select medium from recordings where id = ?',
+            'select releases.id from media '
+            'inner join releases on media.release=releases.id '
+            'inner join recordings on recordings.medium=media.id '
+            'where recordings.id=?',
+#select releases.id from media inner join releases on media.release=releases.id inner join recordings on recordings.medium=media.id where recordings.id='a8247cc4-2cce-408a-bbdb-78318a7a459f';
             (recordingId,))
         return itertools.chain.from_iterable(self.curs)
 
@@ -946,11 +996,11 @@ class Catalog(object):
         self.digestTrackWords(relDict['release'])
 
         # Update discids -> (discid, releases)
-        for medium in relDict['release']['medium-list']:
-            for disc in medium['disc-list']:
-                self.curs.execute('insert into discids '
-                    '(discid, release) values (?,?)',
-                    (disc['id'], releaseId))
+        #for medium in relDict['release']['medium-list']:
+        #    for disc in medium['disc-list']:
+        #        self.curs.execute('insert into discids '
+        #            '(id, release) values (?,?)',
+        #            (disc['id'], releaseId))
 
     def unDigestRelease(self, releaseId, delete=True):
         """Remove all references to a release from the data structures.
@@ -974,8 +1024,8 @@ class Catalog(object):
         # recordings -> (recording, releases)
         self.unDigestTrackWords(releaseId)
 
-        # Update discids -> (discid, releases)
-        self.curs.execute('delete from discids where release=?', (releaseId,))
+        # Update discids -> (id, media)
+        #self.curs.execute('delete from discids where release=?', (releaseId,))
 
     @staticmethod
     def fmtTitle(relDict):
@@ -1394,6 +1444,11 @@ class Catalog(object):
             (releaseId,))
         cols = self.curs.fetchone()
         return cols[0] if cols else None
+
+    def getMediumLen(self, mediumId):
+        self.curs.execute('select sum(length) from recordings where medium=?',
+            (mediumId,))
+        return self.curs.fetchone()[0]
 
 def recLengthAsString(recLength):
     if not recLength:
