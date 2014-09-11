@@ -56,6 +56,7 @@ class TaskHandler(threading.Thread):
             initStatusLabel='Doing something...',
             processLabel='Processing'):
         super(TaskHandler, self).__init__()
+        self.stopthread.clear()
         self.task_generator = task_generator
 
         gtk.gdk.threads_enter()
