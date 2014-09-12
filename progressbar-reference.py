@@ -139,7 +139,20 @@ def main_quit(obj):
     global th
     #Stopping the thread and the gtk's main loop
     #th.stop()
+    # TODO keep a list of references to the threads and tell them all to stop here
     gtk.main_quit()
+
+def main_delete(self, widget, event, data=None):
+    # If you return FALSE in the "delete_event" signal handler,
+    # GTK will emit the "destroy" signal. Returning TRUE means
+    # you don't want the window to be destroyed.
+    # This is useful for popping up 'are you sure you want to quit?'
+    # type dialogs.
+    print ("delete event occurred")
+
+    # Change FALSE to TRUE and the main window will not be destroyed
+    # with a "delete_event".
+    return False
 
 def run_long_task(widget):
     t = ProgressDialog(ThreadedTask(10)).start()
@@ -167,6 +180,7 @@ button.connect('clicked', run_pulse_task)
 vbox.pack_start(button)
 window.add(vbox)
 window.connect('destroy', main_quit)
+window.connect('delete_event', main_delete)
 window.show_all()
 
 # TODO show this result in a Label
