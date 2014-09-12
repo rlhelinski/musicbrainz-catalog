@@ -557,7 +557,7 @@ class Catalog(object):
         # Query for recordings for this release ID
         self.curs.execute('select id from media where release=?', (relId,))
         media = self.curs.fetchall()
-        for mediumId in media:
+        for (mediumId,) in media:
             self.curs.execute('delete from discids where medium=?',
                 (mediumId,))
             self.curs.execute('select id from recordings where medium=?',
@@ -568,7 +568,7 @@ class Catalog(object):
                     (recordingId[0],))
             # Then, delete the rows in the recordings table referencing this
             # medium ID
-            self.curs.execute( 'delete from recordings where media=?',
+            self.curs.execute( 'delete from recordings where medium=?',
                 (mediumId,))
         # Then, delete the rows in the media table referencing this
         # release ID
