@@ -1390,6 +1390,8 @@ class MBCatGtk:
             if result.get("disc"):
                 _log.info('Showing query results for disc ID "%s"'\
                     %result['disc']['id'])
+                # TODO pass in submission URL in disc.submission_url here
+                # and add button to dialog to bring up that URL
                 QueryResultsDialog(self, self.catalog, result['disc'])
             elif result.get("cdstub"):
                 for label, key in [
