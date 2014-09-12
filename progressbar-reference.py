@@ -38,17 +38,24 @@ class ProgressDialog(threading.Thread):
         """Run method, this is the code that runs while thread is alive."""
         self.task.start()
 
+        tstart = time.time()
         while not self.task.stopthread.isSet():
+            fract = float(self.task.numer)/self.task.denom
+            seconds_elapsed = time.time() - tstart
+            self.progressbar.set_fraction(fract)
             gtk.gdk.threads_enter()
-            self.progressbar.set_fraction(
-                float(self.task.numer)/self.task.denom)
-            self.progressbar.set_text(str(time.time()))
+            if fract != 0:
+                self.progressbar.set_text('%0.3f Remaining' % (
+                    seconds_elapsed / fract - seconds_elapsed
+                    ))
             gtk.gdk.threads_leave()
             time.sleep(0.1)
         self.quit()
 
     def quit(self):
+        gtk.gdk.threads_enter()
         self.pbarwindow.destroy()
+        gtk.gdk.threads_leave()
 
     def stop(self):
         """Stop method, sets the event to terminate the thread's main loop"""
@@ -64,7 +71,7 @@ class PulseDialog(ProgressDialog):
         while self.task.isAlive():
             gtk.gdk.threads_enter()
             self.progressbar.pulse()
-            self.progressbar.set_text(str(time.time() - tstart))
+            self.progressbar.set_text('%0.3f Elapsed' % (time.time() - tstart))
             gtk.gdk.threads_leave()
             time.sleep(0.1)
         self.quit()
