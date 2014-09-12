@@ -1170,6 +1170,8 @@ class MBCatGtk:
     def getCoverArt(self, widget):
         releaseId = self.getSelection()
         self.catalog.getCoverArt(releaseId)
+        # refresh the detail pane if it is active
+        self.updateDetailPane()
 
     def refreshRelease(self, widget):
         row = self.getSelectedRow()
