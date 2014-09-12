@@ -1447,7 +1447,8 @@ class MBCatGtk:
         menu.append(submenuitem)
 
         # Vacuum
-        submenuitem = gtk.MenuItem('Vacuum')
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_CLEAR)
+        submenuitem.get_children()[0].set_label('Vacuum')
         submenuitem.connect('activate', self.menuCatalogVacuum)
         menu.append(submenuitem)
 
