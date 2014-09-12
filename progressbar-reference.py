@@ -26,13 +26,11 @@ class ProgressDialog(threading.Thread):
         super(ProgressDialog, self).__init__()
         self.task = task
 
-        gtk.gdk.threads_enter()
         self.pbarwindow = gtk.Window()
         self.pbarwindow.set_transient_for(window)
         self.progressbar = gtk.ProgressBar()
         self.pbarwindow.add(self.progressbar)
         self.pbarwindow.show_all()
-        gtk.gdk.threads_leave()
 
     def run(self):
         """Run method, this is the code that runs while thread is alive."""
@@ -43,7 +41,6 @@ class ProgressDialog(threading.Thread):
             fract = float(self.task.numer)/self.task.denom
             seconds_elapsed = time.time() - tstart
 
-            #gtk.gdk.threads_enter()
             gobject.idle_add(self.progressbar.set_fraction, fract)
             if fract != 0:
                 #self.progressbar.set_text('%0.3f Remaining' % (
@@ -53,14 +50,11 @@ class ProgressDialog(threading.Thread):
                     '%0.3f Remaining' % (
                     seconds_elapsed / fract - seconds_elapsed
                     ))
-            #gtk.gdk.threads_leave()
             time.sleep(0.1)
         self.quit()
 
     def quit(self):
-        gtk.gdk.threads_enter()
         self.pbarwindow.destroy()
-        gtk.gdk.threads_leave()
 
     def stop(self):
         """Stop method, sets the event to terminate the thread's main loop"""
@@ -74,11 +68,9 @@ class PulseDialog(ProgressDialog):
 
         tstart = time.time()
         while self.task.isAlive():
-            #gtk.gdk.threads_enter()
             gobject.idle_add(self.progressbar.pulse)
             gobject.idle_add(self.progressbar.set_text,
                 '%0.3f Elapsed' % (time.time() - tstart))
-            #gtk.gdk.threads_leave()
             time.sleep(0.1)
         self.quit()
 
