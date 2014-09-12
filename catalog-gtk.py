@@ -470,29 +470,19 @@ def GroupQueryResultsDialog(parent, catalog, queryResult):
     d.set_size_request(400, 300)
     tv = gtk.TreeView()
 
-    authorCell = gtk.CellRendererText()
-    authorCell.set_property('xalign', 0)
-    authorCell.set_property('ellipsize', pango.ELLIPSIZE_END)
-    authorCell.set_property('width-chars', 20)
-    authorCol = gtk.TreeViewColumn('Artist', authorCell)
-    authorCol.add_attribute(authorCell, 'text', 1)
-    authorCol.set_resizable(True)
-    tv.append_column(authorCol)
-
-    titleCell = gtk.CellRendererText()
-    titleCell.set_property('xalign', 0)
-    titleCell.set_property('ellipsize', pango.ELLIPSIZE_END)
-    titleCell.set_property('width-chars', 30)
-    titleCol = gtk.TreeViewColumn('Title', titleCell)
-    titleCol.add_attribute(titleCell, 'text', 2)
-    titleCol.set_resizable(True)
-    tv.append_column(titleCol)
-
-    lenCell = gtk.CellRendererText()
-    lenCell.set_property('xalign', 1.0)
-    lenCol = gtk.TreeViewColumn('Releases', lenCell)
-    lenCol.add_attribute(lenCell, 'text', 3)
-    tv.append_column(lenCol)
+    for i, (label, textWidth, xalign) in enumerate([
+            ('Artist', 20, 0),
+            ('Title', 27, 0),
+            ('Releases', 3, 1.0),
+        ]):
+        cell = gtk.CellRendererText()
+        cell.set_property('xalign', xalign)
+        cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+        cell.set_property('width-chars', textWidth)
+        col = gtk.TreeViewColumn(label, cell)
+        col.add_attribute(cell, 'text', i+1)
+        col.set_resizable(True)
+        tv.append_column(col)
 
     # make the list store
     resultListStore = gtk.ListStore(str, str, str, str)
