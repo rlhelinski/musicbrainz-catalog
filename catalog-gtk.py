@@ -474,7 +474,7 @@ def GroupQueryResultsDialog(parent, catalog, queryResult):
     authorCell.set_property('xalign', 0)
     authorCell.set_property('ellipsize', pango.ELLIPSIZE_END)
     authorCell.set_property('width-chars', 20)
-    authorCol = gtk.TreeViewColumn('Title', authorCell)
+    authorCol = gtk.TreeViewColumn('Artist', authorCell)
     authorCol.add_attribute(authorCell, 'text', 1)
     authorCol.set_resizable(True)
     tv.append_column(authorCol)
