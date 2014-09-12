@@ -1534,7 +1534,6 @@ class MBCatGtk:
         menu = gtk.Menu()
         menuitem = gtk.MenuItem("_Release")
         menuitem.set_submenu(menu)
-        self.menu_release_items.append(menuitem)
 
         ## Add
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_ADD)
@@ -1544,7 +1543,6 @@ class MBCatGtk:
             gtk.ACCEL_VISIBLE)
         submenuitem.connect('activate', self.addRelease)
         menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
 
         ## Delete
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_REMOVE)
