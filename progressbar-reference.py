@@ -41,16 +41,13 @@ class ProgressDialog(threading.Thread):
             fract = float(self.task.numer)/self.task.denom
             seconds_elapsed = time.time() - tstart
 
+            text = '%0.3f Remaining' % (
+                seconds_elapsed / fract - seconds_elapsed
+                ) if fract != 0 else '?.?? Remaining'
             gobject.idle_add(self.progressbar.set_fraction, fract)
-            if fract != 0:
-                #self.progressbar.set_text('%0.3f Remaining' % (
-                #    seconds_elapsed / fract - seconds_elapsed
-                #    ))
-                gobject.idle_add(self.progressbar.set_text,
-                    '%0.3f Remaining' % (
-                    seconds_elapsed / fract - seconds_elapsed
-                    ))
+            gobject.idle_add(self.progressbar.set_text, text)
             time.sleep(0.1)
+
         self.quit()
 
     def quit(self):
