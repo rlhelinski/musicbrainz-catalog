@@ -42,13 +42,18 @@ class ProgressDialog(threading.Thread):
         while not self.task.stopthread.isSet():
             fract = float(self.task.numer)/self.task.denom
             seconds_elapsed = time.time() - tstart
-            self.progressbar.set_fraction(fract)
-            gtk.gdk.threads_enter()
+
+            #gtk.gdk.threads_enter()
+            gobject.idle_add(self.progressbar.set_fraction, fract)
             if fract != 0:
-                self.progressbar.set_text('%0.3f Remaining' % (
+                #self.progressbar.set_text('%0.3f Remaining' % (
+                #    seconds_elapsed / fract - seconds_elapsed
+                #    ))
+                gobject.idle_add(self.progressbar.set_text,
+                    '%0.3f Remaining' % (
                     seconds_elapsed / fract - seconds_elapsed
                     ))
-            gtk.gdk.threads_leave()
+            #gtk.gdk.threads_leave()
             time.sleep(0.1)
         self.quit()
 
@@ -69,10 +74,11 @@ class PulseDialog(ProgressDialog):
 
         tstart = time.time()
         while self.task.isAlive():
-            gtk.gdk.threads_enter()
-            self.progressbar.pulse()
-            self.progressbar.set_text('%0.3f Elapsed' % (time.time() - tstart))
-            gtk.gdk.threads_leave()
+            #gtk.gdk.threads_enter()
+            gobject.idle_add(self.progressbar.pulse)
+            gobject.idle_add(self.progressbar.set_text,
+                '%0.3f Elapsed' % (time.time() - tstart))
+            #gtk.gdk.threads_leave()
             time.sleep(0.1)
         self.quit()
 
