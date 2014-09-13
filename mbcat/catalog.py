@@ -89,12 +89,9 @@ class Catalog(object):
         _log.info('Using \'%s\' for the catalog database' % self.dbPath)
         _log.info('Using \'%s\' for the file cache path' % self.cachePath)
 
-        # should we connect here, once and for all, or should we make temporary
-        # connections to sqlite3?
-        if not os.path.isfile(self.dbPath):
+        # _connect() is called by _checkTables()
+        if not os.path.isfile(self.dbPath) or not self._checkTables():
             self._createTables()
-
-        self._connect()
 
     def _connect(self):
         # Open and retain a connection to the database
@@ -116,6 +113,15 @@ class Catalog(object):
         # this connection should be closed when this object is deleted
         return sqlite3.connect(self.dbPath,
                 detect_types=sqlite3.PARSE_DECLTYPES)
+
+    def _checkTables(self):
+        """Connect to and check that the basic tables exist in the database."""
+        self._connect()
+
+        self.curs.execute('select name from sqlite_master where type="table"')
+        tables = itertools.chain.from_iterable(self.curs)
+
+        return 'releases' in tables
 
     def _createTables(self):
         """Create the SQL tables for the catalog. Database is assumed empty."""
