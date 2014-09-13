@@ -21,7 +21,7 @@ def much_fun(arg):
 class ProgressDialog(threading.Thread):
     """This does something that takes a while and keeps track of its own
     progress"""
-    
+
     def __init__(self, task):
         super(ProgressDialog, self).__init__()
         self.task = task
@@ -142,7 +142,7 @@ def main_quit(obj):
     # TODO keep a list of references to the threads and tell them all to stop here
     gtk.main_quit()
 
-def main_delete(self, widget, event, data=None):
+def main_delete(widget, event, data=None):
     # If you return FALSE in the "delete_event" signal handler,
     # GTK will emit the "destroy" signal. Returning TRUE means
     # you don't want the window to be destroyed.
