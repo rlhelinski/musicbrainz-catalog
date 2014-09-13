@@ -685,8 +685,7 @@ class QueryResultsDialog:
         self.parent.setSelectedRow(self.parent.getReleaseRow(entry))
 
     def on_row_activate(self, treeview, path, column):
-        model, it = treeview.get_selection().get_selected()
-        relId = model.get_value(it, 0)
+        relId = self.get_selection()
         webbrowser.open(self.catalog.releaseUrl + relId)
 
     def on_row_select(self, treeview):
