@@ -121,10 +121,7 @@ def ReleaseSelectDialog(parent,
         catalog,
         message='Choose a release',
         releaseIdList=[],
-        releaseDictList=[]
         ):
-    # TODO releaseDictList argument should support metadata returned from a
-    # webservice query
     d = gtk.MessageDialog(parent,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
             gtk.MESSAGE_QUESTION,
@@ -519,10 +516,8 @@ class QueryResultsDialog:
         parent,
         catalog,
         queryResult,
-        message='Release results',
+        message='Release Results',
         ):
-        # TODO releaseDictList argument should support metadata returned from a
-        # webservice query
         self.window = gtk.Window()
         self.window.set_transient_for(parent.window)
         self.window.set_destroy_with_parent(True)
@@ -1704,11 +1699,6 @@ class MBCatGtk:
 
         mb.show_all()
         widget.pack_start(mb, False, False, 0)
-
-    def cellArtist(self, column, cell, model, it, field):
-        row = model.get_value(it, 0)
-        release = self.catalog.getRelease(model[0])
-        cell.set_property('text', self.fmtArtist(release))
 
     def makeListStore(self):
         self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str, str, str)
