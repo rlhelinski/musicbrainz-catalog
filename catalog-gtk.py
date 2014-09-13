@@ -16,6 +16,7 @@ import musicbrainzngs as mb
 import argparse
 import time
 import webbrowser
+import sqlite3
 
 # Initialize GTK's threading engine
 gobject.threads_init()
@@ -871,7 +872,7 @@ class MBCatGtk:
                 cachePath=self.catalog.cachePath)
         try:
             self.makeListStore()
-        except OperationalError as e:
+        except sqlite3.OperationalError as e:
             # This can happen if the database is using an old schema
             _log.error(e)
             _log.info('Trying to rebuild cache tables...')

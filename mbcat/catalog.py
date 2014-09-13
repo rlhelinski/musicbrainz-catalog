@@ -85,13 +85,13 @@ class Catalog(object):
 
         self.prefs = mbcat.userprefs.PrefManager()
 
+        _log.info('Using \'%s\' for the catalog database' % self.dbPath)
+        _log.info('Using \'%s\' for the file cache path' % self.cachePath)
+
         # should we connect here, once and for all, or should we make temporary
         # connections to sqlite3?
         if not os.path.isfile(self.dbPath):
             self._createTables()
-
-        _log.info('Using \'%s\' for the catalog database' % self.dbPath)
-        _log.info('Using \'%s\' for the file cache path' % self.cachePath)
 
         self._connect()
 
@@ -118,6 +118,8 @@ class Catalog(object):
 
     def _createTables(self):
         """Create the SQL tables for the catalog. Database is assumed empty."""
+        self._connect()
+
         # TODO maybe store the metadata dict from musicbrainz instead of the XML?
         self.curs.execute("CREATE TABLE releases("
             "id TEXT PRIMARY KEY, "
