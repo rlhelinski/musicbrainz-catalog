@@ -841,23 +841,7 @@ class DetailPane(gtk.HBox):
             pass
         self.coverart.show()
 
-        releaseDict = self.catalog.getRelease(releaseId)
-        # make the list store
-        trackTreeStore = gtk.TreeStore(str, str, str)
-        for medium in releaseDict['medium-list']:
-            parent = trackTreeStore.append(None,
-                ('',
-                medium['format']+' '+medium['position'],
-                mbcat.catalog.recLengthAsString(
-                    mbcat.catalog.getMediumLen(medium)
-                    )))
-            for track in medium['track-list']:
-                trackTreeStore.append(parent,
-                    (track['recording']['id'],
-                    track['recording']['title'],
-                    mbcat.catalog.recLengthAsString(
-                        track['recording']['length'] \
-                        if 'length' in track['recording'] else None)))
+        trackTreeStore = makeTrackTreeStore(self.catalog, releaseId)
         self.tv.set_model(trackTreeStore)
         self.tv.expand_all()
 
