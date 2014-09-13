@@ -49,6 +49,7 @@ class Catalog(object):
     artistUrl = mbUrl+'artist/'
     labelUrl = mbUrl+'label/'
     releaseUrl = mbUrl+'release/'
+    groupUrl = mbUrl+'release-group/'
 
     zipReleaseRoot = 'release-id'
 
