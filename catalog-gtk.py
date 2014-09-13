@@ -563,10 +563,10 @@ class GroupQueryResultsDialog:
         webbrowser.open(self.catalog.groupUrl + relId)
 
     def on_row_select(self, treeview):
-        model, it = treeview.get_selection().get_selected()
-        relId = model.get_value(it, 0)
-        self.selInfo.set_text(relId)
-        _log.info('Release '+relId+' selected')
+        relId = self.get_selection()
+        if relId:
+            self.selInfo.set_text(relId)
+            _log.info('Release '+relId+' selected')
 
     def on_unselect_all(self, treeview):
         self.selInfo.set_text('')
@@ -667,7 +667,7 @@ class QueryResultsDialog:
 
     def add_release(self, widget, data=None):
         entry = self.get_selection()
-        # TODO this procedure needs to be part of the Catalog class?
+
         if entry in self.catalog:
             ErrorDialog(self.window, 'Release "%s" already exists' % entry)
             return
@@ -677,10 +677,7 @@ class QueryResultsDialog:
             ErrorDialog(self.window, str(e) + ". Bad release ID?")
             return
 
-        _log.info("Added '%s'" % self.catalog.getReleaseTitle(entry))
-
-        # TODO clean this up, too many references to parent, need a method
-        self.catalog.getCoverArt(entry)
+        # TODO clean this up, too many references to parent, need a method?
         self.parent.makeListStore()
         self.parent.setSelectedRow(self.parent.getReleaseRow(entry))
 
@@ -1139,7 +1136,7 @@ class MBCatGtk:
         entry = TextEntry(self.window, 'Enter Release ID')
         if not entry:
             return
-        # TODO this procedure needs to be part of the Catalog class?
+
         if entry in self.catalog:
             ErrorDialog(self.window, 'Release already exists')
             return
@@ -1149,9 +1146,6 @@ class MBCatGtk:
             ErrorDialog(self.window, str(e) + ". Bad release ID?")
             return
 
-        _log.info("Added '%s'" % self.catalog.getRelease(entry)['title'])
-
-        self.catalog.getCoverArt(entry)
         self.makeListStore()
         self.setSelectedRow(self.getReleaseRow(entry))
 
