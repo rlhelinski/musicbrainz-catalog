@@ -462,13 +462,13 @@ class GroupQueryResultsDialog:
     Display a dialog with a list of release groups for a query result.
     """
     def __init__(self,
-            parent,
-            catalog,
+            parentWindow,
+            app,
             queryResult,
             message='Release Group Results',
             ):
         self.window = gtk.Window()
-        self.window.set_transient_for(parent)
+        self.window.set_transient_for(parentWindow)
         self.window.set_destroy_with_parent(True)
         self.window.set_resizable(True)
         self.window.set_border_width(10)
@@ -481,8 +481,8 @@ class GroupQueryResultsDialog:
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 
         # Keep reference to catalog for later
-        self.catalog = catalog
-        self.parent = parent
+        self.app = app
+        self.parentWindow = parentWindow
         # TODO up to this point, this is QueryResultsDialog, verbatim
 
         self.tv = gtk.TreeView()
@@ -551,7 +551,7 @@ class GroupQueryResultsDialog:
         release_group_selected = self.get_selection()
 
         results = mb.search_releases(rgid=release_group_selected)
-        QueryResultsDialog(self, self.catalog, results)
+        QueryResultsDialog(self.window, self.app, results)
 
     def on_row_activate(self, treeview, path, column):
         # TODO not sure what this should do
@@ -583,13 +583,13 @@ class QueryResultsDialog:
     Allow the user to add any of these releases.
     """
     def __init__(self,
-        parent,
-        catalog,
+        parentWindow,
+        app,
         queryResult,
         message='Release Results',
         ):
         self.window = gtk.Window()
-        self.window.set_transient_for(parent.window)
+        self.window.set_transient_for(parentWindow)
         self.window.set_destroy_with_parent(True)
         self.window.set_resizable(True)
         self.window.set_border_width(10)
@@ -600,8 +600,8 @@ class QueryResultsDialog:
         self.window.set_size_request(400, 300)
 
         # Keep reference to catalog for later
-        self.catalog = catalog
-        self.parent = parent
+        self.app = app
+        self.parentWindow = parentWindow
 
         self.tv = gtk.TreeView()
         for i, (label, textWidth) in enumerate(
@@ -666,30 +666,17 @@ class QueryResultsDialog:
         return model.get_value(it, 0) if it else None
 
     def add_release(self, widget, data=None):
-        entry = self.get_selection()
-
-        if entry in self.catalog:
-            ErrorDialog(self.window, 'Release "%s" already exists' % entry)
-            return
-        try:
-            self.catalog.addRelease(entry)
-        except mb.ResponseError as e:
-            ErrorDialog(self.window, str(e) + ". Bad release ID?")
-            return
-
-        # TODO clean this up, too many references to parent, need a method?
-        self.parent.makeListStore()
-        self.parent.setSelectedRow(self.parent.getReleaseRow(entry))
+        self.app._addRelease(self.get_selection(), self.window)
 
     def on_row_activate(self, treeview, path, column):
         relId = self.get_selection()
-        webbrowser.open(self.catalog.releaseUrl + relId)
+        webbrowser.open(mbcat.catalog.releaseUrl + relId)
 
     def on_row_select(self, treeview):
-        model, it = treeview.get_selection().get_selected()
-        relId = model.get_value(it, 0)
-        self.selInfo.set_text(relId)
-        _log.info('Release '+relId+' selected')
+        relId = self.get_selection()
+        if relId:
+            self.selInfo.set_text(relId)
+            _log.info('Release '+relId+' selected')
 
     def on_unselect_all(self, treeview):
         self.selInfo.set_text('')
@@ -1132,22 +1119,23 @@ class MBCatGtk:
         if row:
             self.setSelectedRow(row)
 
-    def addRelease(self, widget):
-        entry = TextEntry(self.window, 'Enter Release ID')
-        if not entry:
-            return
-
-        if entry in self.catalog:
-            ErrorDialog(self.window, 'Release already exists')
+    def _addRelease(self, releaseId, parentWindow):
+        if releaseId in self.catalog:
+            ErrorDialog(parentWindow, 'Release already exists')
             return
         try:
-            self.catalog.addRelease(entry)
+            self.catalog.addRelease(releaseId)
         except mb.ResponseError as e:
-            ErrorDialog(self.window, str(e) + ". Bad release ID?")
+            ErrorDialog(parentWindow, str(e) + ". Bad release ID?")
             return
 
         self.makeListStore()
-        self.setSelectedRow(self.getReleaseRow(entry))
+        self.setSelectedRow(self.getReleaseRow(releaseId))
+
+    def addRelease(self, widget):
+        entry = TextEntry(self.window, 'Enter Release ID')
+        if entry:
+            self._addRelease(entry, self.window)
 
     def deleteRelease(self, widget):
         releaseId = self.getSelection()
