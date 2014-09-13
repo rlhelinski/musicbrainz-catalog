@@ -476,6 +476,8 @@ class GroupQueryResultsDialog:
         self.window.set_title(message)
         self.window.set_size_request(400, 300)
 
+        self.active_on_row_selected = []
+
         vbox = gtk.VBox(False, 10)
         sw = gtk.ScrolledWindow()
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -527,10 +529,12 @@ class GroupQueryResultsDialog:
         btn = gtk.Button('Get Releases')
         btn.connect('clicked', self.get_releases)
         hbox.pack_end(btn, expand=False, fill=False)
+        self.active_on_row_selected.append(btn)
 
         btn = gtk.Button('Browse Group')
         btn.connect('clicked', self.browse_group)
         hbox.pack_end(btn, expand=False, fill=False)
+        self.active_on_row_selected.append(btn)
 
         vbox.pack_end(hbox, expand=False, fill=False)
 
@@ -542,6 +546,7 @@ class GroupQueryResultsDialog:
         self.window.set_title(message)
         self.window.show_all()
 
+        self.row_widgets_set_sensitive(False)
 
     def get_selection(self):
         model, it = self.tv.get_selection().get_selected()
@@ -562,14 +567,20 @@ class GroupQueryResultsDialog:
         relId = self.get_selection()
         webbrowser.open(self.catalog.groupUrl + relId)
 
+    def row_widgets_set_sensitive(self, sens=True):
+        for widget in self.active_on_row_selected:
+            widget.set_sensitive(sens)
+
     def on_row_select(self, treeview):
         relId = self.get_selection()
         if relId:
             self.selInfo.set_text(relId)
             _log.info('Release '+relId+' selected')
+        self.row_widgets_set_sensitive(True)
 
     def on_unselect_all(self, treeview):
         self.selInfo.set_text('')
+        self.row_widgets_set_sensitive(False)
 
     def on_destroy(self, widget, data=None):
         self.window.destroy()
@@ -598,6 +609,8 @@ class QueryResultsDialog:
         sw = gtk.ScrolledWindow()
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.window.set_size_request(400, 300)
+
+        self.active_on_row_selected = []
 
         # Keep reference to catalog for later
         self.app = app
@@ -648,9 +661,17 @@ class QueryResultsDialog:
         btn = gtk.Button('Close', gtk.STOCK_CLOSE)
         btn.connect('clicked', self.on_close)
         hbox.pack_end(btn, expand=False, fill=False)
+
         btn = gtk.Button('Add', gtk.STOCK_ADD)
         btn.connect('clicked', self.add_release)
         hbox.pack_end(btn, expand=False, fill=False)
+        self.active_on_row_selected.append(btn)
+
+        btn = gtk.Button('Browse Release')
+        btn.connect('clicked', self.browse_release)
+        hbox.pack_end(btn, expand=False, fill=False)
+        self.active_on_row_selected.append(btn)
+
         vbox.pack_end(hbox, expand=False, fill=False)
 
         # Info on the selected row
@@ -660,6 +681,8 @@ class QueryResultsDialog:
         self.window.add(vbox)
         self.window.set_title(message)
         self.window.show_all()
+
+        self.row_widgets_set_sensitive(False)
 
     def get_selection(self):
         model, it = self.tv.get_selection().get_selected()
@@ -672,14 +695,24 @@ class QueryResultsDialog:
         relId = self.get_selection()
         webbrowser.open(mbcat.catalog.releaseUrl + relId)
 
+    def browse_release(self, button):
+        relId = self.get_selection()
+        webbrowser.open(mbcat.catalog.Catalog.releaseUrl + relId)
+
+    def row_widgets_set_sensitive(self, sens=True):
+        for widget in self.active_on_row_selected:
+            widget.set_sensitive(sens)
+
     def on_row_select(self, treeview):
         relId = self.get_selection()
         if relId:
             self.selInfo.set_text(relId)
             _log.info('Release '+relId+' selected')
+        self.row_widgets_set_sensitive(True)
 
     def on_unselect_all(self, treeview):
         self.selInfo.set_text('')
+        self.row_widgets_set_sensitive(False)
 
     def on_destroy(self, widget, data=None):
         self.window.destroy()
