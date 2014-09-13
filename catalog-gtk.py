@@ -389,6 +389,29 @@ def ConfirmDialog(parent, message, type=gtk.MESSAGE_QUESTION):
     d.destroy()
     return (r == gtk.RESPONSE_OK)
 
+def makeTrackTreeStore(catalog, releaseId):
+    trackTreeStore = gtk.TreeStore(str, str, str)
+    for mediumId,position,format in catalog.curs.execute(
+            'select id,position,format from media '
+            'where release=? order by position',
+            (releaseId,)).fetchall():
+        parent = trackTreeStore.append(None,
+            ('',
+            format+' '+str(position),
+            mbcat.catalog.recLengthAsString(
+                catalog.getMediumLen(mediumId)
+                )))
+        for recId,recLength,recPosition,title in catalog.curs.execute(
+                'select id,length,position,title from recordings '
+                'where medium=? order by position',
+                (mediumId,)).fetchall():
+            trackTreeStore.append(parent,
+                (recId,
+                title,
+                mbcat.catalog.recLengthAsString(recLength)
+                ))
+    return trackTreeStore
+
 def TrackListDialog(parent, catalog, releaseId):
     """
     Display a dialog with a list of tracks for a release.
@@ -421,26 +444,7 @@ def TrackListDialog(parent, catalog, releaseId):
         tv.append_column(col)
 
     # make the list store
-    trackTreeStore = gtk.TreeStore(str, str, str)
-    for mediumId,position,format in catalog.curs.execute(
-            'select id,position,format from media '
-            'where release=? order by position',
-            (releaseId,)).fetchall():
-        parent = trackTreeStore.append(None,
-            ('',
-            format+' '+str(position),
-            mbcat.catalog.recLengthAsString(
-                catalog.getMediumLen(mediumId)
-                )))
-        for recId,recLength,recPosition,title in catalog.curs.execute(
-                'select id,length,position,title from recordings '
-                'where medium=? order by position',
-                (mediumId,)).fetchall():
-            trackTreeStore.append(parent,
-                (recId,
-                title,
-                mbcat.catalog.recLengthAsString(recLength)
-                ))
+    trackTreeStore = makeTrackTreeStore(catalog, releaseId)
     tv.set_model(trackTreeStore)
     tv.expand_all()
 
@@ -453,59 +457,125 @@ def TrackListDialog(parent, catalog, releaseId):
     r = d.run()
     d.destroy()
 
-def GroupQueryResultsDialog(parent, catalog, queryResult):
+class GroupQueryResultsDialog:
     """
     Display a dialog with a list of release groups for a query result.
     """
-    d = gtk.MessageDialog(parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL,
-            'Track List')
-    d.set_resizable(True)
-    sw = gtk.ScrolledWindow()
-    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-    d.set_size_request(400, 300)
-    tv = gtk.TreeView()
+    def __init__(self,
+            parent,
+            catalog,
+            queryResult,
+            message='Release Group Results',
+            ):
+        self.window = gtk.Window()
+        self.window.set_transient_for(parent)
+        self.window.set_destroy_with_parent(True)
+        self.window.set_resizable(True)
+        self.window.set_border_width(10)
+        self.window.connect('destroy', self.on_destroy)
+        self.window.set_title(message)
+        self.window.set_size_request(400, 300)
 
-    for i, (label, textWidth, xalign) in enumerate([
-            ('Artist', 20, 0),
-            ('Title', 27, 0),
-            ('Releases', 3, 1.0),
-        ]):
-        cell = gtk.CellRendererText()
-        cell.set_property('xalign', xalign)
-        cell.set_property('ellipsize', pango.ELLIPSIZE_END)
-        cell.set_property('width-chars', textWidth)
-        col = gtk.TreeViewColumn(label, cell)
-        col.add_attribute(cell, 'text', i+1)
-        col.set_resizable(True)
-        tv.append_column(col)
+        vbox = gtk.VBox(False, 10)
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 
-    # make the list store
-    resultListStore = gtk.ListStore(str, str, str, str)
-    for group in queryResult['release-group-list']:
-        resultListStore.append((
-            group['id'],
-            mbcat.catalog.formatQueryArtist(group),
-            group['title'],
-            '%d' % len(group['release-list'])
-            ))
-    tv.set_model(resultListStore)
-    tv.expand_all()
+        # Keep reference to catalog for later
+        self.catalog = catalog
+        self.parent = parent
+        # TODO up to this point, this is QueryResultsDialog, verbatim
 
-    tv.show_all()
-    sw.add(tv)
-    sw.show()
-    d.vbox.pack_end(sw)
-    d.set_default_response(gtk.RESPONSE_OK)
+        self.tv = gtk.TreeView()
+        for i, (label, textWidth, xalign) in enumerate([
+                ('Artist', 20, 0),
+                ('Title', 27, 0),
+                ('Releases', 3, 1.0),
+            ]):
+            cell = gtk.CellRendererText()
+            cell.set_property('xalign', xalign)
+            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('width-chars', textWidth)
+            col = gtk.TreeViewColumn(label, cell)
+            col.add_attribute(cell, 'text', i+1)
+            col.set_resizable(True)
+            self.tv.append_column(col)
+        self.tv.connect('row-activated', self.on_row_activate)
+        self.tv.connect('cursor-changed', self.on_row_select)
+        self.tv.connect('unselect-all', self.on_unselect_all)
 
-    r = d.run()
-    model, it = tv.get_selection().get_selected()
-    id = model.get_value(it, 0) if r == gtk.RESPONSE_OK and it \
-        else None
-    d.destroy()
-    return id
+        # make the list store
+        resultListStore = gtk.ListStore(str, str, str, str)
+        for group in queryResult['release-group-list']:
+            resultListStore.append((
+                group['id'],
+                mbcat.catalog.formatQueryArtist(group),
+                group['title'],
+                '%d' % len(group['release-list'])
+                ))
+        self.tv.set_model(resultListStore)
+
+        sw.add(self.tv)
+        vbox.pack_start(sw, expand=True, fill=True)
+
+        # Buttons
+        hbox = gtk.HBox(False, 10)
+        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        btn.connect('clicked', self.on_close)
+        hbox.pack_end(btn, expand=False, fill=False)
+
+        # TODO could use gtk.STOCK_CONNECT here
+        btn = gtk.Button('Get Releases')
+        btn.connect('clicked', self.get_releases)
+        hbox.pack_end(btn, expand=False, fill=False)
+
+        btn = gtk.Button('Browse Group')
+        btn.connect('clicked', self.browse_group)
+        hbox.pack_end(btn, expand=False, fill=False)
+
+        vbox.pack_end(hbox, expand=False, fill=False)
+
+        # Info on the selected row
+        self.selInfo = gtk.Label()
+        vbox.pack_end(self.selInfo, expand=False)
+
+        self.window.add(vbox)
+        self.window.set_title(message)
+        self.window.show_all()
+
+
+    def get_selection(self):
+        model, it = self.tv.get_selection().get_selected()
+        return model.get_value(it, 0) if it else None
+
+    def get_releases(self, widget, data=None):
+        release_group_selected = self.get_selection()
+
+        results = mb.search_releases(rgid=release_group_selected)
+        QueryResultsDialog(self, self.catalog, results)
+
+    def on_row_activate(self, treeview, path, column):
+        # TODO not sure what this should do
+        relId = self.get_selection()
+        webbrowser.open(self.catalog.groupUrl + relId)
+
+    def browse_group(self, button):
+        relId = self.get_selection()
+        webbrowser.open(self.catalog.groupUrl + relId)
+
+    def on_row_select(self, treeview):
+        model, it = treeview.get_selection().get_selected()
+        relId = model.get_value(it, 0)
+        self.selInfo.set_text(relId)
+        _log.info('Release '+relId+' selected')
+
+    def on_unselect_all(self, treeview):
+        self.selInfo.set_text('')
+
+    def on_destroy(self, widget, data=None):
+        self.window.destroy()
+
+    def on_close(self, widget):
+        self.on_destroy(widget)
 
 class QueryResultsDialog:
     """
@@ -1288,11 +1358,7 @@ class MBCatGtk:
         th.stop()
         if not results:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
-        release_group_selected = GroupQueryResultsDialog(self.window,
-            self.catalog, results)
-        if release_group_selected:
-            results = mb.search_releases(rgid=release_group_selected)
-            QueryResultsDialog(self, self.catalog, results)
+        GroupQueryResultsDialog(self.window, self.catalog, results)
 
     def webserviceRelease(self, widget):
         entry = TextEntry(self.window, 'Enter release search terms')
