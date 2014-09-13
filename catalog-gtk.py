@@ -561,11 +561,11 @@ class GroupQueryResultsDialog:
     def on_row_activate(self, treeview, path, column):
         # TODO not sure what this should do
         relId = self.get_selection()
-        webbrowser.open(self.catalog.groupUrl + relId)
+        webbrowser.open(mbcat.catalog.Catalog.groupUrl + relId)
 
     def browse_group(self, button):
         relId = self.get_selection()
-        webbrowser.open(self.catalog.groupUrl + relId)
+        webbrowser.open(mbcat.catalog.Catalog.groupUrl + relId)
 
     def row_widgets_set_sensitive(self, sens=True):
         for widget in self.active_on_row_selected:
@@ -693,7 +693,7 @@ class QueryResultsDialog:
 
     def on_row_activate(self, treeview, path, column):
         relId = self.get_selection()
-        webbrowser.open(mbcat.catalog.releaseUrl + relId)
+        webbrowser.open(mbcat.catalog.Catalog.releaseUrl + relId)
 
     def browse_release(self, button):
         relId = self.get_selection()
