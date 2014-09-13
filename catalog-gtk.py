@@ -457,142 +457,13 @@ def TrackListDialog(parent, catalog, releaseId):
     r = d.run()
     d.destroy()
 
-class GroupQueryResultsDialog:
-    """
-    Display a dialog with a list of release groups for a query result.
-    """
-    def __init__(self,
-            parentWindow,
-            app,
-            queryResult,
-            message='Release Group Results',
-            ):
-        self.window = gtk.Window()
-        self.window.set_transient_for(parentWindow)
-        self.window.set_destroy_with_parent(True)
-        self.window.set_resizable(True)
-        self.window.set_border_width(10)
-        self.window.connect('destroy', self.on_destroy)
-        self.window.set_title(message)
-        self.window.set_size_request(400, 300)
-
-        self.active_on_row_selected = []
-
-        vbox = gtk.VBox(False, 10)
-        sw = gtk.ScrolledWindow()
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-
-        # Keep reference to catalog for later
-        self.app = app
-        self.parentWindow = parentWindow
-        # TODO up to this point, this is QueryResultsDialog, verbatim
-
-        self.tv = gtk.TreeView()
-        for i, (label, textWidth, xalign) in enumerate([
-                ('Artist', 20, 0),
-                ('Title', 27, 0),
-                ('Releases', 3, 1.0),
-            ]):
-            cell = gtk.CellRendererText()
-            cell.set_property('xalign', xalign)
-            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
-            cell.set_property('width-chars', textWidth)
-            col = gtk.TreeViewColumn(label, cell)
-            col.add_attribute(cell, 'text', i+1)
-            col.set_resizable(True)
-            self.tv.append_column(col)
-        self.tv.connect('row-activated', self.on_row_activate)
-        self.tv.connect('cursor-changed', self.on_row_select)
-        self.tv.connect('unselect-all', self.on_unselect_all)
-
-        # make the list store
-        resultListStore = gtk.ListStore(str, str, str, str)
-        for group in queryResult['release-group-list']:
-            resultListStore.append((
-                group['id'],
-                mbcat.catalog.formatQueryArtist(group),
-                group['title'],
-                '%d' % len(group['release-list'])
-                ))
-        self.tv.set_model(resultListStore)
-
-        sw.add(self.tv)
-        vbox.pack_start(sw, expand=True, fill=True)
-
-        # Buttons
-        hbox = gtk.HBox(False, 10)
-        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
-        btn.connect('clicked', self.on_close)
-        hbox.pack_end(btn, expand=False, fill=False)
-
-        # TODO could use gtk.STOCK_CONNECT here
-        btn = gtk.Button('Get Releases')
-        btn.connect('clicked', self.get_releases)
-        hbox.pack_end(btn, expand=False, fill=False)
-        self.active_on_row_selected.append(btn)
-
-        btn = gtk.Button('Browse Group')
-        btn.connect('clicked', self.browse_group)
-        hbox.pack_end(btn, expand=False, fill=False)
-        self.active_on_row_selected.append(btn)
-
-        vbox.pack_end(hbox, expand=False, fill=False)
-
-        # Info on the selected row
-        self.selInfo = gtk.Label()
-        vbox.pack_end(self.selInfo, expand=False)
-
-        self.window.add(vbox)
-        self.window.set_title(message)
-        self.window.show_all()
-
-        self.row_widgets_set_sensitive(False)
-
-    def get_selection(self):
-        model, it = self.tv.get_selection().get_selected()
-        return model.get_value(it, 0) if it else None
-
-    def get_releases(self, widget, data=None):
-        release_group_selected = self.get_selection()
-
-        results = mb.search_releases(rgid=release_group_selected)
-        QueryResultsDialog(self.window, self.app, results)
-
-    def on_row_activate(self, treeview, path, column):
-        # TODO not sure what this should do
-        relId = self.get_selection()
-        webbrowser.open(mbcat.catalog.Catalog.groupUrl + relId)
-
-    def browse_group(self, button):
-        relId = self.get_selection()
-        webbrowser.open(mbcat.catalog.Catalog.groupUrl + relId)
-
-    def row_widgets_set_sensitive(self, sens=True):
-        for widget in self.active_on_row_selected:
-            widget.set_sensitive(sens)
-
-    def on_row_select(self, treeview):
-        relId = self.get_selection()
-        if relId:
-            self.selInfo.set_text(relId)
-            _log.info('Release '+relId+' selected')
-        self.row_widgets_set_sensitive(True)
-
-    def on_unselect_all(self, treeview):
-        self.selInfo.set_text('')
-        self.row_widgets_set_sensitive(False)
-
-    def on_destroy(self, widget, data=None):
-        self.window.destroy()
-
-    def on_close(self, widget):
-        self.on_destroy(widget)
-
 class QueryResultsDialog:
     """
     Create a window with a list of releases from a WebService query.
     Allow the user to add any of these releases.
     """
+    row_contains = 'Group'
+
     def __init__(self,
         parentWindow,
         app,
@@ -605,17 +476,41 @@ class QueryResultsDialog:
         self.window.set_resizable(True)
         self.window.set_border_width(10)
         self.window.connect('destroy', self.on_destroy)
-        vbox = gtk.VBox(False, 10)
-        sw = gtk.ScrolledWindow()
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.window.set_title(message)
         self.window.set_size_request(400, 300)
 
         self.active_on_row_selected = []
+
+        vbox = gtk.VBox(False, 10)
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 
         # Keep reference to catalog for later
         self.app = app
         self.parentWindow = parentWindow
 
+        self.buildTreeView()
+        self.buildListStore(queryResult)
+
+        self.tv.connect('row-activated', self.on_row_activate)
+        self.tv.connect('cursor-changed', self.on_row_select)
+        self.tv.connect('unselect-all', self.on_unselect_all)
+        sw.add(self.tv)
+        vbox.pack_start(sw, expand=True, fill=True)
+
+        hbox = self.buildButtons()
+        vbox.pack_end(hbox, expand=False, fill=False)
+
+        # Info on the selected row
+        self.selInfo = gtk.Label()
+        vbox.pack_end(self.selInfo, expand=False)
+
+        self.window.add(vbox)
+        self.window.show_all()
+
+        self.row_widgets_set_sensitive(False)
+
+    def buildTreeView(self):
         self.tv = gtk.TreeView()
         for i, (label, textWidth) in enumerate(
             [('Artist', 20),
@@ -634,10 +529,8 @@ class QueryResultsDialog:
             col.add_attribute(cell, 'text', i+1)
             col.set_resizable(True)
             self.tv.append_column(col)
-        self.tv.connect('row-activated', self.on_row_activate)
-        self.tv.connect('cursor-changed', self.on_row_select)
-        self.tv.connect('unselect-all', self.on_unselect_all)
 
+    def buildListStore(self, queryResult):
         # make the list store
         resultListStore = gtk.ListStore(str, str, str, str, str, str, str, str)
         for release in queryResult['release-list']:
@@ -653,9 +546,7 @@ class QueryResultsDialog:
                 ))
         self.tv.set_model(resultListStore)
 
-        sw.add(self.tv)
-        vbox.pack_start(sw, expand=True, fill=True)
-
+    def buildButtons(self):
         # Buttons
         hbox = gtk.HBox(False, 10)
         btn = gtk.Button('Close', gtk.STOCK_CLOSE)
@@ -672,17 +563,7 @@ class QueryResultsDialog:
         hbox.pack_end(btn, expand=False, fill=False)
         self.active_on_row_selected.append(btn)
 
-        vbox.pack_end(hbox, expand=False, fill=False)
-
-        # Info on the selected row
-        self.selInfo = gtk.Label()
-        vbox.pack_end(self.selInfo, expand=False)
-
-        self.window.add(vbox)
-        self.window.set_title(message)
-        self.window.show_all()
-
-        self.row_widgets_set_sensitive(False)
+        return hbox
 
     def get_selection(self):
         model, it = self.tv.get_selection().get_selected()
@@ -692,6 +573,7 @@ class QueryResultsDialog:
         self.app._addRelease(self.get_selection(), self.window)
 
     def on_row_activate(self, treeview, path, column):
+        # TODO not sure what this should do
         relId = self.get_selection()
         webbrowser.open(mbcat.catalog.Catalog.releaseUrl + relId)
 
@@ -707,7 +589,7 @@ class QueryResultsDialog:
         relId = self.get_selection()
         if relId:
             self.selInfo.set_text(relId)
-            _log.info('Release '+relId+' selected')
+            _log.info(self.row_contains+' '+relId+' selected')
         self.row_widgets_set_sensitive(True)
 
     def on_unselect_all(self, treeview):
@@ -719,6 +601,78 @@ class QueryResultsDialog:
 
     def on_close(self, widget):
         self.on_destroy(widget)
+
+class GroupQueryResultsDialog(QueryResultsDialog):
+    """
+    Display a dialog with a list of release groups for a query result.
+    """
+    row_contains = 'Group'
+    def __init__(self,
+            parentWindow,
+            app,
+            queryResult,
+            message='Release Group Results',
+            ):
+        QueryResultsDialog.__init__(self, parentWindow, app,
+            queryResult, message)
+
+    def buildTreeView(self):
+        self.tv = gtk.TreeView()
+        for i, (label, textWidth, xalign) in enumerate([
+                ('Artist', 20, 0),
+                ('Title', 27, 0),
+                ('Releases', 3, 1.0),
+            ]):
+            cell = gtk.CellRendererText()
+            cell.set_property('xalign', xalign)
+            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('width-chars', textWidth)
+            col = gtk.TreeViewColumn(label, cell)
+            col.add_attribute(cell, 'text', i+1)
+            col.set_resizable(True)
+            self.tv.append_column(col)
+
+    def buildListStore(self, queryResult):
+        # make the list store
+        resultListStore = gtk.ListStore(str, str, str, str)
+        for group in queryResult['release-group-list']:
+            resultListStore.append((
+                group['id'],
+                mbcat.catalog.formatQueryArtist(group),
+                group['title'],
+                '%d' % len(group['release-list'])
+                ))
+        self.tv.set_model(resultListStore)
+
+    def buildButtons(self):
+        # Buttons
+        hbox = gtk.HBox(False, 10)
+        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        btn.connect('clicked', self.on_close)
+        hbox.pack_end(btn, expand=False, fill=False)
+
+        # TODO could use gtk.STOCK_CONNECT here
+        btn = gtk.Button('Get Releases')
+        btn.connect('clicked', self.get_releases)
+        hbox.pack_end(btn, expand=False, fill=False)
+        self.active_on_row_selected.append(btn)
+
+        btn = gtk.Button('Browse Group')
+        btn.connect('clicked', self.browse_group)
+        hbox.pack_end(btn, expand=False, fill=False)
+        self.active_on_row_selected.append(btn)
+
+        return hbox
+
+    def get_releases(self, widget, data=None):
+        release_group_selected = self.get_selection()
+
+        results = mb.search_releases(rgid=release_group_selected)
+        QueryResultsDialog(self.window, self.app, results)
+
+    def browse_group(self, button):
+        relId = self.get_selection()
+        webbrowser.open(mbcat.catalog.Catalog.groupUrl + relId)
 
 def SelectCollectionDialog(parent, result):
     """
@@ -1356,7 +1310,7 @@ class MBCatGtk:
         th.stop()
         if not results:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
-        GroupQueryResultsDialog(self.window, self.catalog, results)
+        GroupQueryResultsDialog(self.window, self, results)
 
     def webserviceRelease(self, widget):
         entry = TextEntry(self.window, 'Enter release search terms')
@@ -1366,7 +1320,7 @@ class MBCatGtk:
              limit=self.searchResultsLimit)
         if not results:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
-        QueryResultsDialog(self, self.catalog, results)
+        QueryResultsDialog(self, self, results)
 
     def webserviceBarcode(self, widget):
         entry = TextEntry(self.window, 'Enter search barcode (UPC):')
