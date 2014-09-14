@@ -1320,7 +1320,7 @@ class MBCatGtk:
              limit=self.searchResultsLimit)
         if not results:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
-        QueryResultsDialog(self, self, results)
+        QueryResultsDialog(self.window, self, results)
 
     def webserviceBarcode(self, widget):
         entry = TextEntry(self.window, 'Enter search barcode (UPC):')
@@ -1331,7 +1331,7 @@ class MBCatGtk:
         if not results:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
             return
-        QueryResultsDialog(self, self.catalog, results)
+        QueryResultsDialog(self.window, self, results)
 
     def webserviceCatNo(self, widget):
         entry = TextEntry(self.window, 'Enter search catalog number:')

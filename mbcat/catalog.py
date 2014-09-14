@@ -1192,9 +1192,9 @@ class Catalog(object):
         self.digestReleaseXml(releaseId, metaXml)
         self.conn.commit()
 
-        _log.info("Added '%s'" % self.catalog.getReleaseTitle(entry))
+        _log.info("Added '%s'" % self.getReleaseTitle(releaseId))
 
-        self.getCoverArt(entry)
+        self.getCoverArt(releaseId)
 
     def deleteRelease(self, releaseId):
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
