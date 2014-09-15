@@ -412,51 +412,6 @@ def makeTrackTreeStore(catalog, releaseId):
                 ))
     return trackTreeStore
 
-def TrackListDialog(parent, catalog, releaseId):
-    """
-    Display a dialog with a list of tracks for a release.
-    Example:
-    TrackListDialog(gui.window,
-        gui.catalog.getTrackList('1cd1d24c-1705-485c-ae6f-c53e7831b1e4'))
-    """
-    d = gtk.MessageDialog(parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL,
-            'Track List')
-    d.set_resizable(True)
-    sw = gtk.ScrolledWindow()
-    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-    d.set_size_request(400, 300)
-
-    tv = gtk.TreeView()
-    for i, (label, xalign, textWidth) in enumerate(
-        [('Title', 0, 40),
-        ('Length', 1.0, 2),
-        ]):
-        cell = gtk.CellRendererText()
-        cell.set_property('xalign', xalign)
-        cell.set_property('ellipsize', pango.ELLIPSIZE_END)
-        cell.set_property('width-chars', textWidth)
-        col = gtk.TreeViewColumn(label, cell)
-        col.add_attribute(cell, 'text', i+1)
-        col.set_resizable(True)
-        tv.append_column(col)
-
-    # make the list store
-    trackTreeStore = makeTrackTreeStore(catalog, releaseId)
-    tv.set_model(trackTreeStore)
-    tv.expand_all()
-
-    tv.show_all()
-    sw.add(tv)
-    sw.show()
-    d.vbox.pack_end(sw)
-    d.set_default_response(gtk.RESPONSE_OK)
-
-    r = d.run()
-    d.destroy()
-
 class QueryResultsDialog:
     """
     Create a window with a list of releases from a WebService query.
@@ -673,6 +628,64 @@ class GroupQueryResultsDialog(QueryResultsDialog):
     def browse_group(self, button):
         relId = self.get_selection()
         webbrowser.open(mbcat.catalog.Catalog.groupUrl + relId)
+
+# TODO this should inherit QueryResultsDialog
+class TrackListDialog(QueryResultsDialog):
+    """
+    Display a dialog with a list of tracks for a release.
+    Example:
+    """
+    def __init__(self, parentWindow, app, releaseId, message='Track List'):
+        QueryResultsDialog.__init__(self, parentWindow, app,
+            releaseId, message)
+
+    def buildTreeView(self):
+        self.tv = gtk.TreeView()
+        for i, (label, xalign, textWidth) in enumerate(
+            [('Title', 0, 40),
+            ('Length', 1.0, 2),
+            ]):
+            cell = gtk.CellRendererText()
+            cell.set_property('xalign', xalign)
+            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('width-chars', textWidth)
+            col = gtk.TreeViewColumn(label, cell)
+            col.add_attribute(cell, 'text', i+1)
+            col.set_resizable(True)
+            self.tv.append_column(col)
+
+    def buildListStore(self, queryResult):
+        trackTreeStore = makeTrackTreeStore(self.app.catalog, queryResult)
+        self.tv.set_model(trackTreeStore)
+        self.tv.expand_all()
+
+    def buildButtons(self):
+        # Buttons
+        hbox = gtk.HBox(False, 10)
+        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        btn.connect('clicked', self.on_close)
+        hbox.pack_end(btn, expand=False, fill=False)
+
+        btn = gtk.Button('Browse Recording')
+        btn.connect('clicked', self.browse_recording)
+        hbox.pack_end(btn, expand=False, fill=False)
+        self.active_on_row_selected.append(btn)
+
+        return hbox
+
+    def browse_recording(self, button):
+        recordingId = self.get_selection()
+        webbrowser.open(mbcat.catalog.Catalog.recordingUrl + recordingId)
+
+    def on_row_select(self, treeview):
+        model, iter = self.tv.get_selection().get_selected()
+        if len(model.get_path(iter)) > 1:
+            # if a recording is selected
+            QueryResultsDialog.on_row_select(self, treeview)
+            self.row_widgets_set_sensitive(True)
+        else:
+            # a medium is selected
+            self.row_widgets_set_sensitive(False)
 
 def SelectCollectionDialog(parent, result):
     """
@@ -1194,7 +1207,7 @@ class MBCatGtk:
 
     def showTrackList(self, widget):
         releaseId = self.getSelection()
-        TrackListDialog(self.window, self.catalog, releaseId)
+        TrackListDialog(self.window, self, releaseId)
 
     def checkOut(self, widget):
         releaseId = self.getSelection()
