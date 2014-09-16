@@ -1204,6 +1204,8 @@ class MBCatGtk:
 
     def toggleDetailPane(self, widget):
         if widget.active:
+            if not self.getSelection():
+                self.setSelectedRow(0)
             self.detailpane.show()
             self.updateDetailPane()
         else:
@@ -1615,7 +1617,6 @@ class MBCatGtk:
         ## Show Release Detail Pane
         submenuitem = gtk.CheckMenuItem('Show Detail Pane')
         submenuitem.set_active(False)
-        self.menu_release_items.append(submenuitem)
         submenuitem.connect('activate', self.toggleDetailPane)
         menu.append(submenuitem)
 
