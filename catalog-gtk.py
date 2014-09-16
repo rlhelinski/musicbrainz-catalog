@@ -843,6 +843,17 @@ class DetailPane(gtk.HBox):
         self.ratingLbl.connect('changed', self.setRating)
         self.lt.attach(self.ratingLbl, 1, 2, 3, 4)
 
+        l = gtk.Label('On-hand Count')
+        self.lt.attach(l, 0, 1, 4, 5)
+        adjustment = gtk.Adjustment(
+            value=1,
+            lower=0,
+            upper=1000,
+            step_incr=1)
+        self.countSpinButton = gtk.SpinButton(adjustment)
+        adjustment.connect('value_changed', self.setCount)
+        self.lt.attach(self.countSpinButton, 1, 2, 4, 5)
+
         self.lt.show_all()
 
         self.pack_start(self.lt, expand=False, fill=False)
@@ -856,6 +867,10 @@ class DetailPane(gtk.HBox):
         index = combobox.get_active()
         text = model[index][0]
         self.catalog.setRating(self.releaseId, text)
+
+    def setCount(self, spinbutton):
+        self.catalog.setCopyCount(self.releaseId,
+            self.countSpinButton.get_value_as_int())
 
     def update(self, releaseId):
         self.releaseId = releaseId # for the UUID copy button
@@ -888,6 +903,9 @@ class DetailPane(gtk.HBox):
 
         rating = self.catalog.getRating(releaseId)
         self.ratingLbl.set_active(int(rating) if rating and rating != 'None' else 0)
+
+        count = self.catalog.getCopyCount(releaseId)
+        self.countSpinButton.set_value(int(count) if count and count != 'None' else 0)
 
 class MBCatGtk:
     """
