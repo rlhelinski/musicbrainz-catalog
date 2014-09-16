@@ -316,6 +316,18 @@ def TrackSearchDialog(parent,
     else:
         ErrorDialog(parent, 'No matches found for "%s"' % entry)
 
+def buildRatingComboBox(default=None):
+    combobox = gtk.combo_box_new_text()
+    combobox.append_text('None')
+    combobox.append_text('1')
+    combobox.append_text('2')
+    combobox.append_text('3')
+    combobox.append_text('4')
+    combobox.append_text('5')
+    combobox.set_active(default if default is not None else 0)
+    combobox.show()
+    return combobox
+
 def RatingDialog(parent,
     message='Enter rating',
     default=None):
@@ -325,16 +337,8 @@ def RatingDialog(parent,
             gtk.BUTTONS_OK_CANCEL,
             message
             )
-    combobox = gtk.combo_box_new_text()
+    combobox = buildRatingComboBox(default)
     d.vbox.pack_end(combobox)
-    combobox.append_text('None')
-    combobox.append_text('1')
-    combobox.append_text('2')
-    combobox.append_text('3')
-    combobox.append_text('4')
-    combobox.append_text('5')
-    combobox.set_active(default if default is not None else 0)
-    combobox.show()
     d.set_default_response(gtk.RESPONSE_OK)
 
     r = d.run()
@@ -812,7 +816,7 @@ class DetailPane(gtk.HBox):
         self.sw.show()
         self.pack_start(self.sw)
 
-        self.lt = gtk.Table(2, 2, homogeneous=False)
+        self.lt = gtk.Table(2, 4, homogeneous=False)
 
         l = gtk.Label('Release ID')
         self.lt.attach(l, 0, 1, 0, 1)
@@ -833,6 +837,12 @@ class DetailPane(gtk.HBox):
         self.lastListenedLbl = gtk.Label()
         self.lt.attach(self.lastListenedLbl, 1, 2, 2, 3)
 
+        l = gtk.Label('Rating')
+        self.lt.attach(l, 0, 1, 3, 4)
+        self.ratingLbl = buildRatingComboBox()
+        self.ratingLbl.connect('changed', self.setRating)
+        self.lt.attach(self.ratingLbl, 1, 2, 3, 4)
+
         self.lt.show_all()
 
         self.pack_start(self.lt, expand=False, fill=False)
@@ -840,6 +850,12 @@ class DetailPane(gtk.HBox):
 
     def copyReleaseId(self, button):
         self.clipboard.set_text(self.releaseId)
+
+    def setRating(self, combobox):
+        model = combobox.get_model()
+        index = combobox.get_active()
+        text = model[index][0]
+        self.catalog.setRating(self.releaseId, text)
 
     def update(self, releaseId):
         self.releaseId = releaseId # for the UUID copy button
@@ -869,6 +885,9 @@ class DetailPane(gtk.HBox):
         lastListened = time.strftime(mbcat.dateFmtStr,
                 time.localtime(float(lastListened))) if lastListened else '-'
         self.lastListenedLbl.set_text(lastListened)
+
+        rating = self.catalog.getRating(releaseId)
+        self.ratingLbl.set_active(int(rating) if rating and rating != 'None' else 0)
 
 class MBCatGtk:
     """
@@ -1059,8 +1078,7 @@ class MBCatGtk:
         self.menu_release_items_set_sensitive(True)
         model, it = treeview.get_selection().get_selected()
         relId = model.get_value(it, 0)
-        if self.detailpane.get_visible():
-            self.detailpane.update(relId)
+        self.updateDetailPane()
         _log.info('Release '+relId+' selected')
 
     def on_unselect_all(self, treeview):
@@ -1113,6 +1131,7 @@ class MBCatGtk:
 
     def refreshView(self, widget):
         self.makeListStore()
+        self.updateDetailPane()
         self.updateStatusBar()
 
     def scrollToSelected(self, widget):
@@ -1143,7 +1162,8 @@ class MBCatGtk:
             self.detailpane.hide()
 
     def updateDetailPane(self):
-        self.detailpane.update(self.getSelection())
+        if self.detailpane.get_visible():
+            self.detailpane.update(self.getSelection())
 
     def selectFormat(self, action, current):
         text = self.formatNames[action.get_current_value()]
@@ -1312,6 +1332,7 @@ class MBCatGtk:
             date = float(time.strftime('%s',
                 time.strptime(dateStr, mbcat.dateFmtStr)))
             self.catalog.addListenDate(releaseId, date)
+            self.updateDetailPane()
 
     def purchaseInfo(self, widget):
         """Add a purchase date."""
