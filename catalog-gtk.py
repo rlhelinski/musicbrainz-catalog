@@ -52,6 +52,36 @@ def TextEntry(parent, message, default='', textVisible=True):
     else:
         return None
 
+def DateEntry(parent, message, default=''):
+    """
+    Display a dialog with a text entry.
+    Returns the text, or None if canceled.
+    """
+    d = gtk.MessageDialog(parent,
+            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+            gtk.MESSAGE_QUESTION,
+            gtk.BUTTONS_OK_CANCEL,
+            message)
+    entry = gtk.Calendar()
+    #entry.set_text(default)
+    #entry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
+    entry.show()
+    d.vbox.pack_end(entry)
+    d.set_default_response(gtk.RESPONSE_OK)
+
+    r = d.run()
+    # have to get the text before we destroy the gtk.Entry
+    year, month, day = entry.get_date()
+    # From http://www.pygtk.org/pygtk2reference/class-gtkcalendar.html#method-gtkcalendar--get-date
+    # Note that month is zero-based (i.e it allowed values are 0-11) while
+    # selected_day is one-based (i.e. allowed values are 1-31).
+    date = '%d/%d/%d' % (month+1, day, year)
+    d.destroy()
+    if r == gtk.RESPONSE_OK:
+        return date
+    else:
+        return None
+
 def PurchaseInfoEntry(parent,
         message='Enter purchase info:'):
     """
@@ -1343,8 +1373,8 @@ class MBCatGtk:
     def listen(self, widget):
         # TODO this needs its own dialog that displays the current listening dates
         releaseId = self.getSelection()
-        dateStr = TextEntry(self.window,
-            'Enter listen date (' + mbcat.dateFmtUsr + ')',
+        dateStr = DateEntry(self.window,
+            'Choose a listen date',
             time.strftime(mbcat.dateFmtStr))
         if dateStr:
             date = float(time.strftime('%s',
