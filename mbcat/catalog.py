@@ -779,6 +779,18 @@ class Catalog(object):
                 'values (?,?,?)', (releaseId, format, path))
         self.conn.commit()
 
+    def getFirstAdded(self, releaseId):
+        self.curs.execute('select min(date) from added_dates where release=?',
+            (releaseId,))
+        date = self.curs.fetchall()
+        return date[0][0]# if date[0][0] else '-'
+
+    def getLastListened(self, releaseId):
+        self.curs.execute('select max(date) from listened_dates where release=?',
+            (releaseId,))
+        date = self.curs.fetchall()
+        return date[0][0]# if date[0][0] else '-'
+
     def getAddedDates(self, releaseId):
         self.curs.execute('select added from releases where id=?',
             (releaseId,))

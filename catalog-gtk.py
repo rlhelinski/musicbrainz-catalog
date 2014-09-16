@@ -812,7 +812,37 @@ class DetailPane(gtk.HBox):
         self.sw.show()
         self.pack_start(self.sw)
 
+        self.lt = gtk.Table(2, 2, homogeneous=False)
+
+        l = gtk.Label('Release ID')
+        self.lt.attach(l, 0, 1, 0, 1)
+        self.clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
+        self.releaseIdBtn = gtk.Button(stock=gtk.STOCK_COPY)
+        self.releaseIdBtn.connect('clicked', self.copyReleaseId)
+        #self.releaseIdBtn.show()
+        #self.vb.pack_start(self.releaseIdBtn, expand=False, fill=False)
+        self.lt.attach(self.releaseIdBtn, 1, 2, 0, 1)
+
+        l = gtk.Label('First Added')
+        self.lt.attach(l, 0, 1, 1, 2)
+        self.firstAddedLbl = gtk.Label()
+        self.lt.attach(self.firstAddedLbl, 1, 2, 1, 2)
+
+        l = gtk.Label('Last Listened')
+        self.lt.attach(l, 0, 1, 2, 3)
+        self.lastListenedLbl = gtk.Label()
+        self.lt.attach(self.lastListenedLbl, 1, 2, 2, 3)
+
+        self.lt.show_all()
+
+        self.pack_start(self.lt, expand=False, fill=False)
+        self.lt.show()
+
+    def copyReleaseId(self, button):
+        self.clipboard.set_text(self.releaseId)
+
     def update(self, releaseId):
+        self.releaseId = releaseId # for the UUID copy button
         self.coverart.hide()
         self.coverart.set_from_file(self.catalog._getCoverArtPath(releaseId))
         try:
@@ -827,6 +857,18 @@ class DetailPane(gtk.HBox):
         trackTreeStore = makeTrackTreeStore(self.catalog, releaseId)
         self.tv.set_model(trackTreeStore)
         self.tv.expand_all()
+
+        self.releaseIdBtn.set_label('Copy '+releaseId[:8]+'...')
+
+        firstAdded = self.catalog.getFirstAdded(releaseId)
+        firstAdded = time.strftime(mbcat.dateFmtStr,
+                time.localtime(float(firstAdded))) if firstAdded else '-'
+        self.firstAddedLbl.set_text(firstAdded)
+
+        lastListened = self.catalog.getLastListened(releaseId)
+        lastListened = time.strftime(mbcat.dateFmtStr,
+                time.localtime(float(lastListened))) if lastListened else '-'
+        self.lastListenedLbl.set_text(lastListened)
 
 class MBCatGtk:
     """
