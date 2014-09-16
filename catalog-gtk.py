@@ -96,7 +96,7 @@ def PurchaseInfoEntry(parent,
     r = d.run()
     # have to get the text before we destroy the gtk.Entry
     year, month, day = dateEntry.get_date()
-    val = {'date': '%d/%d/%d' % (year, month, day),
+    val = {'date': '%d/%d/%d' % (year, month+1, day),
         'vendor' : vendorEntry.get_text().decode('utf8'),
         'price' : priceEntry.get_text().decode('utf8'),
         }
