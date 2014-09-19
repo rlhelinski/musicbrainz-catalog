@@ -942,10 +942,13 @@ class DetailPane(gtk.HBox):
 
         self.lt = gtk.Table(2, 4, homogeneous=False)
 
+        r = 0
         l = gtk.Label('Release ID')
-        self.lt.attach(l, 0, 1, 0, 1)
+        self.lt.attach(l, 0, 1, r, r+1)
         self.releaseIdLbl = gtk.Label()
-        self.lt.attach(self.releaseIdLbl, 1, 2, 0, 1)
+        self.releaseIdLbl.set_ellipsize(pango.ELLIPSIZE_END)
+        self.lt.attach(self.releaseIdLbl, 1, 2, r, r+1)
+        r += 1
 
         hbox = gtk.HBox()
         self.clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
@@ -957,26 +960,30 @@ class DetailPane(gtk.HBox):
         self.releaseIdBrowseBtn = gtk.Button('Browse')
         self.releaseIdBrowseBtn.connect('clicked', self.browse_release)
         hbox.pack_start(self.releaseIdBrowseBtn)
-        self.lt.attach(hbox, 1, 2, 1, 2)
+        self.lt.attach(hbox, 1, 2, r, r+1)
+        r += 1
 
         l = gtk.Label('First Added')
-        self.lt.attach(l, 0, 1, 1, 2)
+        self.lt.attach(l, 0, 1, r, r+1)
         self.firstAddedLbl = gtk.Label()
-        self.lt.attach(self.firstAddedLbl, 1, 2, 1, 2)
+        self.lt.attach(self.firstAddedLbl, 1, 2, r, r+1)
+        r += 1
 
         l = gtk.Label('Last Listened')
-        self.lt.attach(l, 0, 1, 2, 3)
+        self.lt.attach(l, 0, 1, r, r+1)
         self.lastListenedLbl = gtk.Label()
-        self.lt.attach(self.lastListenedLbl, 1, 2, 2, 3)
+        self.lt.attach(self.lastListenedLbl, 1, 2, r, r+1)
+        r += 1
 
         l = gtk.Label('Rating')
-        self.lt.attach(l, 0, 1, 3, 4)
+        self.lt.attach(l, 0, 1, r, r+1)
         self.ratingLbl = buildRatingComboBox()
         self.ratingLbl.connect('changed', self.setRating)
-        self.lt.attach(self.ratingLbl, 1, 2, 3, 4)
+        self.lt.attach(self.ratingLbl, 1, 2, r, r+1)
+        r += 1
 
         l = gtk.Label('On-hand Count')
-        self.lt.attach(l, 0, 1, 4, 5)
+        self.lt.attach(l, 0, 1, r, r+1)
         adjustment = gtk.Adjustment(
             value=1,
             lower=0,
@@ -984,12 +991,14 @@ class DetailPane(gtk.HBox):
             step_incr=1)
         self.countSpinButton = gtk.SpinButton(adjustment)
         adjustment.connect('value_changed', self.setCount)
-        self.lt.attach(self.countSpinButton, 1, 2, 4, 5)
+        self.lt.attach(self.countSpinButton, 1, 2, r, r+1)
+        r += 1
 
         l = gtk.Label('Checked Out?')
-        self.lt.attach(l, 0, 1, 5, 6)
+        self.lt.attach(l, 0, 1, r, r+1)
         self.checkOutLbl = gtk.Label()
-        self.lt.attach(self.checkOutLbl, 1, 2, 5, 6)
+        self.lt.attach(self.checkOutLbl, 1, 2, r, r+1)
+        r += 1
 
         self.lt.show_all()
 
@@ -1029,8 +1038,7 @@ class DetailPane(gtk.HBox):
         self.tv.set_model(trackTreeStore)
         self.tv.expand_all()
 
-        # TODO maybe ellipsize instead
-        self.releaseIdLbl.set_label(releaseId[:13]+'...')
+        self.releaseIdLbl.set_label(releaseId)
 
         firstAdded = self.catalog.getFirstAdded(releaseId)
         firstAdded = decodeDate(firstAdded) if firstAdded else '-'
