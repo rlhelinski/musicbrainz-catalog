@@ -23,6 +23,12 @@ gobject.threads_init()
 
 _log = logging.getLogger("mbcat")
 
+def decodeDate(date):
+    return time.strftime(mbcat.dateFmtStr, time.localtime(float(date)))
+
+def encodeDate(date):
+    return time.strftime('%s', time.strptime(date, mbcat.dateFmtStr))
+
 # Thanks http://stackoverflow.com/a/8907574/3098007
 def TextEntry(parent, message, default='', textVisible=True):
     """
@@ -817,16 +823,14 @@ class CheckOutHistoryDialog(QueryResultsDialog):
         for event in self.app.catalog.getCheckOutHistory(self.releaseId):
             if len(event) == 2:
                 resultListStore.append((
-                    time.strftime(mbcat.dateFmtStr,
-                        time.localtime(float(event[0]))),
+                    decodeDate(event[0]),
                     '',
                     event[1],
                     ))
             elif len(event) == 1:
                 resultListStore.append((
                     '',
-                    time.strftime(mbcat.dateFmtStr,
-                        time.localtime(float(event[0]))),
+                    decodeDate(event[0]),
                     '',
                     ))
         self.tv.set_model(resultListStore)
@@ -862,11 +866,9 @@ class CheckOutHistoryDialog(QueryResultsDialog):
 
     def updateButtons(self):
         if self.app.catalog.getCheckOutStatus(self.releaseId):
-            print ('out')
             self.checkInBtn.set_sensitive(True)
             self.checkOutBtn.set_sensitive(False)
         else:
-            print ('in')
             self.checkInBtn.set_sensitive(False)
             self.checkOutBtn.set_sensitive(True)
 
@@ -1031,13 +1033,11 @@ class DetailPane(gtk.HBox):
         self.releaseIdLbl.set_label(releaseId[:13]+'...')
 
         firstAdded = self.catalog.getFirstAdded(releaseId)
-        firstAdded = time.strftime(mbcat.dateFmtStr,
-                time.localtime(float(firstAdded))) if firstAdded else '-'
+        firstAdded = decodeDate(firstAdded) if firstAdded else '-'
         self.firstAddedLbl.set_text(firstAdded)
 
         lastListened = self.catalog.getLastListened(releaseId)
-        lastListened = time.strftime(mbcat.dateFmtStr,
-                time.localtime(float(lastListened))) if lastListened else '-'
+        lastListened = decodeDate(lastListened) if lastListened else '-'
         self.lastListenedLbl.set_text(lastListened)
 
         rating = self.catalog.getRating(releaseId)
@@ -1449,8 +1449,7 @@ class MBCatGtk:
         date = TextEntry(self.window,
             "Lend date  (" + mbcat.dateFmtUsr + "): ",
             default=time.strftime(mbcat.dateFmtStr))
-        self.catalog.addCheckOutEvent(releaseId, borrower,
-            time.strftime('%s', time.strptime(date, mbcat.dateFmtStr)))
+        self.catalog.addCheckOutEvent(releaseId, borrower, encodeDate(date))
         self.updateDetailPane()
 
     def checkIn(self, widget=None, releaseId=None):
@@ -1467,7 +1466,7 @@ class MBCatGtk:
         if not date:
             date = time.time()
         self.catalog.addCheckInEvent(releaseId,
-            time.strftime('%s', time.strptime(date, mbcat.dateFmtStr)))
+            encodeDate(date))
         self.updateDetailPane()
 
     def editComment(self, widget):
@@ -1491,8 +1490,7 @@ class MBCatGtk:
             'Choose a listen date',
             time.strftime(mbcat.dateFmtStr))
         if dateStr:
-            date = float(time.strftime('%s',
-                time.strptime(dateStr, mbcat.dateFmtStr)))
+            date = float(encodeDate(dateStr))
             self.catalog.addListenDate(releaseId, date)
             self.updateDetailPane()
 
