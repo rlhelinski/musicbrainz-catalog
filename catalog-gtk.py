@@ -778,6 +778,98 @@ def SelectCollectionDialog(parent, result):
     d.destroy()
     return id
 
+class CheckOutHistoryDialog(QueryResultsDialog):
+    row_contains = 'Event'
+
+    def __init__(self,
+            parentWindow,
+            app,
+            releaseId,
+            message='Release Results',
+            ):
+        self.releaseId = releaseId
+        QueryResultsDialog.__init__(self, parentWindow, app, releaseId, message)
+        self.updateButtons()
+
+    def on_row_select(self, treeview):
+        pass
+
+    def buildTreeView(self):
+        self.tv = gtk.TreeView()
+        for i, (label, textWidth) in enumerate(
+            [('Check Out', 20),
+            ('Check In', 20),
+            ('Borrower', 10),
+            ]):
+            cell = gtk.CellRendererText()
+            cell.set_property('xalign', 0)
+            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('width-chars', textWidth)
+            col = gtk.TreeViewColumn(label, cell)
+            col.add_attribute(cell, 'text', i)
+            col.set_resizable(True)
+            self.tv.append_column(col)
+
+    def buildListStore(self, releaseId):
+        # make the list store
+        resultListStore = gtk.ListStore(str, str, str)
+
+        for event in self.app.catalog.getCheckOutHistory(self.releaseId):
+            if len(event) == 2:
+                resultListStore.append((
+                    time.strftime(mbcat.dateFmtStr,
+                        time.localtime(float(event[0]))),
+                    '',
+                    event[1],
+                    ))
+            elif len(event) == 1:
+                resultListStore.append((
+                    '',
+                    time.strftime(mbcat.dateFmtStr,
+                        time.localtime(float(event[0]))),
+                    '',
+                    ))
+        self.tv.set_model(resultListStore)
+
+    def update(self):
+        self.buildListStore(self.releaseId)
+        self.updateButtons()
+
+    def check_out(self, button):
+        self.app.checkOut(releaseId=self.releaseId)
+        self.update()
+
+    def check_in(self, button):
+        self.app.checkIn(releaseId=self.releaseId)
+        self.update()
+
+    def buildButtons(self):
+        # Buttons
+        hbox = gtk.HBox(False, 10)
+        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        btn.connect('clicked', self.on_close)
+        hbox.pack_end(btn, expand=False, fill=False)
+
+        self.checkInBtn = gtk.Button('Check In')
+        self.checkInBtn.connect('clicked', self.check_in)
+        hbox.pack_end(self.checkInBtn, expand=False, fill=False)
+
+        self.checkOutBtn = gtk.Button('Check Out')
+        self.checkOutBtn.connect('clicked', self.check_out)
+        hbox.pack_end(self.checkOutBtn, expand=False, fill=False)
+
+        return hbox
+
+    def updateButtons(self):
+        if self.app.catalog.getCheckOutStatus(self.releaseId):
+            print ('out')
+            self.checkInBtn.set_sensitive(True)
+            self.checkOutBtn.set_sensitive(False)
+        else:
+            print ('in')
+            self.checkInBtn.set_sensitive(False)
+            self.checkOutBtn.set_sensitive(True)
+
 def TextViewEntry(parent, message, default=''):
     """
     Display a dialog with a text entry.
@@ -955,7 +1047,7 @@ class DetailPane(gtk.HBox):
         self.countSpinButton.set_value(int(count) if count and count != 'None' else 0)
 
         checkedOut = self.catalog.getCheckOutStatus(releaseId)
-        self.checkOutLbl.set_text(checkedOut[0] if checkedOut else 'No')
+        self.checkOutLbl.set_text(checkedOut[1] if checkedOut else 'No')
 
 class MBCatGtk:
     """
@@ -1340,15 +1432,15 @@ class MBCatGtk:
         releaseId = self.getSelection()
         TrackListDialog(self.window, self, releaseId)
 
-    def checkOut(self, widget):
-        releaseId = self.getSelection()
+    def checkOutDialog(self, widget=None):
+        CheckOutHistoryDialog(self.window, self, self.getSelection())
+
+    def checkOut(self, widget=None, releaseId=None):
+        if not releaseId:
+            releaseId = self.getSelection()
 
         checkOutEvents = self.catalog.getCheckOutEvents(releaseId)
         checkInEvents = self.catalog.getCheckInEvents(releaseId)
-        for event in checkOutEvents:
-            _log.info(str(event) + '\n')
-        for event in checkInEvents:
-            _log.info(str(event) + '\n')
 
         borrower = TextEntry(self.window, "Borrower: ")
         if not borrower:
@@ -1361,8 +1453,9 @@ class MBCatGtk:
             time.strftime('%s', time.strptime(date, mbcat.dateFmtStr)))
         self.updateDetailPane()
 
-    def checkIn(self, widget):
-        releaseId = self.getSelection()
+    def checkIn(self, widget=None, releaseId=None):
+        if not releaseId:
+            releaseId = self.getSelection()
 
         if not self.catalog.getCheckOutStatus(releaseId):
             ErrorDialog(self.window, 'Release is not checked out.')
@@ -1736,15 +1829,9 @@ class MBCatGtk:
         sep = gtk.SeparatorMenuItem()
         menu.append(sep)
 
-        ## Check Out
-        submenuitem = gtk.MenuItem('Check Out')
-        submenuitem.connect('activate', self.checkOut)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Check In
-        submenuitem = gtk.MenuItem('Check In')
-        submenuitem.connect('activate', self.checkIn)
+        ## Check Out/In
+        submenuitem = gtk.MenuItem('Check Out/In')
+        submenuitem.connect('activate', self.checkOutDialog)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
 

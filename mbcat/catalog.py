@@ -811,7 +811,7 @@ class Catalog(object):
 
     def getCheckOutEvents(self, releaseId):
         # TODO should use sqlite3.Row as the conn.row_factory for these fetches
-        self.curs.execute('select borrower,date from checkout_events where '
+        self.curs.execute('select date,borrower from checkout_events where '
             'release=?', (releaseId,))
         return self.curs.fetchall()
 
@@ -820,6 +820,13 @@ class Catalog(object):
         self.curs.execute('select date from checkin_events where '
             'release=?', (releaseId,))
         return self.curs.fetchall()
+
+    def getCheckOutHistory(self, releaseId):
+        checkOutEvents = self.getCheckOutEvents(releaseId)
+        checkInEvents = self.getCheckInEvents(releaseId)
+        eventHistory = sorted(checkOutEvents + checkInEvents,
+            key=lambda x: x[0])
+        return eventHistory
 
     def getCheckOutStatus(self, releaseId):
         self.curs.execute('select max(date) from checkout_events '
