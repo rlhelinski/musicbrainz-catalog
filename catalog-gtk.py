@@ -884,6 +884,11 @@ class DetailPane(gtk.HBox):
         adjustment.connect('value_changed', self.setCount)
         self.lt.attach(self.countSpinButton, 1, 2, 4, 5)
 
+        l = gtk.Label('Checked Out?')
+        self.lt.attach(l, 0, 1, 5, 6)
+        self.checkOutLbl = gtk.Label()
+        self.lt.attach(self.checkOutLbl, 1, 2, 5, 6)
+
         self.lt.show_all()
 
         self.pack_start(self.lt, expand=False, fill=False)
@@ -936,6 +941,9 @@ class DetailPane(gtk.HBox):
 
         count = self.catalog.getCopyCount(releaseId)
         self.countSpinButton.set_value(int(count) if count and count != 'None' else 0)
+
+        checkedOut = self.catalog.getCheckOutStatus(releaseId)
+        self.checkOutLbl.set_text(checkedOut[0] if checkedOut else 'No')
 
 class MBCatGtk:
     """
@@ -1340,23 +1348,23 @@ class MBCatGtk:
             default=time.strftime(mbcat.dateFmtStr))
         self.catalog.addCheckOutEvent(releaseId, borrower,
             time.strftime('%s', time.strptime(date, mbcat.dateFmtStr)))
+        self.updateDetailPane()
 
     def checkIn(self, widget):
         releaseId = self.getSelection()
 
-        lendEvents = self.catalog.getLendEvents(releaseId)
-        if not lendEvents or not isinstance(lendEvents[-1],
-            mbcat.extradata.CheckOutEvent):
+        if not self.catalog.getCheckOutStatus(releaseId):
             ErrorDialog(self.window, 'Release is not checked out.')
             return
 
         date = TextEntry(self.window,
-            "Return date (" + mbcat.dateFmtUsr +
-            ") (leave empty for today): ")
+            "Return date (" + mbcat.dateFmtUsr + "): ",
+            default=time.strftime(mbcat.dateFmtStr))
         if not date:
             date = time.time()
-        self.catalog.addLendEvent(releaseId,
-            mbcat.extradata.CheckInEvent(date))
+        self.catalog.addCheckInEvent(releaseId,
+            time.strftime('%s', time.strptime(date, mbcat.dateFmtStr)))
+        self.updateDetailPane()
 
     def editComment(self, widget):
         releaseId = self.getSelection()

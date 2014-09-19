@@ -821,6 +821,22 @@ class Catalog(object):
             'release=?', (releaseId,))
         return self.curs.fetchall()
 
+    def getCheckOutStatus(self, releaseId):
+        self.curs.execute('select max(date) from checkout_events '
+            'where release=?', (releaseId,))
+        latestCheckOut = self.curs.fetchone()[0]
+        self.curs.execute('select max(date) from checkin_events '
+            'where release=?', (releaseId,))
+        latestCheckIn = self.curs.fetchone()[0]
+
+        if latestCheckIn > latestCheckOut:
+            return None
+        else:
+            self.curs.execute('select borrower, date from checkout_events '
+                'where release=? order by date limit 1', (releaseId,))
+            info = self.curs.fetchone()
+            return info
+
     def addCheckOutEvent(self, releaseId, borrower, date):
         self.curs.execute('insert into checkout_events '
             '(borrower, date, release) values (?,?,?)',
@@ -829,7 +845,7 @@ class Catalog(object):
 
     def addCheckInEvent(self, releaseId, date):
         self.curs.execute('insert into checkin_events (date,release) '
-            'where release=?', (date, releaseId))
+            'values (?,?)', (date, releaseId))
         self.conn.commit()
 
     def getRating(self, releaseId):
