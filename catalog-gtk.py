@@ -1203,11 +1203,8 @@ class MBCatGtk:
     def updateStatusBar(self):
         # TODO use this push/pop action better
         self.statusbar.pop(self.context_id)
-        msg = ('%d total releases, %d release words, %d track words, '+\
-            'showing %d releases') % \
-            (len(self.catalog), self.catalog.getWordCount(),
-                self.catalog.getTrackWordCount(),
-                len(self.releaseList))
+        msg = ('Showing %d out of %d releases' % \
+            (len(self.releaseList), len(self.catalog)))
         self.statusbar.push(self.context_id, msg)
 
     def toggleDetailPane(self, widget):
@@ -1219,6 +1216,7 @@ class MBCatGtk:
         else:
             self.detailpane.hide()
 
+    # TODO this should be a method of DetailPane
     def updateDetailPane(self):
         if self.detailpane.get_visible():
             self.detailpane.update(self.getSelection())
