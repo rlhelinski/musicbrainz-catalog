@@ -850,12 +850,20 @@ class DetailPane(gtk.HBox):
 
         l = gtk.Label('Release ID')
         self.lt.attach(l, 0, 1, 0, 1)
+        self.releaseIdLbl = gtk.Label()
+        self.lt.attach(self.releaseIdLbl, 1, 2, 0, 1)
+
+        hbox = gtk.HBox()
         self.clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
-        self.releaseIdBtn = gtk.Button(stock=gtk.STOCK_COPY)
-        self.releaseIdBtn.connect('clicked', self.copyReleaseId)
+        self.releaseIdCopyBtn = gtk.Button(stock=gtk.STOCK_COPY)
+        self.releaseIdCopyBtn.connect('clicked', self.copyReleaseId)
         #self.releaseIdBtn.show()
         #self.vb.pack_start(self.releaseIdBtn, expand=False, fill=False)
-        self.lt.attach(self.releaseIdBtn, 1, 2, 0, 1)
+        hbox.pack_start(self.releaseIdCopyBtn)
+        self.releaseIdBrowseBtn = gtk.Button('Browse')
+        self.releaseIdBrowseBtn.connect('clicked', self.browse_release)
+        hbox.pack_start(self.releaseIdBrowseBtn)
+        self.lt.attach(hbox, 1, 2, 1, 2)
 
         l = gtk.Label('First Added')
         self.lt.attach(l, 0, 1, 1, 2)
@@ -897,6 +905,9 @@ class DetailPane(gtk.HBox):
     def copyReleaseId(self, button):
         self.clipboard.set_text(self.releaseId)
 
+    def browse_release(self, button):
+        webbrowser.open(mbcat.catalog.Catalog.releaseUrl + self.releaseId)
+
     def setRating(self, combobox):
         model = combobox.get_model()
         index = combobox.get_active()
@@ -924,7 +935,8 @@ class DetailPane(gtk.HBox):
         self.tv.set_model(trackTreeStore)
         self.tv.expand_all()
 
-        self.releaseIdBtn.set_label('Copy '+releaseId[:8]+'...')
+        # TODO maybe ellipsize instead
+        self.releaseIdLbl.set_label(releaseId[:13]+'...')
 
         firstAdded = self.catalog.getFirstAdded(releaseId)
         firstAdded = time.strftime(mbcat.dateFmtStr,
@@ -1126,9 +1138,9 @@ class MBCatGtk:
             menuitem.set_sensitive(sens)
 
     def on_row_activate(self, treeview, path, column):
-        model, it = treeview.get_selection().get_selected()
-        relId = model.get_value(it, 0)
-        webbrowser.open(self.catalog.releaseUrl + relId)
+        self.detailpane.show()
+        self.updateDetailPane()
+        self.scrollToSelected()
 
     def on_row_select(self, treeview):
         self.menu_release_items_set_sensitive(True)
@@ -1190,7 +1202,7 @@ class MBCatGtk:
         self.updateDetailPane()
         self.updateStatusBar()
 
-    def scrollToSelected(self, widget):
+    def scrollToSelected(self, widget=None):
         row = self.getSelectedRow()
         self.treeview.scroll_to_cell(row, use_align=True, row_align=0.5)
 
@@ -1213,6 +1225,7 @@ class MBCatGtk:
                 self.setSelectedRow(0)
             self.detailpane.show()
             self.updateDetailPane()
+            self.scrollToSelected()
         else:
             self.detailpane.hide()
 
