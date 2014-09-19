@@ -1487,7 +1487,7 @@ class MBCatGtk:
         if not results:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
             return
-        QueryResultsDialog(self, self.catalog, results)
+        QueryResultsDialog(self.window, self, results)
 
     def webserviceSyncCollection(self, widget):
         """Synchronize with a musicbrainz collection (currently only pushes releases)."""
