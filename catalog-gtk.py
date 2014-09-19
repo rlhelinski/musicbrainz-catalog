@@ -11,7 +11,7 @@ import gtk
 import pango
 import mbcat
 import mbcat.barcode # why does this not automatically import?
-import mbcat.gtkpbar
+import mbcat.dialogs
 import musicbrainzngs as mb
 import argparse
 import time
@@ -1197,14 +1197,14 @@ class MBCatGtk:
     def menuCatalogVacuum(self, widget):
         # Need a new Catalog object for this new thread
         c = mbcat.catalog.Catalog(self.catalog.dbPath, self.catalog.cachePath)
-        th = mbcat.gtkpbar.TaskHandler(self.window,
+        th = mbcat.dialogs.TaskHandler(self.window,
             c.vacuum())
         th.start()
 
     def menuCatalogRebuild(self, widget):
         # Need a new Catalog object for this new thread
         c = mbcat.catalog.Catalog(self.catalog.dbPath, self.catalog.cachePath)
-        th = mbcat.gtkpbar.TaskHandler(self.window,
+        th = mbcat.dialogs.TaskHandler(self.window,
             c.rebuildCacheTables())
         th.start()
         # TODO figure out how to cause a refresh here
@@ -1539,7 +1539,7 @@ class MBCatGtk:
         entry = TextEntry(self.window, 'Enter release group search terms')
         if not entry:
             return
-        th = mbcat.gtkpbar.TaskHandler(self.window, mbcat.gtkpbar.DummyTask())
+        th = mbcat.dialogs.TaskHandler(self.window, mbcat.dialogs.DummyTask())
         th.start()
         results = mb.search_release_groups(releasegroup=entry,
              limit=self.searchResultsLimit)
