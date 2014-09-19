@@ -1240,6 +1240,7 @@ class MBCatGtk:
     def on_row_activate(self, treeview, path, column):
         self.detailpane.show()
         self.updateDetailPane()
+        self.detailPaneCheckItem.set_active(True)
         self.scrollToSelected()
 
     def on_row_select(self, treeview):
@@ -1737,6 +1738,7 @@ class MBCatGtk:
         submenuitem.set_active(False)
         submenuitem.connect('activate', self.toggleDetailPane)
         menu.append(submenuitem)
+        self.detailPaneCheckItem = submenuitem # save a reference
 
         ## Show Statusbar
         submenuitem = gtk.CheckMenuItem('Show Statusbar')
