@@ -16,7 +16,9 @@ window = None
 
 
 def much_fun(arg):
+    t0 = time.time()
     time.sleep(arg)
+    return time.time() - t0
 
 class ProgressDialog(threading.Thread):
     """This does something that takes a while and keeps track of its own
@@ -72,7 +74,11 @@ class PulseDialog(ProgressDialog):
         self.quit()
 
 class ThreadedCall(threading.Thread):
-    """This simply runs a function in a new thread"""
+    """
+    This simply runs a function in a new thread.
+    This thread class is for inheriting to implement a thread which runs a task
+    and does something with the return value.
+    """
 
     def __init__(self, fun, *args):
         super(ThreadedCall, self).__init__()
@@ -160,8 +166,14 @@ def run_long_task(widget):
 def run_mutex_task(widget):
     t = ProgressDialog(MutexTask(10)).start()
 
+class pulse_task(ThreadedCall):
+    def run(self):
+        ThreadedCall.run(self)
+        # This is the thing we want to do after the thread is done
+        print ('Result: '+str(self.result))
+
 def run_pulse_task(widget):
-    t = PulseDialog(ThreadedCall(much_fun, 10)).start()
+    t = PulseDialog(pulse_task(much_fun, 10)).start()
 
 window = gtk.Window()
 window.set_has_frame(True)
