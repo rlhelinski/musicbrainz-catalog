@@ -963,6 +963,12 @@ class DetailPane(gtk.HBox):
         self.lt.attach(hbox, 1, 2, r, r+1)
         r += 1
 
+        l = gtk.Label('Last Refresh')
+        self.lt.attach(l, 0, 1, r, r+1)
+        self.lastRefreshLbl = gtk.Label()
+        self.lt.attach(self.lastRefreshLbl, 1, 2, r, r+1)
+        r += 1
+
         l = gtk.Label('First Added')
         self.lt.attach(l, 0, 1, r, r+1)
         self.firstAddedLbl = gtk.Label()
@@ -1041,6 +1047,10 @@ class DetailPane(gtk.HBox):
         self.tv.expand_all()
 
         self.releaseIdLbl.set_label(releaseId)
+
+        lastRefresh = self.catalog.getMetaTime(releaseId)
+        lastRefresh = decodeDate(lastRefresh) if lastRefresh else '-'
+        self.lastRefreshLbl.set_text(lastRefresh)
 
         firstAdded = self.catalog.getFirstAdded(releaseId)
         firstAdded = decodeDate(firstAdded) if firstAdded else '-'
