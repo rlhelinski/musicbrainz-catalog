@@ -1271,7 +1271,8 @@ class Catalog(object):
         imgPath = self._getCoverArtPath(releaseId)
         if os.path.isfile(imgPath) and os.path.getmtime(imgPath) > \
                 time.time() - maxage:
-            _log.info("Already have cover art for " + releaseId + ", skipping")
+            _log.info("Already have cover art for " + releaseId + " at '" + \
+                imgPath + "', skipping")
             return
 
         try:
