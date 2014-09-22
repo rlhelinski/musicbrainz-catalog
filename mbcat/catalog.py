@@ -1216,6 +1216,7 @@ class Catalog(object):
         """
 
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
+        self._connect() # for threading
         if releaseId in self:
             _log.info("Release %s is already in catalog." % releaseId)
         metaTime = self.getMetaTime(releaseId)

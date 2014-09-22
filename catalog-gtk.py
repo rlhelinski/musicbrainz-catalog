@@ -1364,17 +1364,37 @@ class MBCatGtk:
             self.setSelectedRow(row)
 
     def _addRelease(self, releaseId, parentWindow):
+        class AddReleaseTask(mbcat.dialogs.ThreadedCall):
+            def __init__(self, app, c, fun, *args):
+                mbcat.dialogs.ThreadedCall.__init__(self, fun, *args)
+                self.app = app
+                self.c = c
+
+            def run(self):
+                print ('AddReleaseTask.run')
+                try:
+                    mbcat.dialogs.ThreadedCall.run(self)
+                except mb.ResponseError as e:
+                    ErrorDialog(self.app.window, str(e) + ". Bad release ID?")
+                    return
+                except mb.NetworkError as e:
+                    ErrorDialog(self.app.window, "Unable to connection.")
+                    return
+                #self.app.catalog._connect()
+                self.app.makeListStore(self.c)
+                #gobject.idle_add(self.app.makeListStore)
+                self.app.setSelectedRow(self.app.getReleaseRow(releaseId))
+                #gobject.idle_add(self.app.setSelectedRow,
+                #    self.app.getReleaseRow(releaseId))
+
         if releaseId in self.catalog:
             ErrorDialog(parentWindow, 'Release already exists')
             return
-        try:
-            self.catalog.addRelease(releaseId)
-        except mb.ResponseError as e:
-            ErrorDialog(parentWindow, str(e) + ". Bad release ID?")
-            return
 
-        self.makeListStore()
-        self.setSelectedRow(self.getReleaseRow(releaseId))
+        # Need a new Catalog object for this new thread
+        c = mbcat.catalog.Catalog(self.catalog.dbPath, self.catalog.cachePath)
+        mbcat.dialogs.PulseDialog(parentWindow,
+            AddReleaseTask(self, c, c.addRelease, releaseId)).start()
 
     def addRelease(self, widget):
         entry = TextEntry(self.window, 'Enter Release ID')
@@ -1969,10 +1989,12 @@ class MBCatGtk:
         mb.show_all()
         widget.pack_start(mb, False, False, 0)
 
-    def makeListStore(self):
+    def makeListStore(self, catalog=None):
+        if not catalog:
+            catalog = self.catalog
         self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str, str, str)
 
-        for row in self.catalog.getBasicTable(self.filt):
+        for row in catalog.getBasicTable(self.filt):
             self.releaseList.append(row)
         # Need to add 1 here to get to sort string because of UUID at beginning
         self.releaseList.set_sort_column_id(1, gtk.SORT_ASCENDING)
