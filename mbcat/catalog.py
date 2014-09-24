@@ -1516,7 +1516,8 @@ class Catalog(object):
             ' from releases'+\
             ((' where '+','.join(
                 key+'=?' for key in filt.keys()
-                )) if filt else ''),
+                )) if filt else '')+\
+            ' order by sortstring',
             filt.values())
         # could return the cursor here for efficiency, but then it would have
         # left the object
