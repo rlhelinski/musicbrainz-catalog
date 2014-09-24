@@ -60,6 +60,8 @@ class CatalogManager(threading.Thread):
         self.catalog = Catalog(*self.child_args, **self.child_kwargs)
         while not self.shutdown.isSet():
             self.cmdReady.wait()
+            if self.shutdown.isSet():
+                break
             self.cmdReady.clear()
             fun, event, args, kwargs = self.cmdQueue.pop()
             result = fun(*args, **kwargs)
@@ -94,6 +96,7 @@ class CatalogManager(threading.Thread):
 
     def stop(self):
         self.shutdown.set()
+        self.cmdReady.set()
 
 class Catalog(object):
 
