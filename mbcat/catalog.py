@@ -1518,7 +1518,9 @@ class Catalog(object):
                 key+'=?' for key in filt.keys()
                 )) if filt else ''),
             filt.values())
-        return self.curs
+        # could return the cursor here for efficiency, but then it would have
+        # left the object
+        return self.curs.fetchall()
 
     def getReleaseTitle(self, releaseId):
         self.curs.execute('select title from releases where id=?',

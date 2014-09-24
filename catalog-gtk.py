@@ -1131,6 +1131,7 @@ class MBCatGtk:
 
     def destroy(self, widget, data=None):
         print ("destroy signal occurred")
+        self.catalog.stop()
         gtk.main_quit()
 
     def openAboutWindow(self, widget):
@@ -1335,7 +1336,7 @@ class MBCatGtk:
         # TODO use this push/pop action better
         self.statusbar.pop(self.context_id)
         msg = ('Showing %d out of %d releases' % \
-            (len(self.releaseList), len(self.catalog)))
+            (len(self.releaseList), self.catalog.queueAndGet(self.catalog.catalog.__len__)))
         self.statusbar.push(self.context_id, msg)
 
     def toggleDetailPane(self, widget):
@@ -1991,12 +1992,10 @@ class MBCatGtk:
         mb.show_all()
         widget.pack_start(mb, False, False, 0)
 
-    def makeListStore(self, catalog=None):
-        if not catalog:
-            catalog = self.catalog
+    def makeListStore(self, ):
         self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str, str, str)
 
-        for row in catalog.getBasicTable(self.filt):
+        for row in self.catalog.queueAndGet(self.catalog.catalog.getBasicTable, self.filt):
             self.releaseList.append(row)
         # Need to add 1 here to get to sort string because of UUID at beginning
         self.releaseList.set_sort_column_id(1, gtk.SORT_ASCENDING)
@@ -2036,7 +2035,7 @@ class MBCatGtk:
         self.scrolledwindow.add(self.treeview)
 
     def __init__(self, dbPath, cachePath):
-        self.catalog = mbcat.catalog.Catalog(dbPath, cachePath)
+        self.catalog = mbcat.catalog.CatalogManager(dbPath, cachePath)
         self.filt = {}
 
         # create a new window
