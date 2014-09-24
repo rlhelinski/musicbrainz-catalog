@@ -1033,6 +1033,10 @@ class DetailPane(gtk.HBox):
             self.countSpinButton.get_value_as_int())
 
     def update(self, releaseId):
+        if self.get_visible():
+            self._update(releaseId)
+
+    def _update(self, releaseId):
         self.releaseId = releaseId # for the UUID copy button
         self.coverart.hide()
         self.coverart.set_from_file(self.catalog._getCoverArtPath(releaseId))
@@ -1341,14 +1345,12 @@ class MBCatGtk:
                 self.setSelectedRow(0)
             self.detailpane.show()
             self.updateDetailPane()
-            self.scrollToSelected()
+            self.scrollToSelected() # TODO this doesn't work
         else:
             self.detailpane.hide()
 
-    # TODO this should be a method of DetailPane
     def updateDetailPane(self):
-        if self.detailpane.get_visible():
-            self.detailpane.update(self.getSelection())
+        self.detailpane.update(self.getSelection())
 
     def selectFormat(self, action, current):
         text = self.formatNames[action.get_current_value()]
