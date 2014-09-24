@@ -939,8 +939,9 @@ class DetailPane(gtk.HBox):
         self.lt = gtk.Table(2, 4, homogeneous=False)
 
         r = 0
-        l = gtk.Label('Release ID')
-        self.lt.attach(l, 0, 1, r, r+1)
+        l = gtk.Label('Release ID:')
+        l.set_alignment(0, 0.5)
+        self.lt.attach(l, 0, 1, r, r+2) # span two rows
         self.releaseIdLbl = gtk.Label()
         self.releaseIdLbl.set_ellipsize(pango.ELLIPSIZE_END)
         self.lt.attach(self.releaseIdLbl, 1, 2, r, r+1)
@@ -959,32 +960,37 @@ class DetailPane(gtk.HBox):
         self.lt.attach(hbox, 1, 2, r, r+1)
         r += 1
 
-        l = gtk.Label('Last Refresh')
+        l = gtk.Label('Last Refresh:')
+        l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
         self.lastRefreshLbl = gtk.Label()
         self.lt.attach(self.lastRefreshLbl, 1, 2, r, r+1)
         r += 1
 
-        l = gtk.Label('First Added')
+        l = gtk.Label('First Added:')
+        l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
         self.firstAddedLbl = gtk.Label()
         self.lt.attach(self.firstAddedLbl, 1, 2, r, r+1)
         r += 1
 
-        l = gtk.Label('Last Listened')
+        l = gtk.Label('Last Listened:')
+        l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
         self.lastListenedLbl = gtk.Label()
         self.lt.attach(self.lastListenedLbl, 1, 2, r, r+1)
         r += 1
 
-        l = gtk.Label('Rating')
+        l = gtk.Label('Rating:')
+        l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
         self.ratingLbl = buildRatingComboBox()
         self.ratingLbl.connect('changed', self.setRating)
         self.lt.attach(self.ratingLbl, 1, 2, r, r+1)
         r += 1
 
-        l = gtk.Label('On-hand Count')
+        l = gtk.Label('On-hand Count:')
+        l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
         adjustment = gtk.Adjustment(
             value=1,
@@ -997,6 +1003,7 @@ class DetailPane(gtk.HBox):
         r += 1
 
         l = gtk.Label('Checked Out?')
+        l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
         self.checkOutLbl = gtk.Label()
         self.lt.attach(self.checkOutLbl, 1, 2, r, r+1)
