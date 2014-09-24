@@ -9,16 +9,36 @@ class ProgressDialog(threading.Thread):
     """This does something that takes a while and keeps track of its own
     progress"""
 
-    def __init__(self, parentWindow, task):
+    def __init__(self, parentWindow, task, initStatusLabel='Please Wait...'):
         super(ProgressDialog, self).__init__()
         self.task = task
         self.parentWindow = parentWindow
 
-        self.pbarwindow = gtk.Window()
+        self.pbarwindow = gtk.Window(type=gtk.WINDOW_TOPLEVEL)
         self.pbarwindow.set_transient_for(parentWindow)
+        self.pbarwindow.set_position(gtk.WIN_POS_CENTER_ON_PARENT)
+        self.pbarwindow.set_resizable(False)
+        self.pbarwindow.set_border_width(10)
+        self.pbarwindow.connect('destroy', self.on_destroy)
+        self.pbarwindow.connect('delete_event', self.on_delete)
+
+        vbox = gtk.VBox(False, 10)
+        self.status = gtk.Label(initStatusLabel)
+        self.status.set_width_chars(60)
+        vbox.pack_start(self.status)
+
         self.progressbar = gtk.ProgressBar()
-        self.pbarwindow.add(self.progressbar)
+        vbox.pack_start(self.progressbar)
+        self.pbarwindow.add(vbox)
         self.pbarwindow.show_all()
+
+    def on_delete(self, widget, event, data=None):
+        # Change FALSE to TRUE and the main window will not be destroyed
+        # with a "delete_event".
+        return False
+
+    def on_destroy(self, widget, data=None):
+        self.task.stop()
 
     def run(self):
         """Run method, this is the code that runs while thread is alive."""
@@ -76,6 +96,11 @@ class ThreadedCall(threading.Thread):
         This is just an example. You can make your own by creating a class
         that inherits this class and defining your own run() method."""
         self.result = self.fun(*self.args)
+
+    def stop(self):
+        """We can't actually interrupt the call because of Python's threading
+        limitations, but we provide this function to keep API consistent."""
+        pass
 
 class ThreadedTask(threading.Thread):
     """This does something that takes a while and keeps track of its own
