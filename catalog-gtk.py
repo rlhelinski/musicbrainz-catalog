@@ -1260,7 +1260,6 @@ class MBCatGtk:
         self.detailpane.show()
         self.updateDetailPane()
         self.detailPaneCheckItem.set_active(True)
-        self.scrollToSelected()
 
     def on_row_select(self, treeview):
         self.menu_release_items_set_sensitive(True)
@@ -1585,11 +1584,9 @@ class MBCatGtk:
         entry = TextEntry(self.window, 'Enter release group search terms')
         if not entry:
             return
-        th = mbcat.dialogs.TaskHandler(self.window, mbcat.dialogs.DummyTask())
-        th.start()
+        # Show pulse dialog here
         results = mb.search_release_groups(releasegroup=entry,
              limit=self.searchResultsLimit)
-        th.stop()
         if not results:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
         GroupQueryResultsDialog(self.window, self, results)
