@@ -518,6 +518,7 @@ class QueryResultsDialog:
             col.add_attribute(cell, 'text', i+1)
             col.set_resizable(True)
             self.tv.append_column(col)
+        self.tv.set_search_column(1) # search by Artist
 
     def buildListStore(self, queryResult):
         # make the list store
@@ -620,6 +621,7 @@ class GroupQueryResultsDialog(QueryResultsDialog):
             col.add_attribute(cell, 'text', i+1)
             col.set_resizable(True)
             self.tv.append_column(col)
+        self.tv.set_search_column(1) # search by Artist
 
     def buildListStore(self, queryResult):
         # make the list store
