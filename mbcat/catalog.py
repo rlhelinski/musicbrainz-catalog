@@ -48,6 +48,7 @@ class CatalogManager(threading.Thread):
         self.child_args = args
         self.child_kwargs = kwargs
         threading.Thread.__init__(self)
+        self.setDaemon(True) # terminate when the main thread does
         self.cmdReady = threading.Event()
         self.shutdown = threading.Event()
         self.cmdQueue = []

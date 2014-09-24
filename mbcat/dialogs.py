@@ -11,6 +11,8 @@ class ProgressDialog(threading.Thread):
 
     def __init__(self, parentWindow, task, initStatusLabel='Please Wait...'):
         super(ProgressDialog, self).__init__()
+        # not sure if we need this if this window is destroyed with its parent
+        self.setDaemon(True)
         self.task = task
         self.parentWindow = parentWindow
 
@@ -88,6 +90,7 @@ class ThreadedCall(threading.Thread):
 
     def __init__(self, fun, *args):
         super(ThreadedCall, self).__init__()
+        self.setDaemon(True)
         self.fun = fun
         self.args = args
 
@@ -108,6 +111,7 @@ class ThreadedTask(threading.Thread):
     
     def __init__(self, denom):
         super(ThreadedTask, self).__init__()
+        self.setDaemon(True)
         self.denom = denom
         self.numer = 0
 
