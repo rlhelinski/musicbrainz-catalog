@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 import os
 import sys
 import time
-import re
 import musicbrainzngs.mbxml as mbxml
 import musicbrainzngs.util as mbutil
 import musicbrainzngs.musicbrainz as mb
@@ -490,24 +489,16 @@ class Catalog(object):
                 pbar.finish()
 
     @staticmethod
-    def processWords(field, d):
-        if field in d:
-            return re.findall(r"[\w'.]+", d[field].lower(), re.UNICODE)
-        elif field != 'disambiguation':
-            _log.warning('Release '+relId+' is missing the '+field+' field')
-        return set()
-
-    @staticmethod
     def getReleaseWords(rel):
         words = set()
         relId = rel['id']
 
         for field in ['title', 'artist-credit-phrase', 'disambiguation']:
-            words.update(mbcat.Catalog.processWords(field, rel))
+            words.update(mbcat.processWords(field, rel))
         for credit in rel['artist-credit']:
             for field in ['sort-name', 'disambiguation', 'name']:
                 if field in credit:
-                    words.update(mbcat.Catalog.processWords(field, credit))
+                    words.update(mbcat.processWords(field, credit))
 
         return words
 
@@ -556,7 +547,7 @@ class Catalog(object):
                             medium_id)
                         )
                     if 'title' in track['recording']:
-                        for word in mbcat.Catalog.processWords('title',
+                        for word in mbcat.processWords('title',
                             track['recording']):
                             # Reference each word to this recording
                             self.curs.execute('insert into trackwords '
