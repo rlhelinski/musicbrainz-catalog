@@ -76,6 +76,15 @@ class CatalogManager(threading.Thread):
         self.cmdReady.set() # wake the thread loop out of wait
         return event
 
+    def queueAndGet(self, fun, *args, **kwargs):
+        """
+        A convenience function which queues the command, waits until it is
+        done, and then returns the result.
+        """
+        event = self.queueCmd(fun, *args, **kwargs)
+        event.wait()
+        return self.getResult(event)
+
     def getResult(self, event):
         """
         Get the result associated with an event. Return None if the event was
