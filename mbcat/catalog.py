@@ -42,6 +42,50 @@ if hasattr(etree, 'ParseError'):
 else:
     ETREE_EXCEPTIONS = (expat.ExpatError)
 
+import threading
+class CatalogManager(threading.Thread):
+    def __init__(self, *args, **kwargs):
+        self.child_args = args
+        self.child_kwargs = kwargs
+        threading.Thread.__init__(self)
+        self.cmdReady = threading.Event()
+        self.shutdown = threading.Event()
+        self.cmdQueue = []
+        self.results = dict()
+
+        self.start()
+
+    def run(self):
+        # The single, coveted Catalog object
+        self.catalog = Catalog(*self.child_args, **self.child_kwargs)
+        while not self.shutdown.isSet():
+            self.cmdReady.wait()
+            self.cmdReady.clear()
+            fun, event, args, kwargs = self.cmdQueue.pop()
+            result = fun(*args, **kwargs)
+            if event:
+                self.results[event] = result
+                event.set()
+
+    def queueCmd(self, fun, *args, **kwargs):
+        """
+        Queue a function with arguments to be executed by the manager thread.
+        """
+        event = threading.Event()
+        self.cmdQueue.append((fun, event, args, kwargs))
+        self.cmdReady.set() # wake the thread loop out of wait
+        return event
+
+    def getResult(self, event):
+        """
+        Get the result associated with an event. Return None if the event was
+        not found.
+        """
+        return self.results.pop(event, None)
+
+    def stop(self):
+        self.shutdown.set()
+
 class Catalog(object):
 
     mbUrl = 'http://'+mb.hostname+'/'
