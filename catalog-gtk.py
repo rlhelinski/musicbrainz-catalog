@@ -1223,14 +1223,14 @@ class MBCatGtk:
 
     def menuCatalogVacuum(self, widget):
         # Need a new Catalog object for this new thread
-        c = mbcat.catalog.Catalog(self.catalog.dbPath, self.catalog.cachePath)
+        c = self.catalog.copy()
         th = mbcat.dialogs.TaskHandler(self.window,
             c.vacuum())
         th.start()
 
     def menuCatalogRebuild(self, widget):
         # Need a new Catalog object for this new thread
-        c = mbcat.catalog.Catalog(self.catalog.dbPath, self.catalog.cachePath)
+        c = self.catalog.copy()
         th = mbcat.dialogs.TaskHandler(self.window,
             c.rebuildCacheTables())
         th.start()
@@ -1397,7 +1397,7 @@ class MBCatGtk:
             return
 
         # Need a new Catalog object for this new thread
-        c = mbcat.catalog.Catalog(self.catalog.dbPath, self.catalog.cachePath)
+        c = self.catalog.copy()
         mbcat.dialogs.PulseDialog(parentWindow,
             AddReleaseTask(self, c, c.addRelease, releaseId)).start()
 

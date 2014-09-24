@@ -94,6 +94,9 @@ class Catalog(object):
         if not os.path.isfile(self.dbPath) or not self._checkTables():
             self._createTables()
 
+    def copy(self):
+        return Catalog(self.dbPath, self.cachePath)
+
     def _connect(self):
         # Open and retain a connection to the database
         self.conn = self._get_connection()
