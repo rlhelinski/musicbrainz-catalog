@@ -149,7 +149,7 @@ class ConnectionManager(threading.Thread):
     def execute(self, *argv, **kwargs):
         """
         A convenience function that queues a command to be executed on the
-        cursor and expects no results.
+        cursor and expects no results. Result is discarded.
         """
         self.isReady.wait() # wait for the connection to be ready
         self.queueCmd(self.curs.execute, *argv, **kwargs)
@@ -188,7 +188,8 @@ class ConnectionManager(threading.Thread):
 
     def commit(self):
         """
-        A convenience function that queues a commit on the connection.
+        A convenience function that queues a commit on the connection and waits
+        for it to complete.
         """
         e = self.queueQuery(self.conn.commit)
         e.wait()
