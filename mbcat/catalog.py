@@ -181,8 +181,8 @@ class ConnectionManager(threading.Thread):
         self.queueAndGet(self.curs.execute, *argv)
         # PROBLEM: another command might get the result before this does
         # Possible solution: create a cursor for each execute()?
-        return itertools.chain.from_iterable(
-            self.queueAndGet(self.curs.fetchall))
+        return list(itertools.chain.from_iterable(
+            self.queueAndGet(self.curs.fetchall)))
 
     def commit(self):
         """
@@ -494,17 +494,17 @@ class Catalog(object):
         return metadata['release']
 
     def getReleaseIdsByFormat(self, fmt):
-        self.curs.execute('select id from releases where sortformat=?', (fmt,))
-        return itertools.chain.from_iterable(self.curs.fetchall())
+        return self.cm.executeAndChain(
+            'select id from releases where sortformat=?', (fmt,))
 
     def getFormats(self):
-        self.curs.execute('select distinct sortformat from releases')
-        return itertools.chain.from_iterable(self.curs.fetchall())
+        return self.cm.executeAndChain(
+            'select distinct sortformat from releases')
 
     # TODO rename to getReleaseByBarCode
     def barCodeLookup(self, barcode):
-        self.curs.execute('select id from releases where barcode=?', (barcode,))
-        result = self.curs.fetchall()
+        result = self.cm.executeAndFetch(
+            'select id from releases where barcode=?', (barcode,))
         if not result:
             raise KeyError('Barcode not found')
         return result[0][0]
@@ -1577,8 +1577,8 @@ class Catalog(object):
         If you need to get all the releases, this will be
 
         """
-        self.curs.execute('select '+','.join(self.basicColumns)+\
-            ' from releases'+\
+        return self.cm.executeAndFetch(
+            'select '+','.join(self.basicColumns)+' from releases'+\
             ((' where '+','.join(
                 key+'=?' for key in filt.keys()
                 )) if filt else '')+\
@@ -1586,7 +1586,6 @@ class Catalog(object):
             filt.values())
         # could return the cursor here for efficiency, but then it would have
         # left the object
-        return self.curs.fetchall()
 
     def getReleaseTitle(self, releaseId):
         self.curs.execute('select title from releases where id=?',
