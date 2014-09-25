@@ -50,6 +50,8 @@ class ConnectionManager(threading.Thread):
         self.child_kwargs = kwargs
         threading.Thread.__init__(self)
         self.setDaemon(True) # terminate when the main thread does
+        # to hold commands until the connection is ready
+        self.isReady = threading.Event()
         self.cmdReady = threading.Event()
         self.shutdown = threading.Event()
         self.cmdQueue = deque()
@@ -58,12 +60,30 @@ class ConnectionManager(threading.Thread):
         self.start()
 
     def _create_children(self):
+        # Open and retain a connection to the database
         # The single, coveted connection object
         self.conn = sqlite3.connect(*self.child_args, **self.child_kwargs)
                 #detect_types=sqlite3.PARSE_DECLTYPES)
+        # this connection is closed when this object is deleted
+
+        # This connection and cursor should be enough for most work. You might
+        # need a second cursor if you, for example, have a double-nested 'for'
+        # loop where you are cross-referencing things:
+        #
+        # myconn = self._connection()
+        # mycur = myconn.cursor()
+        # self.curs.execute('first query')
+        # mycur.execute('second query')
+        # for first in self.curs:
+        #     for second in mycur:
+        #         "do something with 'first' and 'second'"
         self.curs = self.conn.cursor()
 
+        self.isReady.set()
+
     def run(self):
+        # The child objects have to be created here for them to be owned by
+        # this in this thread.
         self._create_children()
 
         # Go ahead and get a cursor
@@ -73,28 +93,36 @@ class ConnectionManager(threading.Thread):
                 break
             self.cmdReady.clear()
             fun, event, args, kwargs = self.cmdQueue.pop()
-            result = fun(*args, **kwargs)
+            try:
+                result = fun(*args, **kwargs)
+            except sqlite3.OperationalError as e:
+                _log.error(str(e))
+                result = e
             if event:
                 self.results[event] = result
                 event.set()
 
+    def _queueCmd(self, fun, event, *args, **kwargs):
+        self.cmdQueue.append((fun, event, args, kwargs))
+        self.cmdReady.set() # wake the thread loop out of wait
+
+    def queueQuery(self, fun, *args, **kwargs):
+        """
+        Queue a function with arguments to be executed by the manager thread.
+        This will return an event which can be used to fetch the result of the
+        function. If the result is not fetched, the result dictionary will
+        leak---use queueCmd instead.
+        """
+        event = threading.Event()
+        self._queueCmd(fun, event, *args, **kwargs)
+        return event
+
     def queueCmd(self, fun, *args, **kwargs):
         """
         Queue a function with arguments to be executed by the manager thread.
+        This will discard the result of the function.
         """
-        event = threading.Event()
-        self.cmdQueue.append((fun, event, args, kwargs))
-        self.cmdReady.set() # wake the thread loop out of wait
-        return event
-
-    def queueAndGet(self, fun, *args, **kwargs):
-        """
-        A convenience function which queues the command, waits until it is
-        done, and then returns the result.
-        """
-        event = self.queueCmd(fun, *args, **kwargs)
-        event.wait()
-        return self.getResult(event)
+        self._queueCmd(fun, None, *args, **kwargs)
 
     def getResult(self, event):
         """
@@ -103,18 +131,66 @@ class ConnectionManager(threading.Thread):
         """
         return self.results.pop(event, None)
 
+    def queueAndGet(self, fun, *args, **kwargs):
+        """
+        A convenience function which queues the command, waits until it is
+        done, and then returns the result.
+        """
+        event = self.queueQuery(fun, *args, **kwargs)
+        event.wait()
+        return self.getResult(event)
+
     def stop(self):
         self.shutdown.set()
         self.cmdReady.set()
 
-    def executeAndFetch(self, query):
+    def execute(self, *argv, **kwargs):
         """
-        A convenience function that executes a command and fetches the results.
+        A convenience function that queues a command to be executed on the
+        cursor and expects no results.
         """
-        self.queueAndGet(self.curs.execute, query)
+        self.isReady.wait() # wait for the connection to be ready
+        self.queueCmd(self.curs.execute, *argv, **kwargs)
+
+    def executeAndFetch(self, *argv):
+        """
+        A convenience function that queues a command to be executed, waits for
+        it to finish and returns the result.
+        """
+        self.isReady.wait() # wait for the connection to be ready
+        self.queueAndGet(self.curs.execute, *argv)
         # PROBLEM: another command might get the result before this does
         return self.queueAndGet(self.curs.fetchall)
 
+    def executeAndFetchOne(self, *argv):
+        """
+        A convenience function that queues a command to be executed, waits for
+        and fetches a one-row result.
+        """
+        self.isReady.wait() # wait for the connection to be ready
+        self.queueAndGet(self.curs.execute, *argv)
+        # PROBLEM: another command might get the result before this does
+        return self.queueAndGet(self.curs.fetchone)
+
+    def executeAndChain(self, *argv):
+        """
+        A convenience function that queues a command to be executed, fetches the
+        results and chains them together (e.g., [('a',), ('b',)] -> ['a', 'b']).
+        """
+        self.isReady.wait() # wait for the connection to be ready
+        self.queueAndGet(self.curs.execute, *argv)
+        # PROBLEM: another command might get the result before this does
+        # Possible solution: create a cursor for each execute()?
+        return itertools.chain.from_iterable(
+            self.queueAndGet(self.curs.fetchall))
+
+    def commit(self):
+        """
+        A convenience function that queues a commit on the connection.
+        """
+        e = self.queueQuery(self.conn.commit)
+        e.wait()
+        return self.getResult(e)
 
 class Catalog(object):
 
