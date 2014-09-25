@@ -43,7 +43,8 @@ else:
     ETREE_EXCEPTIONS = (expat.ExpatError)
 
 import threading
-class CatalogManager(threading.Thread):
+from collections import deque
+class ConnectionManager(threading.Thread):
     def __init__(self, *args, **kwargs):
         self.child_args = args
         self.child_kwargs = kwargs
@@ -51,14 +52,21 @@ class CatalogManager(threading.Thread):
         self.setDaemon(True) # terminate when the main thread does
         self.cmdReady = threading.Event()
         self.shutdown = threading.Event()
-        self.cmdQueue = []
+        self.cmdQueue = deque()
         self.results = dict()
 
         self.start()
 
+    def _create_children(self):
+        # The single, coveted connection object
+        self.conn = sqlite3.connect(*self.child_args, **self.child_kwargs)
+                #detect_types=sqlite3.PARSE_DECLTYPES)
+        self.curs = self.conn.cursor()
+
     def run(self):
-        # The single, coveted Catalog object
-        self.catalog = Catalog(*self.child_args, **self.child_kwargs)
+        self._create_children()
+
+        # Go ahead and get a cursor
         while not self.shutdown.isSet():
             self.cmdReady.wait()
             if self.shutdown.isSet():
@@ -98,6 +106,15 @@ class CatalogManager(threading.Thread):
     def stop(self):
         self.shutdown.set()
         self.cmdReady.set()
+
+    def executeAndFetch(self, query):
+        """
+        A convenience function that executes a command and fetches the results.
+        """
+        self.queueAndGet(self.curs.execute, query)
+        # PROBLEM: another command might get the result before this does
+        return self.queueAndGet(self.curs.fetchall)
+
 
 class Catalog(object):
 
