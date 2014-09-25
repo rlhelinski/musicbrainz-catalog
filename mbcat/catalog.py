@@ -92,7 +92,8 @@ class ConnectionManager(threading.Thread):
             if self.shutdown.isSet():
                 break
             self.cmdReady.clear()
-            fun, event, args, kwargs = self.cmdQueue.pop()
+            # popleft removes and returns an element from the left side
+            fun, event, args, kwargs = self.cmdQueue.popleft()
             try:
                 result = fun(*args, **kwargs)
             except sqlite3.OperationalError as e:
@@ -103,6 +104,7 @@ class ConnectionManager(threading.Thread):
                 event.set()
 
     def _queueCmd(self, fun, event, *args, **kwargs):
+        # append adds x to the right side of the deque
         self.cmdQueue.append((fun, event, args, kwargs))
         self.cmdReady.set() # wake the thread loop out of wait
 
