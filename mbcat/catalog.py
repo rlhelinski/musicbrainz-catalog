@@ -89,19 +89,22 @@ class ConnectionManager(threading.Thread):
         # Go ahead and get a cursor
         while not self.shutdown.isSet():
             self.cmdReady.wait()
+            self.cmdReady.clear()
             if self.shutdown.isSet():
                 break
-            self.cmdReady.clear()
-            # popleft removes and returns an element from the left side
-            fun, event, args, kwargs = self.cmdQueue.popleft()
-            try:
-                result = fun(*args, **kwargs)
-            except sqlite3.OperationalError as e:
-                _log.error(str(e))
-                result = e
-            if event:
-                self.results[event] = result
-                event.set()
+            # If more cmdReady was set more than once before we got here, we
+            # would miss commands, so we process the queue until it is empty.
+            while len(self.cmdQueue):
+                # popleft removes and returns an element from the left side
+                fun, event, args, kwargs = self.cmdQueue.popleft()
+                try:
+                    result = fun(*args, **kwargs)
+                except sqlite3.OperationalError as e:
+                    _log.error(str(e))
+                    result = e
+                if event:
+                    self.results[event] = result
+                    event.set()
 
     def _queueCmd(self, fun, event, *args, **kwargs):
         # append adds x to the right side of the deque
