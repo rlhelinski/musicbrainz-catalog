@@ -1386,12 +1386,8 @@ class MBCatGtk:
                 except mb.NetworkError as e:
                     ErrorDialog(self.app.window, "Unable to connection.")
                     return
-                #self.app.catalog._connect()
-                self.app.makeListStore(self.c)
-                #gobject.idle_add(self.app.makeListStore)
+                self.app.makeListStore()
                 self.app.setSelectedRow(self.app.getReleaseRow(releaseId))
-                #gobject.idle_add(self.app.setSelectedRow,
-                #    self.app.getReleaseRow(releaseId))
 
         if releaseId in self.catalog:
             ErrorDialog(parentWindow, 'Release already exists')

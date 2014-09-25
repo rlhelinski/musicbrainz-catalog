@@ -406,8 +406,6 @@ class Catalog(object):
 
     def rebuildCacheTables(self, pbar=None):
         """Drop the derived tables in the database and rebuild them"""
-        # Get our own connection and cursor for this thread
-        self._connect()
         yield 'Dropping tables...'
         yield 15
 
@@ -439,8 +437,6 @@ class Catalog(object):
 
     def vacuum(self):
         """Vacuum the SQLite3 database. Frees up unused space on disc."""
-        # Get our own connection and cursor for this thread
-        self._connect()
         yield 'Vacuuming...'
 
         self.cm.execute('vacuum')
@@ -688,15 +684,16 @@ class Catalog(object):
         This function does not commit.
         """
         # Query for recordings for this release ID
-        self.cm.execute('select id from media where release=?', (relId,))
-        media = self.cm.fetchall()
+        media = self.cm.executeAndFetch(
+            'select id from media where release=?', (relId,))
         for (mediumId,) in media:
             self.cm.execute('delete from discids where medium=?',
                 (mediumId,))
-            self.cm.execute('select id from recordings where medium=?',
-                (mediumId,))
+
             # Iterate through the results
-            for recordingId in self.cm:
+            for recordingId in self.cm.executeAndFetch(
+                    'select id from recordings where medium=?',
+                    (mediumId,)):
                 self.cm.execute('delete from trackwords where recording=?',
                     (recordingId[0],))
             # Then, delete the rows in the recordings table referencing this
@@ -1308,7 +1305,6 @@ class Catalog(object):
         """
 
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
-        self._connect() # for threading
         if releaseId in self:
             _log.info("Release %s is already in catalog." % releaseId)
         metaTime = self.getMetaTime(releaseId)
