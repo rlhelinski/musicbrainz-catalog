@@ -1422,7 +1422,7 @@ class MBCatGtk:
             return
 
         self.catalog.deleteRelease(releaseId)
-        _log.info("Deleted '%s'" % relTitle)
+        _log.info("Deleted %s '%s'" % (releaseId, relTitle))
         self.makeListStore()
         self.setSelectedRow(row)
 
