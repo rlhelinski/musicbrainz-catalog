@@ -286,7 +286,7 @@ class Catalog(object):
         # Indexes for speed (it's all about performance...)
         self.cm.execute('create unique index release_id on releases(id)')
         for col in ['sortstring', 'catno', 'barcode', 'asin']:
-            self.curs.execute('create index release_'+col+\
+            self.cm.execute('create index release_'+col+\
                 ' on releases('+col+')')
 
         self._createMetaTables()
@@ -523,15 +523,15 @@ class Catalog(object):
         return count > 0
 
     def getCopyCount(self, releaseId):
-        self.curs.execute('select count from releases where id=?',
-                (releaseId,))
-        # TODO error not handled if release does not exist
-        return self.curs.fetchone()[0]
+        if releaseId not in self:
+            raise KeyError('Release does not exist')
+        return self.cm.executeAndFetchOne(
+                'select count from releases where id=?', (releaseId,))[0]
 
     def setCopyCount(self, releaseId, count):
-        self.curs.execute('update releases set count=? where id=?',
+        self.cm.execute('update releases set count=? where id=?',
                 (count, releaseId))
-        self.conn.commit()
+        self.cm.commit()
 
     def saveZip(self, zipName='catalog.zip', pbar=None):
         """Exports the database as a ZIP archive"""
