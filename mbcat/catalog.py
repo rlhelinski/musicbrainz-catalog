@@ -239,49 +239,28 @@ class Catalog(object):
         _log.info('Using \'%s\' for the catalog database' % self.dbPath)
         _log.info('Using \'%s\' for the file cache path' % self.cachePath)
 
-        # _connect() is called by _checkTables()
-        if not os.path.isfile(self.dbPath) or not self._checkTables():
+        self.cm = ConnectionManager(self.dbPath)
+
+        if not self._checkTables():
             self._createTables()
 
     def copy(self):
         return Catalog(self.dbPath, self.cachePath)
 
-    def _connect(self):
-        # Open and retain a connection to the database
-        self.conn = self._get_connection()
-        # This connection and cursor should be enough for most work. You might
-        # need a second cursor if you, for example, have a double-nested 'for'
-        # loop where you are cross-referencing things:
-        #
-        # myconn = self._connection()
-        # mycur = myconn.cursor()
-        # self.curs.execute('first query')
-        # mycur.execute('second query')
-        # for first in self.curs:
-        #     for second in mycur:
-        #         "do something with 'first' and 'second'"
-        self.curs = self.conn.cursor()
-
-    def _get_connection(self):
-        # this connection should be closed when this object is deleted
-        return sqlite3.connect(self.dbPath,
-                detect_types=sqlite3.PARSE_DECLTYPES)
-
     def _checkTables(self):
         """Connect to and check that the basic tables exist in the database."""
-        self._connect()
 
-        self.curs.execute('select name from sqlite_master where type="table"')
-        tables = itertools.chain.from_iterable(self.curs)
+        tables = self.cm.executeAndChain(
+            'select name from sqlite_master where type="table"')
 
+        # TODO this should check the complete schema
         return 'releases' in tables
 
     def _createTables(self):
         """Create the SQL tables for the catalog. Database is assumed empty."""
-        self._connect()
 
         # TODO maybe store the metadata dict from musicbrainz instead of the XML?
-        self.curs.execute("CREATE TABLE releases("
+        self.cm.execute("CREATE TABLE releases("
             "id TEXT PRIMARY KEY, "
             "meta BLOB, "
             "sortstring TEXT, "
@@ -302,7 +281,7 @@ class Catalog(object):
             "rating INT DEFAULT 0)")
 
         # Indexes for speed (it's all about performance...)
-        self.curs.execute('create unique index release_id on releases(id)')
+        self.cm.execute('create unique index release_id on releases(id)')
         for col in ['sortstring', 'catno', 'barcode', 'asin']:
             self.curs.execute('create index release_'+col+\
                 ' on releases('+col+')')
@@ -311,25 +290,25 @@ class Catalog(object):
 
         self._createCacheTables()
 
-        self.conn.commit()
+        self.cm.commit()
 
     def _createMetaTables(self):
         """Add the user (meta) data tables to the database.
         This method does not commit its changes."""
 
-        self.curs.execute('CREATE TABLE added_dates('
+        self.cm.execute('CREATE TABLE added_dates('
             'date FLOAT, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id)'
             ')')
 
-        self.curs.execute('CREATE TABLE listened_dates('
+        self.cm.execute('CREATE TABLE listened_dates('
             'date FLOAT, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
             'ON UPDATE CASCADE ON DELETE CASCADE)')
 
-        self.curs.execute('CREATE TABLE purchases ('
+        self.cm.execute('CREATE TABLE purchases ('
             'date FLOAT, '
             'price FLOAT, '
             'vendor TEXT, '
@@ -338,21 +317,21 @@ class Catalog(object):
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         # checkout, checkin (lent out, returned) tables
-        self.curs.execute('CREATE TABLE checkout_events ('
+        self.cm.execute('CREATE TABLE checkout_events ('
             'borrower TEXT, '
             'date FLOAT, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
-        self.curs.execute('CREATE TABLE checkin_events ('
+        self.cm.execute('CREATE TABLE checkin_events ('
             'date FLOAT, '
             'release TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         # Digital copy table
-        self.curs.execute('CREATE TABLE digital ('
+        self.cm.execute('CREATE TABLE digital ('
             'release TEXT, '
             'format TEXT, '
             'path TEXT, '
@@ -367,12 +346,12 @@ class Catalog(object):
                 ('word', 'TEXT'),
                 ]:
 
-            self.curs.execute('CREATE TABLE '+columnName+'s('+\
+            self.cm.execute('CREATE TABLE '+columnName+'s('+\
                 columnName+' '+columnType+', release TEXT, '
                 'FOREIGN KEY(release) REFERENCES releases(id) '
                 'ON DELETE CASCADE ON UPDATE CASCADE)')
 
-        self.curs.execute('CREATE TABLE media ('
+        self.cm.execute('CREATE TABLE media ('
             'id TEXT, '
             'position INTEGER, '
             'format TEXT, '
@@ -380,7 +359,7 @@ class Catalog(object):
             'FOREIGN KEY(release) REFERENCES releases(id) '
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
-        self.curs.execute('CREATE TABLE recordings ('
+        self.cm.execute('CREATE TABLE recordings ('
             'id TEXT, '
             'length INTEGER, '
             'number INTEGER, '
@@ -390,12 +369,12 @@ class Catalog(object):
             'FOREIGN KEY(medium) REFERENCES media(id) '
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
-        self.curs.execute('CREATE TABLE trackwords('
+        self.cm.execute('CREATE TABLE trackwords('
             'trackword TEXT, recording TEXT, '
             'FOREIGN KEY(recording) REFERENCES recordings(id) '
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
-        self.curs.execute('CREATE TABLE discids ('
+        self.cm.execute('CREATE TABLE discids ('
             'id TEXT, '
             'sectors INTEGER, '
             'medium TEXT, '
@@ -403,8 +382,8 @@ class Catalog(object):
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         # Indexes for speed (it's all about performance...)
-        self.curs.execute('create index word_index on words (word)')
-        self.curs.execute('create index trackword_index '
+        self.cm.execute('create index word_index on words (word)')
+        self.cm.execute('create index trackword_index '
             'on trackwords (trackword)')
 
     def updateCacheTables(self, rebuild, pbar=None):
@@ -430,14 +409,14 @@ class Catalog(object):
             # Note: the added_dates, listened_dates, and purchases tables are
             # not transient.
             try:
-                self.curs.execute('drop table '+tab)
+                self.cm.execute('drop table '+tab)
             except sqlite3.OperationalError as e:
                 pass
             yield True
 
         for index in ['word_index', 'trackword_index']:
             try:
-                self.curs.execute('drop index if exists '+index)
+                self.cm.execute('drop index if exists '+index)
             except sqlite3.OperationalError as e:
                 pass
             yield True
@@ -458,29 +437,23 @@ class Catalog(object):
         self._connect()
         yield 'Vacuuming...'
 
-        try:
-            self.curs.execute('vacuum')
-        except sqlite3.OperationalError as e:
-            _log.error(str(e))
+        self.cm.execute('vacuum')
         yield False
 
     def renameRelease(self, oldReleaseId, newReleaseId):
         # TODO this does not update purchases, checkout_events, checkin_events,
         # digital
         # Record the new release ID in the added_dates table
-        self.curs.execute('insert into added_dates (date, release) '
+        self.cm.execute('insert into added_dates (date, release) '
             'values (?,?)', (time.time(), newReleaseId))
         # Replace the release ID with the new one
         # this will cascade to all appropriate table references
-        self.curs.execute('update releases set id=? where id=?',
+        self.cm.execute('update releases set id=? where id=?',
             (newReleaseId, oldReleaseId))
         self.addRelease(newReleaseId)
 
     def getReleaseIds(self):
-        self.curs.execute('select id from releases')
-        listOfTuples = self.curs.fetchall()
-        # return all of the tuples as a list
-        return list(sum(listOfTuples, ()))
+        return self.cm.executeAndChain('select id from releases')
 
     @staticmethod
     def getReleaseDictFromXml(metaxml):
@@ -500,13 +473,12 @@ class Catalog(object):
     def getReleaseXml(self, releaseId):
         """Return a release's musicbrainz XML metadata from the local cache"""
 
-        self.curs.execute('select meta from releases where id = ?',
-            (releaseId,))
-        try:
-            releaseXml = zlib.decompress(self.curs.fetchone()[0])
-        except TypeError:
+        if releaseId not in self:
             raise KeyError ('release %s not found' % releaseId)
-        return releaseXml
+
+        return zlib.decompress(
+            self.cm.executeAndFetchOne(
+                'select meta from releases where id = ?', (releaseId,))[0])
 
     def getRelease(self, releaseId):
         """Return a release's musicbrainz-ngs dictionary.
@@ -539,13 +511,12 @@ class Catalog(object):
 
     def __len__(self):
         """Return the number of releases in the catalog."""
-        self.curs.execute('select count(id) from releases')
-        return self.curs.fetchone()[0]
+        return self.cm.executeAndFetchOne('select count(id) from releases')[0]
 
     def __contains__(self, releaseId):
-        self.curs.execute('select count(id) from releases where id=?',
-                (releaseId,))
-        count = self.curs.fetchone()[0]
+        count = self.cm.executeAndFetchOne(
+                'select count(id) from releases where id=?',
+                (releaseId,)) [0]
         return count > 0
 
     def getCopyCount(self, releaseId):
