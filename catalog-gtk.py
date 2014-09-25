@@ -425,20 +425,21 @@ def ConfirmDialog(parent, message, type=gtk.MESSAGE_QUESTION):
 
 def makeTrackTreeStore(catalog, releaseId):
     trackTreeStore = gtk.TreeStore(str, str, str)
-    for mediumId,position,format in catalog.curs.execute(
+    # TODO this should be a Catalog method
+    for mediumId,position,format in catalog.cm.executeAndFetch(
             'select id,position,format from media '
             'where release=? order by position',
-            (releaseId,)).fetchall():
+            (releaseId,)):
         parent = trackTreeStore.append(None,
             ('',
             format+' '+str(position),
             mbcat.catalog.recLengthAsString(
                 catalog.getMediumLen(mediumId)
                 )))
-        for recId,recLength,recPosition,title in catalog.curs.execute(
+        for recId,recLength,recPosition,title in catalog.cm.executeAndFetch(
                 'select id,length,position,title from recordings '
                 'where medium=? order by position',
-                (mediumId,)).fetchall():
+                (mediumId,)):
             trackTreeStore.append(parent,
                 (recId,
                 title,
