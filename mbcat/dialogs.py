@@ -94,17 +94,18 @@ class ThreadedCall(threading.Thread):
     and does something with the return value.
     """
 
-    def __init__(self, fun, *args):
+    def __init__(self, fun, *args, **kwargs):
         super(ThreadedCall, self).__init__()
         self.setDaemon(True)
         self.fun = fun
         self.args = args
+        self.kwargs = kwargs
 
     def run(self):
         """Run method, this is the code that runs while thread is alive.
         This is just an example. You can make your own by creating a class
         that inherits this class and defining your own run() method."""
-        self.result = self.fun(*self.args)
+        self.result = self.fun(*self.args, **self.kwargs)
 
     def stop(self):
         """We can't actually interrupt the call because of Python's threading
