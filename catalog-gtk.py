@@ -1222,19 +1222,29 @@ class MBCatGtk:
         self.openDatabase(filename)
 
     def menuCatalogVacuum(self, widget):
-        # Need a new Catalog object for this new thread
-        c = self.catalog.copy()
         th = mbcat.dialogs.TaskHandler(self.window,
-            c.vacuum())
+            self.catalog.vacuum())
         th.start()
 
+    class CatalogTask(threading.Thread):
+        """
+        This is a thread that runs a specified task and then refreshes the
+        window.
+        """
+        def __init__(self, app, task):
+            threading.Thread.__init__(self)
+            self.app = app
+            self.task = task
+
+        def run(self):
+            th = mbcat.dialogs.ProgressDialog(self.app.window, self.task)
+            th.start()
+            th.join()
+            self.app.refreshView()
+
     def menuCatalogRebuild(self, widget):
-        # Need a new Catalog object for this new thread
-        c = self.catalog.copy()
-        th = mbcat.dialogs.TaskHandler(self.window,
-            c.rebuildCacheTables())
-        th.start()
-        # TODO figure out how to cause a refresh here
+        self.CatalogTask(self,
+            self.catalog.rebuildCacheTables(self.catalog)).start()
 
     def menuCatalogGetSimilar(self, widget):
         th = TaskHandler()
@@ -1316,7 +1326,7 @@ class MBCatGtk:
             return None
         return self.releaseList.get_path(result_iter)[0]
 
-    def refreshView(self, widget):
+    def refreshView(self, widget=None):
         self.makeListStore()
         self.updateDetailPane()
         self.updateStatusBar()

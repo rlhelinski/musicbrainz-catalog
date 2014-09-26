@@ -12,6 +12,7 @@ import mbcat.coverart
 import mbcat.userprefs
 import mbcat.utils
 import mbcat.extradata
+import mbcat.dialogs
 import shutil
 from datetime import datetime
 from collections import defaultdict
@@ -229,6 +230,19 @@ class Catalog(object):
         'rating'
         ]
 
+    derivedTables = [
+        'words',
+        'trackwords',
+        'media',
+        'recordings',
+        'discids'
+        ]
+
+    indexes = [
+        'word_index',
+        'trackword_index'
+        ]
+
     def __init__(self, dbPath=None, cachePath=None):
         """Open or create a new catalog"""
 
@@ -392,48 +406,53 @@ class Catalog(object):
         self.cm.execute('create index trackword_index '
             'on trackwords (trackword)')
 
-    def updateCacheTables(self, rebuild, pbar=None):
-        """Use the releases table to populate the derived (cache) tables"""
-        yield 'Rebuilding tables...'
-        yield len(self)
-        for releaseId in self.getReleaseIds():
-            metaXml = self.getReleaseXml(releaseId)
-            self.digestReleaseXml(releaseId, metaXml, rebuild=rebuild)
-            yield True
-        yield 'Committing changes...'
-        self.cm.commit()
-        yield False
+    class rebuildCacheTables(mbcat.dialogs.ThreadedTask):
+        def __init__(self, catalog):
+            self.catalog = catalog
+            mbcat.dialogs.ThreadedTask.__init__(self, 0)
 
-    def rebuildCacheTables(self, pbar=None):
-        """Drop the derived tables in the database and rebuild them"""
-        yield 'Dropping tables...'
-        yield 15
+        def run(self):
+            self.rebuildCacheTables()
 
-        for tab in ['words', 'trackwords', 'media', 'recordings', 'discids']:
-            # Note: the added_dates, listened_dates, and purchases tables are
-            # not transient.
-            try:
-                self.cm.execute('drop table '+tab)
-            except sqlite3.OperationalError as e:
-                pass
-            yield True
+        def rebuildCacheTables(self):
+            """Drop the derived tables in the database and rebuild them"""
+            self.status = 'Dropping tables...'
+            self.numer = 0
+            self.denom = len(self.catalog.derivedTables) + \
+                len(self.catalog.indexes)
 
-        for index in ['word_index', 'trackword_index']:
-            try:
-                self.cm.execute('drop index if exists '+index)
-            except sqlite3.OperationalError as e:
-                pass
-            yield True
+            for tab in self.catalog.derivedTables:
+                if self.stopthread.isSet():
+                    return
+                # Note: the added_dates, listened_dates, and purchases tables are
+                # not transient.
+                self.catalog.cm.execute('drop table if exists '+tab)
 
-        # TODO execute vacuum command here
-        self._createCacheTables()
+            for index in self.catalog.indexes:
+                if self.stopthread.isSet():
+                    return
+                self.catalog.cm.execute('drop index if exists '+index)
 
-        # Rebuild
-        g = self.updateCacheTables(rebuild=True)
-        for r in g:
-            yield r
+            self.catalog._createCacheTables()
 
-        yield False
+            # Rebuild
+            g = self.updateCacheTables()
+
+        def updateCacheTables(self):
+            """Use the releases table to populate the derived (cache) tables"""
+            self.status = 'Rebuilding tables...'
+            self.numer = 0
+            self.denom = len(self.catalog)
+            for releaseId in self.catalog.getReleaseIds():
+                if self.stopthread.isSet():
+                    return
+                metaXml = self.catalog.getReleaseXml(releaseId)
+                self.catalog.digestReleaseXml(releaseId, metaXml, rebuild=True)
+                self.numer += 1
+
+            self.denom = 0
+            self.status = 'Committing changes...'
+            self.catalog.cm.commit()
 
     def vacuum(self):
         """Vacuum the SQLite3 database. Frees up unused space on disc."""
