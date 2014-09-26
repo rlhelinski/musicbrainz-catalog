@@ -388,6 +388,20 @@ class BarcodeSearchDialog:
     def on_close(self, widget):
         self.on_destroy(widget)
 
+class BarcodeQueryDialog(BarcodeSearchDialog):
+    def on_submit(self, widget):
+        entry = self.entry.get_text()
+        if not entry:
+            return
+        # TODO Show pulse dialog here
+        results = mb.search_releases(barcode=entry,
+             limit=self.app.searchResultsLimit)
+        if not results:
+            ErrorDialog(self.window, 'No results found for "%s"' % entry)
+            return
+        QueryResultsDialog(self.parentWindow, self, results)
+        self.on_destroy()
+
 def TrackSearchDialog(parent,
         catalog,
         message='Enter search terms',
@@ -1659,7 +1673,7 @@ class MBCatGtk:
         entry = TextEntry(self.window, 'Enter release group search terms')
         if not entry:
             return
-        # Show pulse dialog here
+        # TODO Show pulse dialog here
         results = mb.search_release_groups(releasegroup=entry,
              limit=self.searchResultsLimit)
         if not results:
@@ -1677,15 +1691,7 @@ class MBCatGtk:
         QueryResultsDialog(self.window, self, results)
 
     def webserviceBarcode(self, widget):
-        entry = TextEntry(self.window, 'Enter search barcode (UPC):')
-        if not entry:
-            return
-        results = mb.search_releases(barcode=entry,
-             limit=self.searchResultsLimit)
-        if not results:
-            ErrorDialog(self.window, 'No results found for "%s"' % entry)
-            return
-        QueryResultsDialog(self.window, self, results)
+        BarcodeQueryDialog(self.window, self)
 
     def webserviceCatNo(self, widget):
         entry = TextEntry(self.window, 'Enter search catalog number:')
