@@ -915,12 +915,11 @@ class DetailPane(gtk.HBox):
         self.pack_start(self.coverart, expand=False, fill=False)
 
         self.sw = gtk.ScrolledWindow()
-        #self.sw.set_size_request(self.imgpx, self.imgpx)
         self.sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 
         self.tv = gtk.TreeView()
         for i, (label, xalign, textWidth) in enumerate(
-            [('Title', 0, 40),
+            [('Title', 0, 32),
             ('Length', 1.0, 2),
             ]):
             cell = gtk.CellRendererText()
