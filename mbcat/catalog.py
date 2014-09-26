@@ -522,11 +522,11 @@ class Catalog(object):
 
     # TODO rename to getReleaseByBarCode
     def barCodeLookup(self, barcode):
-        result = self.cm.executeAndFetch(
+        result = self.cm.executeAndChain(
             'select id from releases where barcode=?', (barcode,))
         if not result:
             raise KeyError('Barcode not found')
-        return result[0][0]
+        return result
 
     def __len__(self):
         """Return the number of releases in the catalog."""
