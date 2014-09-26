@@ -1033,14 +1033,14 @@ class DetailPane(gtk.HBox):
         self.lt = gtk.Table(2, 4, homogeneous=False)
 
         r = 0
-        l = gtk.Label('Release ID:')
-        l.set_alignment(0, 0.5)
-        self.lt.attach(l, 0, 1, r, r+2) # span two rows
         self.releaseIdLbl = gtk.Label()
         self.releaseIdLbl.set_ellipsize(pango.ELLIPSIZE_END)
-        self.lt.attach(self.releaseIdLbl, 1, 2, r, r+1)
+        self.lt.attach(self.releaseIdLbl, 0, 2, r, r+1) # span two columns
         r += 1
 
+        l = gtk.Label('Release ID:')
+        l.set_alignment(0, 0.5)
+        self.lt.attach(l, 0, 1, r, r+1)
         hbox = gtk.HBox()
         self.clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
         self.releaseIdCopyBtn = gtk.Button(stock=gtk.STOCK_COPY)
