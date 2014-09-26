@@ -1078,10 +1078,10 @@ class DetailPane(gtk.HBox):
 
 class MBCatGtk:
     """
-    A GTK interface for managing a MusicBrainz Catalog.
+    A GTK interface for managing a music collection using MusicBrainz.
     """
     __name__ = 'MusicBrainz Catalog GTK Gui'
-    __version__ = '0.1'
+    __version__ = mbcat.catalog.__version__
     __copyright__ = 'Ryan Helinski'
     __website__ = 'https://github.com/rlhelinski/musicbrainz-catalog'
 
