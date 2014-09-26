@@ -64,7 +64,6 @@ class ConnectionManager(threading.Thread):
         # Open and retain a connection to the database
         # The single, coveted connection object
         self.conn = sqlite3.connect(*self.child_args, **self.child_kwargs)
-                #detect_types=sqlite3.PARSE_DECLTYPES)
         # this connection is closed when this object is deleted
 
         # This connection and cursor should be enough for most work. You might
