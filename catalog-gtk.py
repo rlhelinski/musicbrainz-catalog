@@ -1037,6 +1037,8 @@ class DetailPane(gtk.HBox):
             self._update(releaseId)
 
     def _update(self, releaseId):
+        if not releaseId:
+            return
         self.releaseId = releaseId # for the UUID copy button
         self.coverart.hide()
         self.coverart.set_from_file(self.catalog._getCoverArtPath(releaseId))
