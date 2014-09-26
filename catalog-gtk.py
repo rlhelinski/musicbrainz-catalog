@@ -1697,11 +1697,10 @@ class MBCatGtk:
         entry = TextEntry(self.window, 'Enter release search terms')
         if not entry:
             return
-        results = mb.search_releases(release=entry,
-             limit=self.searchResultsLimit)
-        if not results:
-            ErrorDialog(self.window, 'No results found for "%s"' % entry)
-        QueryResultsDialog(self.window, self, results)
+        mbcat.dialogs.PulseDialog(self.window,
+            QueryTask(self.window, self, QueryResultsDialog,
+                mb.search_releases,
+                release=entry)).start()
 
     def webserviceBarcode(self, widget):
         BarcodeQueryDialog(self.window, self)
