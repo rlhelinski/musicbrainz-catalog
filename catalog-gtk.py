@@ -1392,7 +1392,6 @@ class MBCatGtk:
                 self.c = c
 
             def run(self):
-                print ('AddReleaseTask.run')
                 try:
                     mbcat.dialogs.ThreadedCall.run(self)
                 except mb.ResponseError as e:
