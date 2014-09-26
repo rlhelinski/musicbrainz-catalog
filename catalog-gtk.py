@@ -3,6 +3,7 @@
 #
 
 from __future__ import print_function
+from __future__ import unicode_literals
 import logging
 logging.basicConfig(level=logging.INFO)
 import threading
