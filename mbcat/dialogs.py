@@ -162,11 +162,11 @@ class MutexTask(ThreadedTask):
         self.one_running.clear()
 
 # Some examples
-def run_long_task(widget):
-    t = ProgressDialog(ThreadedTask(10)).start()
+def run_long_task(window):
+    t = ProgressDialog(window, ThreadedTask(10)).start()
 
-def run_mutex_task(widget):
-    t = ProgressDialog(MutexTask(10)).start()
+def run_mutex_task(window):
+    t = ProgressDialog(window, MutexTask(10)).start()
 
 class pulse_task(ThreadedCall):
     def run(self):
@@ -174,6 +174,6 @@ class pulse_task(ThreadedCall):
         # This is the thing we want to do after the thread is done
         print ('Result: '+str(self.result))
 
-def run_pulse_task(widget):
-    t = PulseDialog(pulse_task(much_fun, 10)).start()
+def run_pulse_task(window):
+    t = PulseDialog(window, pulse_task(much_fun, 10)).start()
 
