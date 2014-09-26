@@ -1776,7 +1776,7 @@ class MBCatGtk:
                     %result['disc']['id'])
                 # TODO pass in submission URL in disc.submission_url here
                 # and add button to dialog to bring up that URL
-                QueryResultsDialog(self, self.catalog, result['disc'])
+                QueryResultsDialog(self.window, self, result['disc'])
             elif result.get("cdstub"):
                 for label, key in [
                         ('CD Stub', 'id'),
