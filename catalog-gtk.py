@@ -1700,7 +1700,7 @@ class MBCatGtk:
         mbcat.dialogs.PulseDialog(self.window,
             QueryTask(self.window, self, QueryResultsDialog,
                 mb.search_releases,
-                release=entry)).start()
+                release=entry, limit=self.searchResultsLimit)).start()
 
     def webserviceBarcode(self, widget):
         BarcodeQueryDialog(self.window, self)
@@ -1709,12 +1709,10 @@ class MBCatGtk:
         entry = TextEntry(self.window, 'Enter search catalog number:')
         if not entry:
             return
-        results = mb.search_releases(catno=entry,
-             limit=self.searchResultsLimit)
-        if not results:
-            ErrorDialog(self.window, 'No results found for "%s"' % entry)
-            return
-        QueryResultsDialog(self.window, self, results)
+        mbcat.dialogs.PulseDialog(self.window,
+            QueryTask(self.window, self, QueryResultsDialog,
+                mb.search_releases,
+                catno=entry, limit=self.searchResultsLimit)).start()
 
     def webserviceSyncCollection(self, widget):
         """Synchronize with a musicbrainz collection (currently only pushes releases)."""
