@@ -1222,8 +1222,10 @@ class MBCatGtk:
         self.openDatabase(filename)
 
     def menuCatalogVacuum(self, widget):
-        th = mbcat.dialogs.TaskHandler(self.window,
-            self.catalog.vacuum())
+        th = self.CatalogTask(self,
+            mbcat.dialogs.PulseDialog(
+                self.window,
+                mbcat.dialogs.ThreadedCall(self.catalog.vacuum)))
         th.start()
 
     class CatalogTask(threading.Thread):
@@ -1237,14 +1239,14 @@ class MBCatGtk:
             self.task = task
 
         def run(self):
-            th = mbcat.dialogs.ProgressDialog(self.app.window, self.task)
-            th.start()
-            th.join()
+            self.task.start()
+            self.task.join()
             self.app.refreshView()
 
     def menuCatalogRebuild(self, widget):
         self.CatalogTask(self,
-            self.catalog.rebuildCacheTables(self.catalog)).start()
+            mbcat.dialogs.ProgressDialog(self.window,
+                self.catalog.rebuildCacheTables(self.catalog))).start()
 
     def menuCatalogGetSimilar(self, widget):
         th = TaskHandler()
@@ -1401,10 +1403,9 @@ class MBCatGtk:
             ErrorDialog(parentWindow, 'Release already exists')
             return
 
-        # Need a new Catalog object for this new thread
-        c = self.catalog.copy()
         mbcat.dialogs.PulseDialog(parentWindow,
-            AddReleaseTask(self, c, c.addRelease, releaseId)).start()
+            AddReleaseTask(self, self.catalog,
+                self.catalog.addRelease, releaseId)).start()
 
     def addRelease(self, widget):
         entry = TextEntry(self.window, 'Enter Release ID')

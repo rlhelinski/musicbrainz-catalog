@@ -456,10 +456,8 @@ class Catalog(object):
 
     def vacuum(self):
         """Vacuum the SQLite3 database. Frees up unused space on disc."""
-        yield 'Vacuuming...'
-
+        _log.info('Vacuuming database')
         self.cm.execute('vacuum')
-        yield False
 
     def renameRelease(self, oldReleaseId, newReleaseId):
         # TODO this does not update purchases, checkout_events, checkin_events,
