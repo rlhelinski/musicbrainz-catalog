@@ -47,14 +47,20 @@ class ProgressDialog(threading.Thread):
         self.task.start()
 
         tstart = time.time()
-        while not self.task.stopthread.isSet():
-            fract = float(self.task.numer)/self.task.denom
+        while self.task.isAlive():
+            if self.task.status:
+                gobject.idle_add(self.status.set_text, self.task.status)
             seconds_elapsed = time.time() - tstart
+            if self.task.denom == 0:
+                text = '%0.3f Elapsed' % seconds_elapsed
+                gobject.idle_add(self.progressbar.pulse)
+            else:
+                fract = float(self.task.numer)/self.task.denom
+                text = '%0.3f Remaining' % (
+                    seconds_elapsed / fract - seconds_elapsed
+                    ) if fract != 0 else '?.?? Remaining'
+                gobject.idle_add(self.progressbar.set_fraction, fract)
 
-            text = '%0.3f Remaining' % (
-                seconds_elapsed / fract - seconds_elapsed
-                ) if fract != 0 else '?.?? Remaining'
-            gobject.idle_add(self.progressbar.set_fraction, fract)
             gobject.idle_add(self.progressbar.set_text, text)
             time.sleep(0.1)
 
@@ -114,6 +120,7 @@ class ThreadedTask(threading.Thread):
         self.setDaemon(True)
         self.denom = denom
         self.numer = 0
+        self.status = ''
 
         #Thread event, stops the thread if it is set.
         self.stopthread = threading.Event()
@@ -125,12 +132,12 @@ class ThreadedTask(threading.Thread):
 
         while not self.stopthread.isSet():
             if self.numer > self.denom:
-                self.stopthread.set()
                 break
             time.sleep(1)
             self.numer += 1
 
-        self.stop()
+    def incr(self):
+        self.numer += 1
 
     def stop(self):
         """Stop method, sets the event to terminate the thread's main loop"""
