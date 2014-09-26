@@ -1131,7 +1131,6 @@ class MBCatGtk:
 
     def destroy(self, widget, data=None):
         print ("destroy signal occurred")
-        self.catalog.stop()
         gtk.main_quit()
 
     def openAboutWindow(self, widget):
