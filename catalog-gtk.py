@@ -393,14 +393,11 @@ class BarcodeQueryDialog(BarcodeSearchDialog):
         entry = self.entry.get_text()
         if not entry:
             return
-        # TODO Show pulse dialog here
-        results = mb.search_releases(barcode=entry,
-             limit=self.app.searchResultsLimit)
-        if not results:
-            ErrorDialog(self.window, 'No results found for "%s"' % entry)
-            return
-        QueryResultsDialog(self.parentWindow, self.app, results)
-        self.on_destroy()
+        mbcat.dialogs.PulseDialog(self.window,
+            QueryTask(self.window, self.app, QueryResultsDialog,
+                mb.search_releases,
+                barcode=entry, limit=self.app.searchResultsLimit)).start()
+        #self.on_destroy() # can't do this here
 
 def TrackSearchDialog(parent,
         catalog,
@@ -540,6 +537,8 @@ class QueryTask(mbcat.dialogs.ThreadedCall):
             ErrorDialog(self.window, 'No results found for "%s"' % str(kwargs))
         else:
             self.result_viewer(self.window, self.app, self.result)
+            #if type(self.app) == BarcodeQueryDialog:
+                #self.window.destroy()
 
 class QueryResultsDialog:
     """
