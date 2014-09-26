@@ -907,7 +907,7 @@ class Catalog(object):
 
     def getAddedDates(self, releaseId):
         return self.cm.executeAndFetchOne(
-            'select added from releases where id=?',
+            'select date from added_dates where release=?',
             (releaseId,))[0]
 
     def addAddedDate(self, releaseId, date):
@@ -916,11 +916,10 @@ class Catalog(object):
             try:
                 date = float(date)
             except ValueError as e:
-                raise ValueError('Date object must be a floating-point number')
+                raise ValueError('Date object should be a floating-point number')
 
-        existingDates = self.getAddedDates(releaseId)
-        self.cm.execute('update releases set added=? where id=?',
-            (existingDates+[date],releaseId))
+        self.cm.execute('insert into added_dates (date, release) '
+            'values (?,?)', (date, releaseId))
         self.cm.commit()
 
     def getCheckOutEvents(self, releaseId):
