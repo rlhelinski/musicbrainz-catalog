@@ -528,6 +528,19 @@ def makeTrackTreeStore(catalog, releaseId):
                 ))
     return trackTreeStore
 
+class QueryTask(mbcat.dialogs.ThreadedCall):
+    def __init__(self, window, app, result_viewer, fun, *args, **kwargs):
+        mbcat.dialogs.ThreadedCall.__init__(self, fun, *args, **kwargs)
+        self.window = window
+        self.app = app
+        self.result_viewer = result_viewer
+    def run(self):
+        mbcat.dialogs.ThreadedCall.run(self)
+        if not self.result:
+            ErrorDialog(self.window, 'No results found for "%s"' % str(kwargs))
+        else:
+            self.result_viewer(self.window, self.app, self.result)
+
 class QueryResultsDialog:
     """
     Create a window with a list of releases from a WebService query.
@@ -740,14 +753,15 @@ class GroupQueryResultsDialog(QueryResultsDialog):
     def get_releases(self, widget, data=None):
         release_group_selected = self.get_selection()
 
-        results = mb.search_releases(rgid=release_group_selected)
-        QueryResultsDialog(self.window, self.app, results)
+        mbcat.dialogs.PulseDialog(self.window,
+            QueryTask(self.window, self.app, QueryResultsDialog,
+                mb.search_releases,
+                rgid=release_group_selected)).start()
 
     def browse_group(self, button):
         relId = self.get_selection()
         webbrowser.open(mbcat.catalog.Catalog.groupUrl + relId)
 
-# TODO this should inherit QueryResultsDialog
 class TrackListDialog(QueryResultsDialog):
     """
     Display a dialog with a list of tracks for a release.
@@ -1670,15 +1684,14 @@ class MBCatGtk:
         self.setSelectedRow(self.getReleaseRow(releaseId))
 
     def webserviceReleaseGroup(self, widget):
-        entry = TextEntry(self.window, 'Enter release group search terms')
+        entry = TextEntry(self.window, 'Enter release group search terms:')
         if not entry:
             return
-        # TODO Show pulse dialog here
-        results = mb.search_release_groups(releasegroup=entry,
-             limit=self.searchResultsLimit)
-        if not results:
-            ErrorDialog(self.window, 'No results found for "%s"' % entry)
-        GroupQueryResultsDialog(self.window, self, results)
+
+        mbcat.dialogs.PulseDialog(self.window,
+            QueryTask(self.window, self, GroupQueryResultsDialog,
+                mb.search_release_groups,
+                releasegroup=entry)).start()
 
     def webserviceRelease(self, widget):
         entry = TextEntry(self.window, 'Enter release search terms')
