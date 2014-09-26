@@ -1241,9 +1241,12 @@ class MBCatGtk:
             self.task = task
 
         def run(self):
+            row = self.app.getSelectedRow()
             self.task.start()
             self.task.join()
             self.app.refreshView()
+            if row:
+                self.app.setSelectedRow(row)
 
     def menuCatalogRebuild(self, widget):
         self.CatalogTask(self,
