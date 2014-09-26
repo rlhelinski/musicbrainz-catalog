@@ -399,7 +399,7 @@ class BarcodeQueryDialog(BarcodeSearchDialog):
         if not results:
             ErrorDialog(self.window, 'No results found for "%s"' % entry)
             return
-        QueryResultsDialog(self.parentWindow, self, results)
+        QueryResultsDialog(self.parentWindow, self.app, results)
         self.on_destroy()
 
 def TrackSearchDialog(parent,
