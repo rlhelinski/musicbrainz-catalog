@@ -293,33 +293,100 @@ def ReleaseSearchDialog(parent,
     else:
         ErrorDialog(parent, 'No matches found for "%s"' % entry)
 
-def BarcodeSearchDialog(parent,
-        catalog,
-        message='Enter barcode (UPC):',
-        default=''):
-    entry = TextEntry(parent, message, default)
-    if not entry:
-        return
+class BarcodeSearchDialog:
+    def __init__(self,
+            parentWindow,
+            app,
+            message='Enter barcode (UPC):',
+            default='',
+            title='Barcode Entry'
+            ):
+        self.parentWindow = parentWindow
+        self.app = app
+        self.window = gtk.Window()
+        self.window.set_transient_for(parentWindow)
+        self.window.set_destroy_with_parent(True)
+        self.window.set_border_width(10)
+        self.window.connect('destroy', self.on_destroy)
+        self.window.set_title(title)
 
-    barCodes = mbcat.barcode.UPC(entry).variations()
-    matches = set()
-    for barCode in barCodes:
-        try:
-            for releaseId in catalog.barCodeLookup(barCode):
-                matches.add(releaseId)
-        except KeyError as e:
-            pass
+        vbox = gtk.VBox(False, 10)
+
+        prompt = gtk.Label(message)
+        vbox.pack_start(prompt, expand=True, fill=True)
+
+        entrybox = gtk.HBox(False, 10)
+        self.entry = gtk.Entry(40)
+        self.entry.connect('changed', self.on_change, self.entry)
+        self.entry.connect('activate', self.on_submit)
+        if default:
+            self.entry.set_text(default)
+        entrybox.pack_start(self.entry, expand=True, fill=True)
+        self.checkIndicator = gtk.Image()
+        self.checkIndicator.set_from_stock(
+                gtk.STOCK_CANCEL, gtk.ICON_SIZE_BUTTON)
+        entrybox.pack_start(self.checkIndicator, expand=False, fill=False)
+
+        vbox.pack_start(entrybox, expand=False, fill=False)
+
+        buttonbox = gtk.HBox(False, 10)
+
+        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        btn.connect('clicked', self.on_close)
+        buttonbox.pack_end(btn, expand=False, fill=False)
+
+        btn = gtk.Button('Add', gtk.STOCK_OK)
+        btn.connect('clicked', self.on_submit)
+        buttonbox.pack_end(btn, expand=False, fill=False)
+
+        vbox.pack_start(buttonbox, expand=False, fill=False)
+
+        self.window.add(vbox)
+        self.window.show_all()
+
+    def on_change(self, widget, entry):
+        entry_text = entry.get_text()
+        self.checkIndicator.set_from_stock(
+                gtk.STOCK_APPLY if \
+                    mbcat.barcode.UPC.check_upc_a(entry_text) \
+                    else gtk.STOCK_CANCEL,
+                gtk.ICON_SIZE_BUTTON)
+
+    def get_matches(self, entry):
+        barCodes = mbcat.barcode.UPC(entry).variations()
+        matches = set()
+        for barCode in barCodes:
+            try:
+                for releaseId in self.app.catalog.barCodeLookup(barCode):
+                    matches.add(releaseId)
+            except KeyError as e:
+                pass
+            else:
+                found = True
+        matches = list(matches)
+
+        if len(matches) > 1:
+            # Have to ask the user which release they mean
+            return ReleaseSelectDialog(self.parentWindow, self.app.catalog,
+                    releaseIdList=matches)
+        elif len(matches) == 1:
+            return matches[0]
         else:
-            found = True
-    matches = list(matches)
+            ErrorDialog(self.window, 'No matches found for "%s"' % entry)
 
-    if len(matches) > 1:
-        # Have to ask the user which release they mean
-        return ReleaseSelectDialog(parent, catalog, releaseIdList=matches)
-    elif len(matches) == 1:
-        return matches[0]
-    else:
-        ErrorDialog(parent, 'No matches found for "%s"' % entry)
+    def on_submit(self, widget):
+        entry = self.entry.get_text()
+        releaseId = self.get_matches(entry)
+
+        if releaseId and releaseId in self.app.catalog:
+            self.app.setSelectedRow(self.app.getReleaseRow(releaseId))
+            self.on_destroy()
+
+    def on_destroy(self, widget=None, data=None):
+        self.window.destroy()
+
+    def on_close(self, widget):
+        self.on_destroy(widget)
 
 def TrackSearchDialog(parent,
         catalog,
@@ -455,10 +522,10 @@ class QueryResultsDialog:
     row_contains = 'Group'
 
     def __init__(self,
-        parentWindow,
-        app,
-        queryResult,
-        message='Release Results',
+            parentWindow,
+            app,
+            queryResult,
+            message='Release Results',
         ):
         self.window = gtk.Window()
         self.window.set_transient_for(parentWindow)
@@ -1574,10 +1641,7 @@ class MBCatGtk:
         self.catalog.setRating(releaseId, nr)
 
     def searchBarcode(self, widget):
-        releaseId = BarcodeSearchDialog(self.window, self.catalog)
-        if not releaseId or releaseId not in self.catalog:
-            return
-        self.setSelectedRow(self.getReleaseRow(releaseId))
+        BarcodeSearchDialog(self.window, self)
 
     def searchArtistTitle(self, widget):
         releaseId = ReleaseSearchDialog(self.window, self.catalog)
