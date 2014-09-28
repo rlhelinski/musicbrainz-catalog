@@ -294,19 +294,6 @@ def ReleaseSearchDialog(parent,
     else:
         ErrorDialog(parent, 'No matches found for "%s"' % entry)
 
-class ReleaseDistanceDialog:
-    def __init__(self, parentWindow, app, results):
-        self.parentWindow = parentWindow
-        self.app = app
-        self.results = results
-
-        lds = self.results
-        # Need to write a dialog to show this result
-        for i in range(100):
-            print(str(lds[i][0]) + '\t' +
-                     self.app.catalog.getReleaseSortStr(lds[i][1]) + ' <-> ' +
-                     self.app.catalog.getReleaseSortStr(lds[i][2]) + '\n')
-
 class BarcodeSearchDialog:
     def __init__(self,
             parentWindow,
@@ -834,6 +821,42 @@ class TrackListDialog(QueryResultsDialog):
         else:
             # a medium is selected
             self.row_widgets_set_sensitive(False)
+
+class ReleaseDistanceDialog(QueryResultsDialog):
+    row_contains = 'Comparison'
+    def __init__(self, parentWindow, app, queryResult,
+            message='Release Comparison Results'):
+        self.parentWindow = parentWindow
+        self.app = app
+
+        QueryResultsDialog.__init__(self, parentWindow, app,
+            queryResult, message)
+
+    def buildTreeView(self):
+        self.tv = gtk.TreeView()
+        for i, (label, textWidth, xalign) in enumerate([
+                ('Distance', 4, 1.0),
+                ('Left', 32, 0),
+                ('Right', 32, 0),
+            ]):
+            cell = gtk.CellRendererText()
+            cell.set_property('xalign', xalign)
+            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('width-chars', textWidth)
+            col = gtk.TreeViewColumn(label, cell)
+            col.add_attribute(cell, 'text', i)
+            col.set_resizable(True)
+            self.tv.append_column(col)
+        self.tv.set_search_column(1) # search by left
+
+    def buildListStore(self, queryResult):
+        # make the list store
+        resultListStore = gtk.ListStore(str, str, str)
+        for distance, left, right in queryResult[:200]:
+            resultListStore.append((distance,
+                self.app.catalog.getReleaseSortStr(left),
+                self.app.catalog.getReleaseSortStr(right)))
+        self.tv.set_model(resultListStore)
 
 def SelectCollectionDialog(parent, result):
     """

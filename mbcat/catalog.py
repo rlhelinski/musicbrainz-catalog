@@ -1419,7 +1419,6 @@ class Catalog(object):
             # This expression results from the nested for loops below
             numRels = len(self.catalog)
             self.denom = (numRels**2 - numRels)/2
-            print (self.denom)
             dists = []
 
             releaseIds = self.catalog.getReleaseIds()
@@ -1433,7 +1432,6 @@ class Catalog(object):
 
                     dists.append((dist, leftId, rightId))
                     self.numer += 1
-            print (self.numer)
 
             # TODO could sort the list and truncate it in each iteration above
             self.result = sorted(dists, key=lambda sortKey: sortKey[0])
