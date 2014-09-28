@@ -1402,34 +1402,41 @@ class Catalog(object):
         for releaseId in self.getReleaseIds():
             self.getCoverArt(releaseId, maxage=maxage)
 
-    def checkLevenshteinDistances(self, pbar=None):
+    class checkLevenshteinDistances(mbcat.dialogs.ThreadedTask):
         """
         Compute the Levenshtein (edit) distance of each pair of releases.
 
         Returns a sorted list of the most similar releases
         """
-        import Levenshtein
-        dists = []
+        def __init__(self, catalog):
+            self.catalog = catalog
+            mbcat.dialogs.ThreadedTask.__init__(self, 0)
 
-        if pbar:
-            pbar.maxval = (float(len(self)**2) - float(len(self)))/2
-            pbar.start()
-        for leftIdx in range(len(self)):
-            for rightIdx in range(leftIdx, len(self)):
-                if  leftIdx == rightIdx :
-                    continue
-                leftId = self.getReleaseIds()[leftIdx]
-                rightId = self.getReleaseIds()[rightIdx]
-                dist = Levenshtein.distance(self.getReleaseSortStr(leftId),
-                        self.getReleaseSortStr(rightId))
+        def run(self):
+            import Levenshtein
+            self.status = 'Comparing releases...'
+            self.numer = 0
+            # This expression results from the nested for loops below
+            numRels = len(self.catalog)
+            self.denom = (numRels**2 - numRels)/2
+            print (self.denom)
+            dists = []
 
-                dists.append((dist,leftId, rightId))
-                if pbar:
-                    pbar.update(pbar.currval + 1)
-        if pbar:
-            pbar.finish()
+            releaseIds = self.catalog.getReleaseIds()
+            for leftIdx in range(len(self.catalog)):
+                for rightIdx in range(leftIdx+1, len(self.catalog)):
+                    leftId = releaseIds[leftIdx]
+                    rightId = releaseIds[rightIdx]
+                    dist = Levenshtein.distance(
+                            self.catalog.getReleaseSortStr(leftId),
+                            self.catalog.getReleaseSortStr(rightId))
 
-        return sorted(dists, key=lambda sortKey: sortKey[0])
+                    dists.append((dist, leftId, rightId))
+                    self.numer += 1
+            print (self.numer)
+
+            # TODO could sort the list and truncate it in each iteration above
+            self.result = sorted(dists, key=lambda sortKey: sortKey[0])
 
     def syncCollection(self, colId):
         """

@@ -294,6 +294,19 @@ def ReleaseSearchDialog(parent,
     else:
         ErrorDialog(parent, 'No matches found for "%s"' % entry)
 
+class ReleaseDistanceDialog:
+    def __init__(self, parentWindow, app, results):
+        self.parentWindow = parentWindow
+        self.app = app
+        self.results = results
+
+        lds = self.results
+        # Need to write a dialog to show this result
+        for i in range(100):
+            print(str(lds[i][0]) + '\t' +
+                     self.app.catalog.getReleaseSortStr(lds[i][1]) + ' <-> ' +
+                     self.app.catalog.getReleaseSortStr(lds[i][2]) + '\n')
+
 class BarcodeSearchDialog:
     def __init__(self,
             parentWindow,
@@ -390,6 +403,9 @@ class BarcodeSearchDialog:
         self.on_destroy(widget)
 
 class BarcodeQueryDialog(BarcodeSearchDialog):
+    """
+    A variation of BarcodeSearchDialog for webservice queries.
+    """
     def on_submit(self, widget):
         entry = self.entry.get_text()
         if not entry:
@@ -1343,21 +1359,27 @@ class MBCatGtk:
             if row:
                 self.app.setSelectedRow(row)
 
+    class CheckTask(threading.Thread):
+        def __init__(self, window, app, result_viewer, task):
+            threading.Thread.__init__(self)
+            self.window = window
+            self.app = app
+            self.result_viewer = result_viewer
+            self.task = task
+        def run(self):
+            self.task.start()
+            self.task.join()
+            self.result_viewer(self.window, self.app, self.task.task.result)
+
     def menuCatalogRebuild(self, widget):
         self.CatalogTask(self,
             mbcat.dialogs.ProgressDialog(self.window,
                 self.catalog.rebuildCacheTables(self.catalog))).start()
 
     def menuCatalogGetSimilar(self, widget):
-        th = TaskHandler()
-        pd = ProgressDialog(parent=self.window, taskHandler=th)
-        #   initStatusLabel='Computing similar releases')
-        self.catalog.checkLevenshteinDistances(pbar=pd)
-        # Need to write a dialog to show this result
-        for i in range(100):
-            print(str(lds[i][0]) + '\t' +
-                         self.c.formatDiscInfo(lds[i][1]) + ' <-> ' +
-                         self.c.formatDiscInfo(lds[i][2]) + '\n')
+        self.CheckTask(self.window, self, ReleaseDistanceDialog,
+            mbcat.dialogs.ProgressDialog(self.window,
+                self.catalog.checkLevenshteinDistances(self.catalog))).start()
 
     def format_comment(self, column, cell, model, it, field):
         row = model.get_value(it, 0)
