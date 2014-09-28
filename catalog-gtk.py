@@ -593,8 +593,6 @@ class QueryResultsDialog:
         self.window.add(vbox)
         self.window.show_all()
 
-        self.row_widgets_set_sensitive(False)
-
     def buildTreeView(self):
         self.tv = gtk.TreeView()
         for i, (label, textWidth) in enumerate(
