@@ -588,9 +588,7 @@ class QueryResultsDialog:
         hbox = self.buildButtons()
         vbox.pack_end(hbox, expand=False, fill=False)
 
-        # Info on the selected row
-        self.selInfo = gtk.Label()
-        vbox.pack_end(self.selInfo, expand=False)
+        self.buildRowInfoWidgets(vbox)
 
         self.window.add(vbox)
         self.window.show_all()
@@ -652,6 +650,11 @@ class QueryResultsDialog:
         self.active_on_row_selected.append(btn)
 
         return hbox
+
+    def buildRowInfoWidgets(self, vbox):
+        # Info on the selected row
+        self.selInfo = gtk.Label()
+        vbox.pack_end(self.selInfo, expand=False)
 
     def get_selection(self):
         model, it = self.tv.get_selection().get_selected()
@@ -844,19 +847,75 @@ class ReleaseDistanceDialog(QueryResultsDialog):
             cell.set_property('ellipsize', pango.ELLIPSIZE_END)
             cell.set_property('width-chars', textWidth)
             col = gtk.TreeViewColumn(label, cell)
-            col.add_attribute(cell, 'text', i)
+            col.add_attribute(cell, 'text', i+2)
             col.set_resizable(True)
             self.tv.append_column(col)
         self.tv.set_search_column(1) # search by left
 
     def buildListStore(self, queryResult):
         # make the list store
-        resultListStore = gtk.ListStore(str, str, str)
+        resultListStore = gtk.ListStore(str, str, str, str, str)
         for distance, left, right in queryResult[:200]:
-            resultListStore.append((distance,
+            resultListStore.append((
+                left,
+                right,
+                distance,
                 self.app.catalog.getReleaseSortStr(left),
                 self.app.catalog.getReleaseSortStr(right)))
         self.tv.set_model(resultListStore)
+
+    def buildButtons(self):
+        # Buttons
+        hbox = gtk.HBox(False, 10)
+        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        btn.connect('clicked', self.on_close)
+        hbox.pack_end(btn, expand=False, fill=False)
+
+        # TODO could use gtk.STOCK_CONNECT here
+        btn = gtk.Button('Select Right')
+        btn.connect('clicked', self.select_release, 1)
+        hbox.pack_end(btn, expand=False, fill=False)
+        self.active_on_row_selected.append(btn)
+
+        btn = gtk.Button('Select Left')
+        btn.connect('clicked', self.select_release, 0)
+        hbox.pack_end(btn, expand=False, fill=False)
+        self.active_on_row_selected.append(btn)
+
+        return hbox
+
+    def buildRowInfoWidgets(self, vbox):
+        # Info on the selected row
+        hbox = gtk.HBox(10, False)
+        self.leftInfo = gtk.Label()
+        self.leftInfo.set_ellipsize(pango.ELLIPSIZE_END)
+        hbox.pack_start(self.leftInfo, expand=True, fill=True)
+        self.vsLbl = gtk.Label(' <-> ')
+        hbox.pack_start(self.vsLbl, expand=False, fill=False)
+        self.rightInfo = gtk.Label()
+        self.rightInfo.set_ellipsize(pango.ELLIPSIZE_END)
+        hbox.pack_start(self.rightInfo, expand=True, fill=True)
+        vbox.pack_end(hbox, expand=False)
+
+    def on_row_select(self, treeview):
+        model, it = self.tv.get_selection().get_selected()
+        leftId = model.get_value(it, 0)
+        rightId = model.get_value(it, 1)
+
+        if leftId and rightId:
+            self.leftInfo.set_text(leftId)
+            self.rightInfo.set_text(rightId)
+            _log.info(self.row_contains+' '+leftId+' <-> '+rightId+' selected')
+        self.row_widgets_set_sensitive(True)
+
+    def select_release(self, button, right):
+        """
+        right: 0 for left, 1 for right
+        """
+        model, it = self.tv.get_selection().get_selected()
+
+        releaseId = model.get_value(it, right) if it else None
+        self.app.setSelectedRow(self.app.getReleaseRow(releaseId))
 
 def SelectCollectionDialog(parent, result):
     """
