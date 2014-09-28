@@ -470,8 +470,9 @@ class Catalog(object):
             (newReleaseId, oldReleaseId))
         self.addRelease(newReleaseId)
 
-    def getReleaseIds(self):
-        return self.cm.executeAndChain('select id from releases')
+    def getReleaseIds(self, filter=None):
+        return self.cm.executeAndChain('select id from releases'
+            +((' '+filter) if filter else ''))
 
     @staticmethod
     def getReleaseDictFromXml(metaxml):
@@ -1408,8 +1409,9 @@ class Catalog(object):
 
         Returns a sorted list of the most similar releases
         """
-        def __init__(self, catalog):
+        def __init__(self, catalog, limit=None):
             self.catalog = catalog
+            self.limit = limit
             mbcat.dialogs.ThreadedTask.__init__(self, 0)
 
         def run(self):
@@ -1418,12 +1420,19 @@ class Catalog(object):
             self.numer = 0
             # This expression results from the nested for loops below
             numRels = len(self.catalog)
-            self.denom = (numRels**2 - numRels)/2
+            self.denom = (numRels**2 - numRels)/2 # (N choose 2)
             dists = []
 
-            releaseIds = self.catalog.getReleaseIds()
+            def getRightUpper(leftIdx, limit):
+                if limit is None:
+                    return len(self.catalog)
+                else:
+                    return min(len(self.catalog), leftIdx+1+limit)
+
+            releaseIds = self.catalog.getReleaseIds('order by sortstring')
             for leftIdx in range(len(self.catalog)):
-                for rightIdx in range(leftIdx+1, len(self.catalog)):
+                for rightIdx in range(leftIdx+1,
+                        getRightUpper(leftIdx,self.limit)):
                     leftId = releaseIds[leftIdx]
                     rightId = releaseIds[rightIdx]
                     dist = Levenshtein.distance(

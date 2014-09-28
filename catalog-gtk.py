@@ -1461,7 +1461,7 @@ class MBCatGtk:
     def menuCatalogGetSimilar(self, widget):
         self.CheckTask(self.window, self, ReleaseDistanceDialog,
             mbcat.dialogs.ProgressDialog(self.window,
-                self.catalog.checkLevenshteinDistances(self.catalog))).start()
+                self.catalog.checkLevenshteinDistances(self.catalog, 2))).start()
 
     def format_comment(self, column, cell, model, it, field):
         row = model.get_value(it, 0)
