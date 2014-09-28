@@ -1420,7 +1420,9 @@ class Catalog(object):
             self.numer = 0
             # This expression results from the nested for loops below
             numRels = len(self.catalog)
-            self.denom = (numRels**2 - numRels)/2 # (N choose 2)
+            # Without proof,
+            self.denom = (numRels**2 - numRels)/2 - \
+                ((numRels-self.limit)**2 - (numRels-self.limit))/2
             dists = []
 
             def getRightUpper(leftIdx, limit):
