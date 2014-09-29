@@ -52,11 +52,13 @@ class ProgressDialog(threading.Thread):
                 gobject.idle_add(self.status.set_text, self.task.status)
             seconds_elapsed = time.time() - tstart
             if self.task.denom == 0:
-                text = self.format_time(seconds_elapsed)+' Elapsed'
+                text = '{} - '.format(self.task.numer)+\
+                    self.format_time(seconds_elapsed)+' Elapsed'
                 gobject.idle_add(self.progressbar.pulse)
             else:
                 fract = float(self.task.numer)/self.task.denom
-                text = self.ETA(fract, seconds_elapsed)+' Remaining'
+                text = '{} / {} - '.format(self.task.numer, self.task.denom)+\
+                    self.ETA(fract, seconds_elapsed)+' Remaining'
                 gobject.idle_add(self.progressbar.set_fraction, fract)
 
             gobject.idle_add(self.progressbar.set_text, text)
