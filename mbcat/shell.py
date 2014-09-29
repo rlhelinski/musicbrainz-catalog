@@ -55,7 +55,7 @@ class Shell:
                     self.s.write("%d matches found:\n" % len(matches))
                     for i, match in enumerate(matches):
                         self.s.write(
-                            str(i) + " " + self.c.formatDiscInfo(match) + "\n")
+                            str(i) + " " + self.formatReleaseInfo(match) + "\n")
                     while (True):
                         try:
                             index = int(self.s.nextWord("Select a match: "))
@@ -72,6 +72,17 @@ class Shell:
             else:
                 raise ValueError('No release specified.')
 
+    def formatReleaseInfo(self, releaseId):
+        return ' '.join( [
+                releaseId, ':', \
+                self.c.getReleaseArtist(releaseId), '-', \
+                self.c.getReleaseDate(releaseId), '-', \
+                self.c.getReleaseTitle(releaseId), \
+                #'('+release['disambiguation']+')' if 'disambiguation' in \
+                    #release else '', \
+                '['+str(self.c.getReleaseFormat(releaseId))+']', \
+            ] )
+
     def SearchTrack(self, prompt="Enter search terms (or recording ID): "):
         """Search for a recording and return recording ID."""
         while(True):
@@ -81,7 +92,7 @@ class Shell:
                     matches = [mbcat.utils.getReleaseIdFromInput(input)]
                 else:
                     matches = list(self.c._search(input, table='trackwords',
-                        keycolumn='trackword'))
+                        keycolumn='trackword', outcolumn='recording'))
 
                 self.s.write("%d %s found:\n" % (len(matches), 
                     'matches' if len(matches)>1 else 'match'))
@@ -120,7 +131,7 @@ class Shell:
         self.s.write('\nAppears on:\n')
         for i, releaseId in enumerate(releases):
             self.s.write(
-                str(i)+' '+self.c.formatDiscInfo(releaseId)+'\n')
+                str(i)+' '+self.formatReleaseInfo(releaseId)+'\n')
 
     def AddPurchaseEvent(self):
         """Add a purchase date."""
@@ -284,7 +295,7 @@ class Shell:
                 found = True
 
         for releaseId in pairs:
-            self.s.write(self.c.formatDiscInfo(releaseId) + '\n')
+            self.s.write(self.formatReleaseInfo(releaseId) + '\n')
 
         if not found:
             raise KeyError('No variation of barcode %s found' % barCodeEntered)
@@ -398,8 +409,8 @@ class Shell:
         lds = self.c.checkLevenshteinDistances(pbar)
         for i in range(number):
             self.s.write(str(lds[i][0]) + '\t' +
-                         self.c.formatDiscInfo(lds[i][1]) + ' <-> ' +
-                         self.c.formatDiscInfo(lds[i][2]) + '\n')
+                         self.formatReleaseInfo(lds[i][1]) + ' <-> ' +
+                         self.formatReleaseInfo(lds[i][2]) + '\n')
 
     def ZipExport(self):
         """Export the catalog to a zip file containing release XML files."""

@@ -1633,6 +1633,10 @@ class Catalog(object):
             'select title from releases where id=?',
             (releaseId,))[0]
 
+    def getReleaseDate(self, releaseId):
+        return self.cm.executeAndFetchOne(
+            'select date from releases where id=?', (releaseId,))[0]
+
     def getReleaseCountry(self, releaseId):
         return self.cm.executeAndFetchOne(
             'select country from releases where id=?',
