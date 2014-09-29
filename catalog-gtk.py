@@ -1737,7 +1737,7 @@ class MBCatGtk:
     def setSelectedRow(self, row):
         """Selects and scrolls to a row in the TreeView"""
         # Limit the range of the row input
-        actualRow = min(len(self.releaseList), row)
+        actualRow = min(len(self.releaseList)-1, row)
         self.treeview.get_selection().select_path(actualRow)
         self.treeview.scroll_to_cell(actualRow, use_align=True, row_align=0.5)
         self.on_row_select(self.treeview)
