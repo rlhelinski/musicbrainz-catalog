@@ -1856,7 +1856,10 @@ class MBCatGtk:
         result = mb.get_collections()
         collectionId = SelectCollectionDialog(self.window, result)
 
-        self.catalog.syncCollection(collectionId)
+        self.CatalogTask(self,
+            mbcat.dialogs.ProgressDialog(self.window,
+                self.catalog.syncCollection(self.catalog,
+                    collectionId))).start()
 
     def readDiscTOC(self, widget):
         def askBrowseSubmission():

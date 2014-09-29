@@ -1447,7 +1447,7 @@ class Catalog(object):
             # TODO could sort the list and truncate it in each iteration above
             self.result = sorted(dists, key=lambda sortKey: sortKey[0])
 
-    def syncCollection(self, colId):
+    class syncCollection(mbcat.dialogs.ThreadedTask):
         """
         Synchronize the catalog with a MusicBrainz collection.
 
@@ -1457,35 +1457,50 @@ class Catalog(object):
         In the future, should also reconcile releases in the collection
         that are not in the catalog.
         """
-        # this is a hack so that the progress will appear immediately
-        import sys
-        sys.stdout.write('Fetching list of releases in collection...')
-        sys.stdout.flush()
-        count = 0
-        colRelIds = []
-        while True:
-            result = mb.get_releases_in_collection(colId, limit=25,
-                    offset=count)
-            col = result['collection']
-            relList = col['release-list']
-            if len(relList) == 0:
-                break
-            count += len(relList)
-            sys.stdout.write('.')
-            sys.stdout.flush()
-            for rel in relList:
-                colRelIds.append(rel['id'])
+        releasesPerFetch = 25
+        releasesPerPost = 100
 
-        #colRelList = mb.get_releases_in_collection(colId)
-        print('OK')
-        print('Found %d / %d releases.' % (len(colRelIds), len(self)))
+        def __init__(self, catalog, collectionId):
+            self.catalog = catalog
+            self.collectionId = collectionId
+            mbcat.dialogs.ThreadedTask.__init__(self, 0)
 
-        relIdsToAdd = list(set(self.getReleaseIds()) - set(colRelIds))
+        def run(self):
+            self.status = 'Fetching list of releases in collection...'
+            self.numer = 0
+            self.denom = 0
 
-        print('Going to add %d releases to collection...' % len(relIdsToAdd))
-        for relIdChunk in mbcat.utils.chunks(relIdsToAdd, 100):
-            mb.add_releases_to_collection(colId, relIdChunk)
-        print('DONE')
+            colRelIds = []
+            while True:
+                _log.info('Fetching %d releases in collection starting at %d.'\
+                        % (self.releasesPerFetch, self.numer))
+                result = mb.get_releases_in_collection(
+                        self.collectionId,
+                        limit=self.releasesPerFetch,
+                        offset=self.numer)
+                col = result['collection']
+                relList = col['release-list']
+                if len(relList) == 0:
+                    break
+                self.numer += len(relList)
+                for rel in relList:
+                    colRelIds.append(rel['id'])
+
+            _log.info('Found %d / %d releases in collection.' % (
+                    len(colRelIds), len(self.catalog)))
+
+            relIdsToAdd = list(set(
+                    self.catalog.getReleaseIds()) - set(colRelIds))
+
+            _log.info('%d missing releases to add to collection.'\
+                % len(relIdsToAdd))
+            self.status = 'Going to add %d releases to collection...'\
+                % len(relIdsToAdd)
+            self.numer = 0
+            self.denom = len(relIdsToAdd) / self.releasesPerPost
+            for relIdChunk in mbcat.utils.chunks(relIdsToAdd,
+                    self.releasesPerPost):
+                mb.add_releases_to_collection(self.collectionId, relIdChunk)
 
     def makeLabelTrack(self, releaseId, outPath='Audacity Label Track.txt'):
         """Useful for importing into Audacity."""
