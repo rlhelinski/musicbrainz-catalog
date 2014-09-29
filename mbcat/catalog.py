@@ -1575,7 +1575,7 @@ class Catalog(object):
         'format',
         ]
 
-    def getBasicTable(self, filt={}):
+    def getBasicTable(self, filt=''):
         """
         Fetch basic information about all the releases and return an iterator.
         If you need to get all the releases, this will be
@@ -1583,11 +1583,8 @@ class Catalog(object):
         """
         return self.cm.executeAndFetch(
             'select '+','.join(self.basicColumns)+' from releases'+\
-            ((' where '+','.join(
-                key+'=?' for key in filt.keys()
-                )) if filt else '')+\
-            ' order by sortstring',
-            filt.values())
+            ((' where '+filt if filt else '')+\
+            ' order by sortstring'))
         # could return the cursor here for efficiency, but then it would have
         # left the object
 

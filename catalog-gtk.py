@@ -1572,9 +1572,9 @@ class MBCatGtk:
         if text != 'All':
             fmt = mbcat.formats.getFormatObj(text).name()
             #print ('Filtering formats: '+text+', '+fmt)
-            self.filt = {'sortformat': fmt}
+            self.filt = 'sortformat='+fmt
         else:
-            self.filt = {}
+            self.filt = ''
         self.makeListStore()
         self.updateStatusBar()
 
@@ -2229,7 +2229,7 @@ class MBCatGtk:
 
     def __init__(self, dbPath, cachePath):
         self.catalog = mbcat.catalog.Catalog(dbPath, cachePath)
-        self.filt = {}
+        self.filt = ''
 
         # create a new window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
