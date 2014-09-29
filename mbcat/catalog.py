@@ -1501,6 +1501,7 @@ class Catalog(object):
             for relIdChunk in mbcat.utils.chunks(relIdsToAdd,
                     self.releasesPerPost):
                 mb.add_releases_to_collection(self.collectionId, relIdChunk)
+                self.numer += 1
 
     def makeLabelTrack(self, releaseId, outPath='Audacity Label Track.txt'):
         """Useful for importing into Audacity."""
