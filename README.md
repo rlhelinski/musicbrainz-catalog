@@ -43,14 +43,17 @@ This application will help you perform the following tasks:
 Getting Started
 ===============
 
-You'll need [Python](https://www.python.org/),
-[python-discid](https://github.com/JonnyJD/python-discid) (optional; requires
-[libdiscid](http://musicbrainz.org/doc/libdiscid)) and the musicbrainz-catalog
-source code.
+You'll need the following software to get started:
+
+* [Python](https://www.python.org/),
+* [musicbrainzngs](https://github.com/rlhelinski/python-musicbrainzngs),
+* [python-discid](https://github.com/JonnyJD/python-discid) (optional; requires
+[libdiscid](http://musicbrainz.org/doc/libdiscid)),
+* and the musicbrainz-catalog source code.
 
 On Ubuntu Linux, get the pre-requisites with the following command:
 ```
-sudo apt-get install python libdiscid0 python-libdiscid
+sudo apt-get install python python-musicbrainzngs libdiscid0 python-libdiscid
 ```
 
 Once you have the pre-requisites, we recommend cloning the source code using
@@ -60,7 +63,8 @@ with Git so that you can easily upgrade later, use the command:
 git clone https://github.com/rlhelinski/musicbrainz-catalog.git
 ```
 
-To get a ZIP file of the latest version instead, use the following link:
+To get a ZIP file of the latest version instead of using Git, use the following
+link:
 https://github.com/rlhelinski/musicbrainz-catalog/archive/master.zip
 
 The 'catalog-cli.py' script is the text-mode interface to the catalog. Start it
