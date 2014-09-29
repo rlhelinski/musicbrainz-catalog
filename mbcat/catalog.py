@@ -1010,6 +1010,13 @@ class Catalog(object):
             'values (?,?)', (date,releaseId))
         self.cm.commit()
 
+    def deleteListenDate(self, releaseId, date):
+        if not isinstance(date, float):
+            raise ValueError ('Wrong type for date argument')
+        self.cm.execute('delete from listened_dates where release=? and date=?',
+                (releaseId, date))
+        self.cm.commit()
+
     @mbcat.utils.deprecated
     def getExtraData(self, releaseId):
         """Put together all of the metadata added by mbcat. This might be

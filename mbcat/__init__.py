@@ -1,6 +1,7 @@
 from . import catalog
 import re
 import time
+import datetime
 
 dateFmtStr = '%m/%d/%Y'
 dateFmtUsr = 'MM/DD/YYYY'
@@ -10,6 +11,12 @@ def decodeDate(date):
 
 def encodeDate(date):
     return time.strftime('%s', time.strptime(date, dateFmtStr))
+
+def encodeDateTime(dt):
+    return dt.strftime('%s')
+
+def decodeDateTime(dts):
+    return datetime.datetime.fromtimestamp(dts)
 
 def processWords(field, d):
     if field in d:

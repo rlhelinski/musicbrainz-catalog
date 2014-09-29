@@ -16,6 +16,7 @@ import mbcat.dialogs
 import musicbrainzngs as mb
 import argparse
 import time
+import datetime
 import webbrowser
 import sqlite3
 
@@ -53,33 +54,86 @@ def TextEntry(parent, message, default='', textVisible=True):
     else:
         return None
 
-def DateEntry(parent, message, default=''):
+def DateEntry(parent, message, default=None):
     """
     Display a dialog with a text entry.
     Returns the text, or None if canceled.
     """
+    if not default:
+        default = datetime.datetime.now()
     d = gtk.MessageDialog(parent,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
             gtk.MESSAGE_QUESTION,
             gtk.BUTTONS_OK_CANCEL,
             message)
     entry = gtk.Calendar()
-    #entry.set_text(default)
-    #entry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
-    entry.show()
-    d.vbox.pack_end(entry)
+    entry.select_month(default.month-1, default.year)
+    entry.select_day(default.day)
+    d.vbox.pack_start(entry)
+
+    # Hour, Minute, Second Spinners
+    hbox = gtk.HBox(False, 0)
+
+    vbox2 = gtk.VBox(False, 0)
+    hbox.pack_start(vbox2, True, True, 5)
+
+    label = gtk.Label("Hour :")
+    label.set_alignment(0, 0.5)
+    vbox2.pack_start(label, False, True, 0)
+
+    adj = gtk.Adjustment(default.hour, 0, 23, 1, 12, 0)
+    hour_spinner = gtk.SpinButton(adj, 0, 0)
+    hour_spinner.set_wrap(True)
+    vbox2.pack_start(hour_spinner, False, True, 0)
+
+    vbox2 = gtk.VBox(False, 0)
+    hbox.pack_start(vbox2, True, True, 5)
+
+    label = gtk.Label("Minute :")
+    label.set_alignment(0, 0.5)
+    vbox2.pack_start(label, False, True, 0)
+
+    adj = gtk.Adjustment(default.minute, 0, 59, 1, 15, 0)
+    minute_spinner = gtk.SpinButton(adj, 0, 0)
+    minute_spinner.set_wrap(True)
+    vbox2.pack_start(minute_spinner, False, True, 0)
+
+    vbox2 = gtk.VBox(False, 0)
+    hbox.pack_start(vbox2, True, True, 5)
+
+    label = gtk.Label("Second :")
+    label.set_alignment(0, 0.5)
+    vbox2.pack_start(label, False, True, 0)
+
+    adj = gtk.Adjustment(default.second, 0, 59, 1, 15, 0)
+    second_spinner = gtk.SpinButton(adj, 0, 0)
+    second_spinner.set_wrap(True)
+    vbox2.pack_start(second_spinner, False, True, 0)
+
+    d.vbox.pack_start(hbox, True, True, 5)
+    d.vbox.show_all()
+
     d.set_default_response(gtk.RESPONSE_OK)
 
     r = d.run()
     # have to get the text before we destroy the gtk.Entry
     year, month, day = entry.get_date()
+    hour, minute, second = hour_spinner.get_value_as_int(), \
+            minute_spinner.get_value_as_int(), \
+            second_spinner.get_value_as_int()
     # From http://www.pygtk.org/pygtk2reference/class-gtkcalendar.html#method-gtkcalendar--get-date
     # Note that month is zero-based (i.e it allowed values are 0-11) while
     # selected_day is one-based (i.e. allowed values are 1-31).
-    date = '%d/%d/%d' % (month+1, day, year)
+    entered_datetime = datetime.datetime(
+            year,
+            month+1,
+            day,
+            hour,
+            minute,
+            second)
     d.destroy()
     if r == gtk.RESPONSE_OK:
-        return date
+        return entered_datetime
     else:
         return None
 
@@ -979,7 +1033,7 @@ class CheckOutHistoryDialog(QueryResultsDialog):
             parentWindow,
             app,
             releaseId,
-            message='Release Results',
+            message='Checkout History',
             ):
         self.releaseId = releaseId
         QueryResultsDialog.__init__(self, parentWindow, app, releaseId, message)
@@ -1059,6 +1113,87 @@ class CheckOutHistoryDialog(QueryResultsDialog):
         else:
             self.checkInBtn.set_sensitive(False)
             self.checkOutBtn.set_sensitive(True)
+
+class ListenHistoryDialog(QueryResultsDialog):
+    row_contains = 'Event'
+
+    def __init__(self,
+            parentWindow,
+            app,
+            releaseId,
+            message='Listen History',
+            ):
+        self.releaseId = releaseId
+        QueryResultsDialog.__init__(self, parentWindow, app, releaseId, message)
+        self.selInfo.set_ellipsize(pango.ELLIPSIZE_END)
+        self.selInfo.set_text('Release "%s" (%s)' %
+                (self.app.catalog.getReleaseTitle(releaseId), releaseId))
+
+    def on_row_select(self, treeview):
+        # When a row is selected, sensitize the Delete Event button
+        pass
+
+    def update(self):
+        self.buildListStore(self.releaseId)
+
+    def buildTreeView(self):
+        self.tv = gtk.TreeView()
+        for i, (label, textWidth) in enumerate(
+            [('Date', 20),
+            ]):
+            cell = gtk.CellRendererText()
+            cell.set_property('xalign', 1.0)
+            cell.set_property('width-chars', textWidth)
+            col = gtk.TreeViewColumn(label, cell)
+            col.add_attribute(cell, 'text', i+1)
+            col.set_resizable(True)
+            self.tv.append_column(col)
+
+    def buildListStore(self, releaseId):
+        resultListStore = gtk.ListStore(float, str)
+
+        for event in self.app.catalog.getListenDates(self.releaseId):
+            resultListStore.append((event, mbcat.decodeDateTime(event)))
+        self.tv.set_model(resultListStore)
+
+    def buildButtons(self):
+        # Buttons
+        hbox = gtk.HBox(False, 10)
+        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        btn.connect('clicked', self.on_close)
+        hbox.pack_end(btn, expand=False, fill=False)
+
+        self.checkInBtn = gtk.Button('Delete Date')
+        self.checkInBtn.connect('clicked', self.delete_date)
+        hbox.pack_end(self.checkInBtn, expand=False, fill=False)
+
+        self.checkOutBtn = gtk.Button('Add Date')
+        self.checkOutBtn.connect('clicked', self.add_date)
+        hbox.pack_end(self.checkOutBtn, expand=False, fill=False)
+
+        return hbox
+
+    def get_selection(self):
+        """Return the unique date float for the selected row, if any."""
+        model, it = self.tv.get_selection().get_selected()
+        return model.get_value(it, 0) if it else None
+
+    def add_date(self, button):
+        dt = DateEntry(self.window,
+            'Choose a listen date')
+        if dt:
+            date = float(mbcat.encodeDateTime(dt))
+            self.app.catalog.addListenDate(releaseId=self.releaseId, date=date)
+            self.update()
+            self.app.updateDetailPane()
+
+    def delete_date(self, button):
+        selected_date = self.get_selection()
+        if selected_date:
+            self.app.catalog.deleteListenDate(releaseId=self.releaseId,
+                    date=selected_date)
+            self.update()
+            self.app.updateDetailPane()
 
 def TextViewEntry(parent, message, default=''):
     """
@@ -1716,11 +1851,11 @@ class MBCatGtk:
         if not borrower:
             return
 
-        date = TextEntry(self.window,
-            "Lend date  (" + mbcat.dateFmtUsr + "): ",
-            default=time.strftime(mbcat.dateFmtStr))
-        self.catalog.addCheckOutEvent(releaseId, borrower, mbcat.encodeDate(date))
-        self.updateDetailPane()
+        date = DateEntry(self.window, "Choose a lend date")
+        if date:
+            self.catalog.addCheckOutEvent(releaseId, borrower,
+                    mbcat.encodeDateTime(date))
+            self.updateDetailPane()
 
     def checkIn(self, widget=None, releaseId=None):
         if not releaseId:
@@ -1730,14 +1865,10 @@ class MBCatGtk:
             ErrorDialog(self.window, 'Release is not checked out.')
             return
 
-        date = TextEntry(self.window,
-            "Return date (" + mbcat.dateFmtUsr + "): ",
-            default=time.strftime(mbcat.dateFmtStr))
-        if not date:
-            date = time.time()
-        self.catalog.addCheckInEvent(releaseId,
-            mbcat.encodeDate(date))
-        self.updateDetailPane()
+        date = DateEntry(self.window, "Select return date")
+        if date:
+            self.catalog.addCheckInEvent(releaseId, mbcat.encodeDateTime(date))
+            self.updateDetailPane()
 
     def editComment(self, widget):
         releaseId = self.getSelection()
@@ -1754,15 +1885,8 @@ class MBCatGtk:
             self.catalog.setCopyCount(releaseId, newcount)
 
     def listen(self, widget):
-        # TODO this needs its own dialog that displays the current listening dates
-        releaseId = self.getSelection()
-        dateStr = DateEntry(self.window,
-            'Choose a listen date',
-            time.strftime(mbcat.dateFmtStr))
-        if dateStr:
-            date = float(mbcat.encodeDate(dateStr))
-            self.catalog.addListenDate(releaseId, date)
-            self.updateDetailPane()
+        ListenHistoryDialog(self.window, self, self.getSelection())
+
 
     def purchaseInfo(self, widget):
         """Add a purchase date."""
@@ -2110,7 +2234,7 @@ class MBCatGtk:
         self.menu_release_items.append(submenuitem)
 
         ## Listen
-        submenuitem = gtk.MenuItem('Listen')
+        submenuitem = gtk.MenuItem('Listen Events')
         submenuitem.connect('activate', self.listen)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
