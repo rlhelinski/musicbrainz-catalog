@@ -1582,6 +1582,22 @@ class MBCatGtk:
         if row:
             self.setSelectedRow(row)
 
+    def menuClearFilters(self, widget=None):
+        self.filt = ''
+        self.refreshView(widget)
+
+    def menuCatalogCheck(self, widget):
+        self.filt = 'format like "%[unknown]%"'\
+                ' or barcode=""'\
+                ' or asin=""'\
+                ' or label=""'\
+                ' or catno=""'\
+                ' or country=""'\
+                ' or date=""'\
+                ' or artist=""'\
+                ' or title=""'
+        self.refreshView(widget)
+
     def _addRelease(self, releaseId, parentWindow):
         class AddReleaseTask(mbcat.dialogs.ThreadedCall):
             def __init__(self, app, c, fun, *args):
@@ -1922,7 +1938,8 @@ class MBCatGtk:
         menu.append(sep)
 
         # Check
-        submenuitem = gtk.MenuItem('Check')
+        submenuitem = gtk.MenuItem('Incomplete Data')
+        submenuitem.connect('activate', self.menuCatalogCheck)
         menu.append(submenuitem)
 
         # Vacuum
@@ -1996,12 +2013,17 @@ class MBCatGtk:
             action = self.actiongroup.get_action(name)
             subsubmenu.append(action.create_menu_item())
 
+        ## Clear Filters
+        submenuitem = gtk.MenuItem('Clear Filters')
+        submenuitem.connect('activate', self.menuClearFilters)
+        menu.append(submenuitem)
+
         ## Refresh
         submenuitem = gtk.MenuItem('Refresh')
         submenuitem.connect('activate', self.refreshView)
         menu.append(submenuitem)
 
-        ## Refresh
+        ## Scroll to Selected
         submenuitem = gtk.MenuItem('Scroll to Selected')
         submenuitem.connect('activate', self.scrollToSelected)
         self.menu_release_items.append(submenuitem)
