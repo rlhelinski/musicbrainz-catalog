@@ -1415,11 +1415,10 @@ class MBCatGtk:
         self.openDatabase(filename)
 
     def menuCatalogVacuum(self, widget):
-        th = self.CatalogTask(self,
+        self.CatalogTask(self,
             mbcat.dialogs.PulseDialog(
                 self.window,
-                mbcat.dialogs.ThreadedCall(self.catalog.vacuum)))
-        th.start()
+                mbcat.dialogs.ThreadedCall(self.catalog.vacuum))).start()
 
     class CatalogTask(threading.Thread):
         """
