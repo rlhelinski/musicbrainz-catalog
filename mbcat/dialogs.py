@@ -52,19 +52,33 @@ class ProgressDialog(threading.Thread):
                 gobject.idle_add(self.status.set_text, self.task.status)
             seconds_elapsed = time.time() - tstart
             if self.task.denom == 0:
-                text = '%0.3f Elapsed' % seconds_elapsed
+                text = self.format_time(seconds_elapsed)+' Elapsed'
                 gobject.idle_add(self.progressbar.pulse)
             else:
                 fract = float(self.task.numer)/self.task.denom
-                text = '%0.3f Remaining' % (
-                    seconds_elapsed / fract - seconds_elapsed
-                    ) if fract != 0 else '?.?? Remaining'
+                text = self.ETA(fract, seconds_elapsed)+' Remaining'
                 gobject.idle_add(self.progressbar.set_fraction, fract)
 
             gobject.idle_add(self.progressbar.set_text, text)
             time.sleep(0.1)
 
         self.quit()
+
+    @staticmethod
+    def format_time(seconds):
+        """Formats time as the string "MM:SS.mm"."""
+        td = datetime.timedelta(seconds=round(seconds,2))
+        return '{:02}:{:02}.{:02}'.format(
+                td.seconds % 3600 // 60,
+                td.seconds % 60,
+                td.microseconds // 10000)
+
+    def ETA(self, fract, seconds_elapsed):
+        if fract == 0 or fract == 0.0:
+            return '--:--.--'
+        else:
+            eta = seconds_elapsed / fract - seconds_elapsed
+            return self.format_time(eta)
 
     def quit(self):
         self.pbarwindow.destroy()

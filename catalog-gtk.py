@@ -1457,6 +1457,8 @@ class MBCatGtk:
                 self.catalog.rebuildCacheTables(self.catalog))).start()
 
     def menuCatalogGetSimilar(self, widget):
+        # TODO could implement a simple dialog here that asks for the limit on
+        # the distance of neighbors to compare and the number of results to keep
         self.CheckTask(self.window, self, ReleaseDistanceDialog,
             mbcat.dialogs.ProgressDialog(self.window,
                 self.catalog.checkLevenshteinDistances(self.catalog, 2))).start()
