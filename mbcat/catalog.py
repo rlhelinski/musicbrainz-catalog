@@ -1350,7 +1350,7 @@ class Catalog(object):
 
         _log.info("Added '%s'" % self.getReleaseTitle(releaseId))
 
-        self.getCoverArt(releaseId)
+        self.getCoverArt(releaseId, olderThan)
 
     def deleteRelease(self, releaseId):
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
@@ -1400,7 +1400,7 @@ class Catalog(object):
     def getCoverArt(self, releaseId, maxage=60*60):
         imgPath = self._getCoverArtPath(releaseId)
         if os.path.isfile(imgPath) and os.path.getmtime(imgPath) > \
-                time.time() - maxage:
+                (time.time() - maxage):
             _log.info("Already have cover art for " + releaseId + " at '" + \
                 imgPath + "', skipping")
             return
