@@ -1666,12 +1666,9 @@ class MBCatGtk:
             self.task = task
 
         def run(self):
-            row = self.app.getSelectedRow()
             self.task.start()
             self.task.join()
             self.app.refreshView()
-            if row:
-                self.app.setSelectedRow(row)
 
     class CheckTask(threading.Thread):
         def __init__(self, window, app, result_viewer, task):
@@ -1768,15 +1765,18 @@ class MBCatGtk:
 
     def refreshView(self, widget=None):
         selRelId = self.getSelection()
+        selRow = self.getSelectedRow()
         self.makeListStore()
         self.updateDetailPane()
         self.updateStatusBar()
         # if there was a selection
         if selRelId:
-            row = self.getReleaseRow(selRelId)
+            newRow = self.getReleaseRow(selRelId)
             # if the release exists in the new ListStore
-            if row:
-                self.setSelectedRow(row)
+            if newRow:
+                self.setSelectedRow(newRow)
+            else:
+                self.setSelectedRow(selRow)
 
     def scrollToSelected(self, widget=None):
         row = self.getSelectedRow()
