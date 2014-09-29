@@ -1613,10 +1613,8 @@ class Catalog(object):
         """
         return self.cm.executeAndFetch(
             'select '+','.join(self.basicColumns)+' from releases'+\
-            ((' where '+filt if filt else '')+\
+            (((' where '+filt) if filt else '')+\
             ' order by sortstring'))
-        # could return the cursor here for efficiency, but then it would have
-        # left the object
 
     def getReleaseTitle(self, releaseId):
         return self.cm.executeAndFetchOne(

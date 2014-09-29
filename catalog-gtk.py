@@ -1826,6 +1826,31 @@ class MBCatGtk:
                 ' or title=""'
         self.refreshView(widget)
 
+    def menuFilterQuick(self, widget):
+        terms = TextEntry(self.window,
+            'Enter terms to search for, seperated by spaces.\n'\
+            'Ex.: "john smith" would show any releases including "john"\n'\
+            '\tor "smith" in the title or the artist.')
+        if terms:
+            self.filt = ' or '.join([
+                    ('sortstring like "%'+term+'%"') \
+                    for term in terms.split(' ')
+                    ])
+            self.refreshView(widget)
+
+    def menuFilterExpression(self, widget):
+        expr = TextEntry(self.window,
+            'Enter an SQL expression for "where"\n'\
+            'Ex.: country="US" and date < 1970\n'
+            'Ex.: artist like "%Smith%" or artist like "%John%"\n'
+            'Useful columns:\n'\
+            '\tartist, title, sortstring, date, county, label, catno,\n'\
+            '\tbarcode, asin, format, metatime, count, comment, rating\n',
+            default=self.filt)
+        if expr:
+            self.filt = expr
+            self.refreshView(widget)
+
     def _addRelease(self, releaseId, parentWindow):
         class AddReleaseTask(mbcat.dialogs.ThreadedCall):
             def __init__(self, app, c, fun, *args):
@@ -2129,50 +2154,45 @@ class MBCatGtk:
         menuitem = gtk.MenuItem("_Catalog")
         menuitem.set_submenu(menu)
 
-        # Open
+        ## Open
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_OPEN, self.agr)
         # Note that this inherits the <Control>o accelerator
         submenuitem.connect('activate', self.menuCatalogOpen)
         menu.append(submenuitem)
 
-        # Save As...
+        ## Save As...
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_SAVE_AS, self.agr)
         submenuitem.set_sensitive(False) # should be enabled when opened
         self.menuCatalogSaveAsItem = submenuitem
         submenuitem.connect('activate', self.menuCatalogSaveAs)
         menu.append(submenuitem)
 
-        # Separator
+        ## Separator
         sep = gtk.SeparatorMenuItem()
         menu.append(sep)
 
-        # Check
-        submenuitem = gtk.MenuItem('Incomplete Data')
-        submenuitem.connect('activate', self.menuCatalogCheck)
-        menu.append(submenuitem)
-
-        # Vacuum
+        ## Vacuum
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_CLEAR)
         submenuitem.get_child().set_label('Vacuum')
         submenuitem.connect('activate', self.menuCatalogVacuum)
         menu.append(submenuitem)
 
-        # Rebuild
+        ## Rebuild
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_EXECUTE)
         submenuitem.get_child().set_label('Rebuild Indexes')
         submenuitem.connect('activate', self.menuCatalogRebuild)
         menu.append(submenuitem)
 
-        # Similar
+        ## Similar
         submenuitem = gtk.MenuItem('Similar')
         submenuitem.connect('activate', self.menuCatalogGetSimilar)
         menu.append(submenuitem)
 
-        # Separator
+        ## Separator
         sep = gtk.SeparatorMenuItem()
         menu.append(sep)
 
-        # Quit
+        ## Quit
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_QUIT, self.agr)
         key, mod = gtk.accelerator_parse('Q')
         submenuitem.add_accelerator('activate', self.agr, key, mod, 
@@ -2198,33 +2218,6 @@ class MBCatGtk:
         submenuitem = gtk.CheckMenuItem('Show Statusbar')
         submenuitem.set_active(True)
         submenuitem.connect('activate', self.toggleStatusBar)
-        menu.append(submenuitem)
-
-        ## Formats
-        # TODO this should be dynamically generated after loading or changing
-        # the database
-        self.actiongroup = gtk.ActionGroup('FormatsGroup')
-
-        self.actiongroup.add_actions([('Formats', None, '_Formats')])
-
-        self.actiongroup.add_radio_actions([
-            (name, None, label, None, None, i) \
-            for i, [name, label] in enumerate(zip(self.formatNames, \
-                self.formatLabels))
-            ], 0, self.selectFormat)
-
-        submenuitem = self.actiongroup.get_action('Formats').create_menu_item()
-        menu.append(submenuitem)
-        subsubmenu = gtk.Menu()
-        submenuitem.set_submenu(subsubmenu)
-
-        for name in self.formatNames:
-            action = self.actiongroup.get_action(name)
-            subsubmenu.append(action.create_menu_item())
-
-        ## Clear Filters
-        submenuitem = gtk.MenuItem('Clear Filters')
-        submenuitem.connect('activate', self.menuClearFilters)
         menu.append(submenuitem)
 
         ## Refresh
@@ -2355,6 +2348,58 @@ class MBCatGtk:
         ## Track
         submenuitem = gtk.MenuItem('Track')
         submenuitem.connect('activate', self.searchTrack)
+        menu.append(submenuitem)
+
+        # Filter
+        menu = gtk.Menu()
+        menuitem = gtk.MenuItem("Filter")
+        menuitem.set_submenu(menu)
+        mb.append(menuitem)
+
+        ## Formats
+        # TODO this should be dynamically generated after loading or changing
+        # the database
+        self.actiongroup = gtk.ActionGroup('FormatsGroup')
+
+        self.actiongroup.add_actions([('Formats', None, '_Formats')])
+
+        self.actiongroup.add_radio_actions([
+            (name, None, label, None, None, i) \
+            for i, [name, label] in enumerate(zip(self.formatNames, \
+                self.formatLabels))
+            ], 0, self.selectFormat)
+
+        submenuitem = self.actiongroup.get_action('Formats').create_menu_item()
+        menu.append(submenuitem)
+        subsubmenu = gtk.Menu()
+        submenuitem.set_submenu(subsubmenu)
+
+        for name in self.formatNames:
+            action = self.actiongroup.get_action(name)
+            subsubmenu.append(action.create_menu_item())
+
+        ## Quick search
+        submenuitem = gtk.MenuItem('Quick Search')
+        submenuitem.connect('activate', self.menuFilterQuick)
+        menu.append(submenuitem)
+
+        ## Enter expression
+        submenuitem = gtk.MenuItem('Enter Expression')
+        submenuitem.connect('activate', self.menuFilterExpression)
+        menu.append(submenuitem)
+
+        ## Check for Incomplete Data
+        submenuitem = gtk.MenuItem('Incomplete Data')
+        submenuitem.connect('activate', self.menuCatalogCheck)
+        menu.append(submenuitem)
+
+        ## Separator
+        sep = gtk.SeparatorMenuItem()
+        menu.append(sep)
+
+        ## Clear Filters
+        submenuitem = gtk.MenuItem('Clear Filters')
+        submenuitem.connect('activate', self.menuClearFilters)
         menu.append(submenuitem)
 
         # Webservice menu
