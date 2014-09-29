@@ -143,6 +143,8 @@ def PurchaseInfoEntry(parent,
     Display a dialog with a text entry.
     Returns the text, or None if canceled.
     """
+    # TODO this should have hour, minute and second added to be consistent with
+    # other date entries
     d = gtk.MessageDialog(parent,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
             gtk.MESSAGE_QUESTION,
@@ -1648,6 +1650,11 @@ class MBCatGtk:
                 self.window,
                 mbcat.dialogs.ThreadedCall(self.catalog.vacuum))).start()
 
+    def menuCatalogRefresh(self, widget):
+        self.CatalogTask(self,
+            mbcat.dialogs.ProgressDialog(self.window,
+                self.catalog.refreshAllMetaData(self.catalog, 60*60*24))).start()
+
     class CatalogTask(threading.Thread):
         """
         This is a thread that runs a specified task and then refreshes the
@@ -2170,6 +2177,12 @@ class MBCatGtk:
         ## Separator
         sep = gtk.SeparatorMenuItem()
         menu.append(sep)
+
+        ## Refresh Metadata
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_REFRESH)
+        submenuitem.get_child().set_label('Refresh Metadata')
+        submenuitem.connect('activate', self.menuCatalogRefresh)
+        menu.append(submenuitem)
 
         ## Vacuum
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_CLEAR)

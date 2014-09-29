@@ -1332,6 +1332,7 @@ class Catalog(object):
     def addRelease(self, releaseId, olderThan=0):
         """
         Get metadata XML from MusicBrainz and add to or refresh the catalog.
+        This function does commit its changes.
         """
 
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
@@ -1356,10 +1357,21 @@ class Catalog(object):
         self.unDigestRelease(releaseId)
         self.cm.commit()
 
-    def refreshAllMetaData(self, olderThan=0, pbar=None):
-        for releaseId in self.loadReleaseIds(pbar):
-            _log.info("Refreshing %s", releaseId)
-            self.addRelease(releaseId, olderThan)
+    class refreshAllMetaData(mbcat.dialogs.ThreadedTask):
+        def __init__(self, catalog, olderThan=0):
+            self.catalog = catalog
+            self.olderThan = olderThan
+            mbcat.dialogs.ThreadedTask.__init__(self, 0)
+
+        def run(self):
+            self.status = 'Fetching all metadata older than %d seconds...'\
+                    % self.olderThan
+            self.numer = 0
+            self.denom = len(self.catalog)
+            for releaseId in self.catalog.getReleaseIds():
+                _log.info("Refreshing release %s", releaseId)
+                self.catalog.addRelease(releaseId, self.olderThan)
+                self.numer += 1
             # NOTE Could delay commit in addRelease and commit once here, but
             # fetching from web is slow, so this extra delay might be
             # acceptable. Also, partial refreshes will be committed as they
@@ -1607,10 +1619,10 @@ class Catalog(object):
 
     def getBasicTable(self, filt=''):
         """
-        Fetch basic information about all the releases and return an iterator.
-        If you need to get all the releases, this will be
-
+        Fetch "basic" information about all the releases and return a list of
+        lists. Accepts SQL code for the 'where' clause in the 'filt' argument.
         """
+        # TODO this does not sanitize the 'filt' argument!
         return self.cm.executeAndFetch(
             'select '+','.join(self.basicColumns)+' from releases'+\
             (((' where '+filt) if filt else '')+\
