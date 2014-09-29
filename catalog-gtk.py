@@ -1844,9 +1844,9 @@ class MBCatGtk:
         terms = TextEntry(self.window,
             'Enter terms to search for, seperated by spaces.\n'\
             'Ex.: "john smith" would show any releases including "john"\n'\
-            '\tor "smith" in the title or the artist.')
+            '\tand "smith" in the title or the artist.')
         if terms:
-            self.filt = ' or '.join([
+            self.filt = ' and '.join([
                     ('sortstring like "%'+term+'%"') \
                     for term in terms.split(' ')
                     ])
