@@ -1767,9 +1767,16 @@ class MBCatGtk:
         return self.releaseList.get_path(result_iter)[0]
 
     def refreshView(self, widget=None):
+        selRelId = self.getSelection()
         self.makeListStore()
         self.updateDetailPane()
         self.updateStatusBar()
+        # if there was a selection
+        if selRelId:
+            row = self.getReleaseRow(selRelId)
+            # if the release exists in the new ListStore
+            if row:
+                self.setSelectedRow(row)
 
     def scrollToSelected(self, widget=None):
         row = self.getSelectedRow()
