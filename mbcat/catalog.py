@@ -987,15 +987,22 @@ class Catalog(object):
 
     def addPurchase(self, releaseId, date, price, vendor):
         # Some error checking
-        if not isinstance(date, str) and not isinstance(date, unicode):
+        if not isinstance(date, float):
             raise ValueError ('Wrong type for date')
-        if not isinstance(price, str) and not isinstance(price, unicode):
-            raise ValueError ('Wrong type for date')
+        if not isinstance(price, float):
+            raise ValueError ('Wrong type for price')
         if not isinstance(vendor, str) and not isinstance(vendor, unicode):
-            raise ValueError ('Wrong type for date')
+            raise ValueError ('Wrong type for vendor')
 
         self.cm.execute('insert into purchases (date,price,vendor,release) '
             'values (?,?,?,?)', (date,price,vendor,releaseId))
+        self.cm.commit()
+
+    def deletePurchase(self, releaseId, date):
+        if not isinstance(date, float):
+            raise ValueError ('Wrong type for date argument')
+        self.cm.execute('delete from purchases where release=? and date=?',
+                (releaseId, date))
         self.cm.commit()
 
     def getListenDates(self, releaseId):

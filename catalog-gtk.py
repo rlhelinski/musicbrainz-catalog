@@ -181,9 +181,10 @@ def PurchaseInfoEntry(parent,
     r = d.run()
     # have to get the text before we destroy the gtk.Entry
     year, month, day = dateEntry.get_date()
-    val = {'date': '%d/%d/%d' % (year, month+1, day),
+    val = {'date': float(mbcat.encodeDateTime(
+            datetime.datetime(year, month+1, day))),
         'vendor' : vendorEntry.get_text().decode('utf8'),
-        'price' : priceEntry.get_text().decode('utf8'),
+        'price' : priceEntry.get_value(),
         }
 
     d.destroy()
@@ -1115,6 +1116,8 @@ class CheckOutHistoryDialog(QueryResultsDialog):
             self.checkOutBtn.set_sensitive(True)
 
 class ListenHistoryDialog(QueryResultsDialog):
+    """Manage listen history."""
+
     row_contains = 'Event'
 
     def __init__(self,
@@ -1191,6 +1194,96 @@ class ListenHistoryDialog(QueryResultsDialog):
         selected_date = self.get_selection()
         if selected_date:
             self.app.catalog.deleteListenDate(releaseId=self.releaseId,
+                    date=selected_date)
+            self.update()
+            self.app.updateDetailPane()
+
+class PurchaseHistoryDialog(QueryResultsDialog):
+    """Manage purchase dates."""
+
+    row_contains = 'Event'
+
+    def __init__(self,
+            parentWindow,
+            app,
+            releaseId,
+            message='Purchase History',
+            ):
+        self.releaseId = releaseId
+        QueryResultsDialog.__init__(self, parentWindow, app, releaseId, message)
+        self.selInfo.set_ellipsize(pango.ELLIPSIZE_END)
+        self.selInfo.set_text('Release "%s" (%s)' %
+                (self.app.catalog.getReleaseTitle(releaseId), releaseId))
+
+    def on_row_select(self, treeview):
+        # When a row is selected, sensitize the Delete Event button
+        pass
+
+    def update(self):
+        self.buildListStore(self.releaseId)
+
+    def buildTreeView(self):
+        self.tv = gtk.TreeView()
+        for i, (label, textWidth, xalign) in enumerate([
+            ('Date', 20, 0),
+            ('Price', 5, 1.0),
+            ('Vendor', 20, 0),
+            ]):
+            cell = gtk.CellRendererText()
+            cell.set_property('xalign', xalign)
+            cell.set_property('width-chars', textWidth)
+            col = gtk.TreeViewColumn(label, cell)
+            col.add_attribute(cell, 'text', i+1)
+            col.set_resizable(True)
+            self.tv.append_column(col)
+
+    def buildListStore(self, releaseId):
+        resultListStore = gtk.ListStore(float, str, str, str)
+
+        for date,price,vendor in self.app.catalog.getPurchases(
+                self.releaseId):
+            resultListStore.append((
+                date,
+                mbcat.decodeDate(date),
+                price,
+                vendor
+                ))
+        self.tv.set_model(resultListStore)
+
+    def buildButtons(self):
+        # Buttons
+        hbox = gtk.HBox(False, 10)
+        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        btn.connect('clicked', self.on_close)
+        hbox.pack_end(btn, expand=False, fill=False)
+
+        self.checkInBtn = gtk.Button('Delete Event')
+        self.checkInBtn.connect('clicked', self.delete_event)
+        hbox.pack_end(self.checkInBtn, expand=False, fill=False)
+
+        self.checkOutBtn = gtk.Button('Add Event')
+        self.checkOutBtn.connect('clicked', self.add_event)
+        hbox.pack_end(self.checkOutBtn, expand=False, fill=False)
+
+        return hbox
+
+    def get_selection(self):
+        """Return the unique date float for the selected row, if any."""
+        model, it = self.tv.get_selection().get_selected()
+        return model.get_value(it, 0) if it else None
+
+    def add_event(self, button):
+        info = PurchaseInfoEntry(self.window)
+        if info:
+            self.app.catalog.addPurchase(self.releaseId,
+                    info['date'], info['price'], info['vendor'])
+            self.update()
+            self.app.updateDetailPane()
+
+    def delete_event(self, button):
+        selected_date = self.get_selection()
+        if selected_date:
+            self.app.catalog.deletePurchase(releaseId=self.releaseId,
                     date=selected_date)
             self.update()
             self.app.updateDetailPane()
@@ -1887,19 +1980,8 @@ class MBCatGtk:
     def listen(self, widget):
         ListenHistoryDialog(self.window, self, self.getSelection())
 
-
     def purchaseInfo(self, widget):
-        """Add a purchase date."""
-        releaseId = self.getSelection()
-
-        purchases = self.catalog.getPurchases(releaseId)
-        for purchase in purchases:
-            print(str(purchase))
-        info = PurchaseInfoEntry(self.window)
-        if not info:
-            return
-
-        self.catalog.addPurchase(releaseId, info['date'], info['price'], info['vendor'])
+        PurchaseHistoryDialog(self.window, self, self.getSelection())
 
     def rateRelease(self, widget):
         releaseId = self.getSelection()
@@ -2239,8 +2321,8 @@ class MBCatGtk:
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
 
-        ## Purchase Info
-        submenuitem = gtk.MenuItem('Purchase Info')
+        ## Purchase History
+        submenuitem = gtk.MenuItem('Purchase History')
         submenuitem.connect('activate', self.purchaseInfo)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
