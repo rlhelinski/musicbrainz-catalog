@@ -83,7 +83,7 @@ class ProgressDialog(threading.Thread):
             return self.format_time(eta)
 
     def quit(self):
-        self.pbarwindow.destroy()
+        gobject.idle_add(self.pbarwindow.destroy)
 
     def stop(self):
         """Stop method, sets the event to terminate the thread's main loop"""
