@@ -1800,7 +1800,7 @@ class MBCatGtk:
         if text != 'All':
             fmt = mbcat.formats.getFormatObj(text).name()
             #print ('Filtering formats: '+text+', '+fmt)
-            self.filt = 'sortformat='+fmt
+            self.filt = 'sortformat="'+fmt+'"'
         else:
             self.filt = ''
         self.makeListStore()
