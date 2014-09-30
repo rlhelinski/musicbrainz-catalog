@@ -10,6 +10,7 @@ import musicbrainzngs
 import webbrowser
 import itertools
 _log = logging.getLogger("mbcat")
+import tempfile
 
 
 class Shell:
@@ -175,18 +176,21 @@ class Shell:
 
     # TODO also need a delete comment function
     def AddComment(self):
-        """Add a comment."""
+        """Edit comments."""
         releaseId = self.Search()
         comment = self.c.getComment(releaseId)
+        tfd, tfn = tempfile.mkstemp()
+        tf = os.fdopen(tfd, 'w')
         if comment:
-            self.s.write('Comments: ' + comment + '\n')
-        newComment = self.s.nextLine('Additional Comment: ')
-        if not newComment:
-            raise ValueError('Empty string.')
+            tf.write(comment)
+        tf.close()
 
-        if comment:
-            newComment = comment + '\n' + newComment
-        self.c.setComment(releaseId, newComment)
+        os.system('editor %s' % tfn)
+
+        with open(tfn, 'r') as f:
+            self.c.setComment(releaseId, f.read())
+
+        os.unlink(tfn)
 
     def SetRating(self):
         """Add a rating."""
