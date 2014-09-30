@@ -823,6 +823,30 @@ class GroupQueryResultsDialog(QueryResultsDialog):
         relId = self.get_selection()
         webbrowser.open(mbcat.catalog.Catalog.groupUrl + relId)
 
+class DiscQueryResultsDialog(QueryResultsDialog):
+    def __init__(self,
+            parentWindow,
+            app,
+            submission_url,
+            queryResult,
+            message='Disc Results',
+        ):
+        self.submission_url = submission_url
+        QueryResultsDialog.__init__(self, parentWindow, app, queryResult,
+                message)
+
+    def buildButtons(self):
+        hbox = QueryResultsDialog.buildButtons(self)
+
+        btn = gtk.Button('Submit Disc')
+        btn.connect('clicked', self.submit_disc)
+        hbox.pack_end(btn, expand=False, fill=False)
+
+        return hbox
+
+    def submit_disc(self, widget):
+        webbrowser.open(self.submission_url)
+
 class TrackListDialog(QueryResultsDialog):
     """
     Display a dialog with a list of tracks for a release.
@@ -2136,7 +2160,7 @@ class MBCatGtk:
                     %result['disc']['id'])
                 # TODO pass in submission URL in disc.submission_url here
                 # and add button to dialog to bring up that URL
-                QueryResultsDialog(self.window, self, result['disc'])
+                DiscQueryResultsDialog(self.window, self, disc.submission_url, result['disc'])
             elif result.get("cdstub"):
                 for label, key in [
                         ('CD Stub', 'id'),
