@@ -49,6 +49,8 @@ class Shell:
             if input:
                 if len(mbcat.utils.getReleaseIdFromInput(input)) == 36:
                     releaseId = mbcat.utils.getReleaseIdFromInput(input)
+                    self.s.write("Release %s selected.\n" % \
+                            self.formatReleaseInfo(releaseId))
                     return releaseId
                 matches = list(self.c._search(input))
                 if len(matches) > 1:
@@ -66,6 +68,8 @@ class Shell:
                             self.s.write(str(e) + " try again\n")
 
                 elif len(matches) == 1:
+                    self.s.write("Release %s selected.\n" % \
+                            self.formatReleaseInfo(matches[0]))
                     return matches[0]
                 else:
                     raise ValueError("No matches for \"%s\"." % input)
