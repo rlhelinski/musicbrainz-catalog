@@ -25,6 +25,14 @@ class Shell:
         self.c.report()
         self.s = InputSplitter(stdin=stdin, stdout=stdout)
 
+    def confirm(self, prompt, default=False):
+        options = '[Y/n]' if default else '[y/N]'
+        answer = self.s.nextLine(prompt+' '+options)
+        if default is True:
+            return not answer or answer.lower().startswith('y')
+        else:
+            return answer and answer.lower().startswith('y')
+
     def SearchSort(self):
         """Search for a release and display its neighbors in the sorting scheme.
         Useful for sorting physical media."""
@@ -311,7 +319,8 @@ class Shell:
     def Delete(self):
         """Delete a release."""
         releaseId = self.Search("Enter search terms or release ID to delete: ")
-        self.c.deleteRelease(releaseId)
+        if self.confirm('Delete release?', default=False):
+            self.c.deleteRelease(releaseId)
 
     def Check(self):
         """Check releases for missing information."""
@@ -586,9 +595,7 @@ class Shell:
         """Read table of contents from a CD-ROM, search for a release, and add
 to the catalog"""
         def askBrowseSubmission():
-            answer = self.s.nextLine(
-                'Open browser to Submission URL? [y/N]')
-            if answer and answer.lower().startswith('y'):
+            if self.confirm('Open browser to Submission URL?', default=False):
                 _log.info('Opening web browser.')
                 webbrowser.open(disc.submission_url)
 
