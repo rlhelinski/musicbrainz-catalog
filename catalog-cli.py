@@ -20,5 +20,5 @@ if __name__ == "__main__":
 
     c = Catalog(dbPath=args.database, cachePath=args.cache)
     s = Shell(catalog=c)
-    s.main()
+    s.cmdloop()
 

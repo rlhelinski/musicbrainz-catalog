@@ -10,21 +10,42 @@ import musicbrainzngs
 import webbrowser
 import itertools
 _log = logging.getLogger("mbcat")
+import cmd
 
+class Shell(cmd.Cmd):
+    """An interactive shell for musicbrainz-catalog."""
 
-class Shell:
+    prompt = 'mbcat$ '
 
-    """An interactive shell that prompts the user for inputs and renders output for the catalog."""
-    widgets = ["Releases: ", progressbar.Bar(
+    pbar_widgets = ["Releases: ", progressbar.Bar(
         marker="=", left="[", right="]"),
         " ", progressbar.Percentage()]
 
     def __init__(self, stdin=sys.stdin, stdout=sys.stdout, catalog=None):
+        cmd.Cmd.__init__(self)
         self.c = catalog if catalog != None else Catalog()
         self.c.report()
         self.s = InputSplitter(stdin=stdin, stdout=stdout)
 
-    def SearchSort(self):
+    def do_report(self, arg):
+        """Display statistics of the catalog"""
+        self.c.report()
+
+    search_cmds = ['release', 'barcode', 'track']
+
+    def do_search(self, subcmd):
+        if subcmd in search_cmds:
+            print (subcmd)
+        else:
+            print ('Oops')
+
+    def complete_search(self, text, line, begidx, endidx):
+        completions = self.search_cmds[:] if not text \
+            else [ f for f in self.search_cmds \
+                    if f.startswitch(text) ]
+        return completions
+
+    def do_search(self):
         """Search for a release and display its neighbors in the sorting scheme.
         Useful for sorting physical media."""
         releaseId = self.Search()
@@ -569,10 +590,6 @@ class Shell:
 
         webbrowser.open(self.c.releaseUrl + releaseId)
 
-    def Report(self):
-        """Display high-level information about catalog"""
-        self.c.report()
-
     def RebuildCache(self):
         """Rebuild cache database tables (used for searching)"""
         pbar = progressbar.ProgressBar(widgets=self.widgets)
@@ -659,70 +676,6 @@ to the catalog"""
                 raise Exception('Input was out of range')
             addResultToCatalog(choice)
 
-    def Quit(self):
-        """quit (or press enter)"""
-        sys.exit(0)
-
-    # The master list of shell commands
-    shellCommands = {
-        'q': Quit,
-        'release' : {
-            'add': Add,
-            'switch': Switch,
-            'delete': Delete,
-            'refresh': Refresh,
-            'checkout': CheckOut,
-            'checkin': CheckIn,
-            'count': CopyCount,
-            'tracklist': TrackList,
-            'coverart': CoverArt,
-            'purchase': AddPurchaseEvent,
-            'listen': AddListenDate,
-            'comment': AddComment,
-            'rate': SetRating,
-            },
-        'search': {
-            'release' : SearchSort,
-            'barcode': BarcodeSearch,
-            'track': SearchTrackShowReleases,
-            },
-        'catalog' : {
-            'html': Html,
-            'similar': GetSimilar,
-            'export': {
-                'zip': ZipExport,
-                },
-            'import': {
-                'zip': ZipImport,
-                },
-            'rebuild': RebuildCache,
-            'report': Report,
-            'check': Check,
-            },
-        'digital': {
-            'path': DigitalPath,
-            'search': DigitalSearch,
-            #'list' : DigitalList,
-        },
-        'audacity': {
-            'labeltrack': LabelTrack,
-            'metatags': MetaTags,
-        },
-        'webservice': {
-            'release': {
-                'barcode': MBReleaseBarcode,
-                'catno': MBReleaseCatno,
-                'title': MBReleaseTitle,
-            },
-            'group': {
-                'title': MBRelGroupTitle,
-            },
-            'sync': SyncCollection,
-        },
-        'browser': OpenBrowser,
-        'disc': ReadDiscTOC,
-    }
-
     def cmdSummary(self, cmdStruct, level=0, parentLeader=''):
         """Print a summary of commands."""
         for i, cmdname in enumerate(sorted(cmdStruct.keys())):
@@ -769,18 +722,8 @@ to the catalog"""
         except KeyError as e:
             self.s.write(str(e) + " Invalid command.\n")
 
-    def main(self):
-        while (True):
-            input = self.s.nextWord("Enter command ('h' for help): ").lower()
+    def do_EOF(self, line):
+        return True
 
-            if not input or input.startswith('q'):
-                break
-
-            if (input == 'h' or input == 'help'):
-                self.cmdSummary(self.shellCommands)
-
-            elif input in self.shellCommands.keys():
-                self.cmdParse(self.shellCommands, input)
-
-            else:
-                self.s.write("Invalid command\n")
+    def postloop(self):
+        print ()
