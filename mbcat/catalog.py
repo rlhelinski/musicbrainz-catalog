@@ -1576,15 +1576,23 @@ class Catalog(object):
         """Write ASCII tracklist for releaseId to 'stream'. """
         stream.write('\n')
         _log.info('Printing tracklist for \'%s\'' % releaseId)
-        rel = self.getRelease(releaseId)
-        for medium in rel['medium-list']:
-            for track in medium['track-list']:
-                rec = track['recording']
+        for mediumId,position,format in self.cm.executeAndFetch(
+                'select id,position,format from media '
+                'where release=? order by position',
+                (releaseId,)):
+            stream.write('%-60s %6s\n' % (format+' %d'%position,
+                    recLengthAsString(
+                        self.getMediumLen(mediumId)
+                    )))
+            for recId,recLength,recPosition,title in self.cm.executeAndFetch(
+                    'select id,length,position,title from recordings '
+                    'where medium=? order by position',
+                    (mediumId,)):
                 stream.write(
-                    rec['title'] +
-                    ' '*(60-len(rec['title'])) +
-                    ('%6s' % recLengthAsString(rec['length'] 
-                        if 'length' in rec else None)) + '\n')
+                    '%-60s ' % title +
+                    '%6s' % recLengthAsString(recLength)
+                    + '\n')
+            stream.write('\n')
 
     def getTrackList(self, releaseId):
         """
