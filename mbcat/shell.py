@@ -172,15 +172,15 @@ class Shell:
 
         listenDates = self.c.getListenDates(releaseId)
         for listenDate in listenDates:
-            self.s.write(
-                time.strftime(mbcat.dateFmtStr, time.localtime(listenDate)) + '\n')
+            self.s.write(str(mbcat.decodeDateTime(listenDate))+'\n')
         dateStr = self.s.nextLine(
-            'Enter listen date (' + mbcat.dateFmtUsr + ') [enter for now]: ')
-        date = float(time.strftime('%s',
-            time.strptime(dateStr, mbcat.dateFmtStr))) \
-            if dateStr else time.time()
+            'Enter listen date (' + mbcat.dateFmtUsr + \
+            ') [blank for none, "now" for current time]: ')
+        if dateStr:
+            date = float(mbcat.encodeDate(dateStr)) \
+                if dateStr.lower() != 'now' else time.time()
 
-        self.c.addListenDate(releaseId, date)
+            self.c.addListenDate(releaseId, date)
 
     # TODO also need a delete comment function
     def AddComment(self):
@@ -239,6 +239,7 @@ class Shell:
             releaseId = self.Search(
                 "Enter search terms or release ID [empty for all]: ")
         except ValueError as e:
+            # TODO this function needs to be rewritten like refreshAllMetaData
             self.c.refreshAllCoverArt()
         else:
             self.c.getCoverArt(releaseId)
