@@ -1354,8 +1354,11 @@ class Catalog(object):
 
     def deleteRelease(self, releaseId):
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
+        title = self.getReleaseTitle(releaseId)
         self.unDigestRelease(releaseId)
         self.cm.commit()
+
+        _log.info("Deleted '%s'" % title)
 
     class refreshAllMetaData(mbcat.dialogs.ThreadedTask):
         def __init__(self, catalog, olderThan=0):
