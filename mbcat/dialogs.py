@@ -128,10 +128,12 @@ class ThreadedCall(threading.Thread):
         limitations, but we provide this function to keep API consistent."""
         pass
 
+# TODO move this to another module so that importing gtk is not necessary for
+# the catalog
 class ThreadedTask(threading.Thread):
     """This does something that takes a while and keeps track of its own
     progress"""
-    
+
     def __init__(self, denom):
         super(ThreadedTask, self).__init__()
         self.setDaemon(True)
