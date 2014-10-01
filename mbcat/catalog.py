@@ -317,8 +317,7 @@ class Catalog(object):
 
         self.cm.execute('CREATE TABLE added_dates('
             'date FLOAT, '
-            'release TEXT, '
-            'FOREIGN KEY(release) REFERENCES releases(id)'
+            'release TEXT'
             ')')
 
         self.cm.execute('CREATE TABLE listened_dates('
