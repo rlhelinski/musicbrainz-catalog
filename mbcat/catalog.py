@@ -371,7 +371,7 @@ class Catalog(object):
                 'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         self.cm.execute('CREATE TABLE media ('
-            'id TEXT, '
+            'id TEXT PRIMARY KEY, '
             'position INTEGER, '
             'format TEXT, '
             'release TEXT, '
@@ -379,7 +379,7 @@ class Catalog(object):
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         self.cm.execute('CREATE TABLE recordings ('
-            'id TEXT, '
+            'id TEXT PRIMARY KEY, '
             'length INTEGER, '
             'number INTEGER, '
             'position INTEGER, '
