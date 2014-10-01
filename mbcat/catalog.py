@@ -656,11 +656,6 @@ class Catalog(object):
             for track in medium['track-list']:
                 yield track
 
-    @staticmethod
-    def _addRelTableRow(cursor, table_name, key_column, key, release_id):
-        cursor.execute('insert into '+table_name+' (key_column, release) '
-            'values ('+key+', '+release_id+')')
-
     def digestTrackWords(self, rel):
         """
         Digest all of the words in the track titles of a release.
