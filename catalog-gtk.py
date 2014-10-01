@@ -1953,7 +1953,7 @@ class MBCatGtk:
             ErrorDialog(parent, 'Select a release first')
             return
 
-        relTitle = self.catalog.getRelease(releaseId)['title']
+        relTitle = self.catalog.getReleaseTitle(releaseId)
         # Ask the user to specify a release to which to switch
         newRelId = TextEntry(self.window,
             'Enter release ID to replace %s\n"%s"' % (releaseId, relTitle))
@@ -1962,7 +1962,7 @@ class MBCatGtk:
             return
 
         self.catalog.renameRelease(releaseId, newRelId)
-        newRelTitle = self.catalog.getRelease(newRelId)['title']
+        newRelTitle = self.catalog.getReleaseTitle(newRelId)
 
         if relTitle != newRelTitle:
             _log.info("Replaced '%s' with '%s'" % (relTitle, newRelTitle))

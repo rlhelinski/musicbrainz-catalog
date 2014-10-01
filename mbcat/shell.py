@@ -247,11 +247,11 @@ class Shell:
     def Switch(self):
         """Substitute one release ID for another."""
         releaseId = self.Search()
-        oldReleaseTitle = self.c.getRelease(releaseId)['title']
+        oldReleaseTitle = self.c.getReleaseTitle(releaseId)
         self.s.write("Enter new release ID: ")
         newReleaseId = self.s.nextWord()
         self.c.renameRelease(releaseId, newReleaseId)
-        newReleaseTitle = self.c.getRelease(newReleaseId)['title']
+        newReleaseTitle = self.c.getReleaseTitle(newReleaseId)
         if oldReleaseTitle != newReleaseTitle:
             self.s.write("Replaced '%s' with '%s'\n" %
                          (oldReleaseTitle, newReleaseTitle))
