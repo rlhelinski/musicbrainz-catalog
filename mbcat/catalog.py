@@ -98,8 +98,12 @@ class ConnectionManager(threading.Thread):
                 # popleft removes and returns an element from the left side
                 fun, event, args, kwargs = self.cmdQueue.popleft()
                 try:
+                    _log.debug(str(fun)+str(args)+str(kwargs))
                     result = fun(*args, **kwargs)
                 except sqlite3.OperationalError as e:
+                    _log.error(str(e))
+                    result = e
+                except sqlite3.IntegrityError as e:
                     _log.error(str(e))
                     result = e
                 if event:
@@ -458,6 +462,8 @@ class Catalog(object):
         self.cm.execute('vacuum')
 
     def renameRelease(self, oldReleaseId, newReleaseId):
+        _log.info('Renaming existing release \'%s\' to \'%s\'' % (
+                oldReleaseId, newReleaseId))
         # TODO this does not update purchases, checkout_events, checkin_events,
         # digital
         # Record the new release ID in the added_dates table
