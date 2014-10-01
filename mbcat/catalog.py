@@ -1090,6 +1090,17 @@ class Catalog(object):
         exists = releaseId in self
         now = time.time()
 
+        # Check for a merged release ID
+        if relDict['release']['id'] != releaseId:
+            _log.info('Release \'%s\' has been merged into \'%s\'.' %\
+                (releaseId, relDict['release']['id']))
+            if exists:
+                if relDict['release']['id'] in self:
+                    raise Exception('Can not rename release because the new '
+                            'name already exists!')
+                self.renameRelease(releaseId, relDict['release']['id'])
+            releaseId = relDict['release']['id']
+
         if not exists:
             self.cm.execute('insert into added_dates '
                 '(date, release) values (?, ?)',
