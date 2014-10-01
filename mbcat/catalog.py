@@ -65,6 +65,7 @@ class ConnectionManager(threading.Thread):
         # The single, coveted connection object
         self.conn = sqlite3.connect(*self.child_args, **self.child_kwargs)
         # this connection is closed when this object is deleted
+        self.conn.execute('pragma foreign_keys=ON')
 
         # This connection and cursor should be enough for most work. You might
         # need a second cursor if you, for example, have a double-nested 'for'
