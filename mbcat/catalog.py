@@ -1373,6 +1373,9 @@ class Catalog(object):
 
     def deleteRelease(self, releaseId):
         releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
+        if releaseId not in self:
+            raise KeyError('Release does not exist')
+
         title = self.getReleaseTitle(releaseId)
         self.unDigestRelease(releaseId)
         self.cm.commit()
