@@ -576,8 +576,13 @@ def makeTrackTreeStore(catalog, releaseId):
                 catalog.getMediumLen(mediumId)
                 )))
         for recId,recLength,recPosition,title in catalog.cm.executeAndFetch(
-                'select id,length,position,title from recordings '
-                'where medium=? order by position',
+                'select recordings.id, recordings.length, '
+                'medium_recordings.position, recordings.title '
+                'from recordings '
+                'inner join medium_recordings on '
+                'medium_recordings.recording=recordings.id '
+                'inner join media on medium_recordings.medium=media.id '
+                'where media.id=? order by medium_recordings.position',
                 (mediumId,)):
             trackTreeStore.append(parent,
                 (recId,
