@@ -27,7 +27,7 @@ class Shell:
 
     def confirm(self, prompt, default=False):
         options = '[Y/n]' if default else '[y/N]'
-        answer = self.s.nextLine(prompt+' '+options)
+        answer = self.s.nextLine(prompt+' '+options+' ')
         if default is True:
             return not answer or answer.lower().startswith('y')
         else:
@@ -680,6 +680,14 @@ to the catalog"""
                 raise Exception('There was only a CD stub.')
 
         def addResultToCatalog(choice):
+            if choice in self.c:
+                if not self.confirm('Release already exists. Add again?',
+                        default=False):
+                    return
+            else:
+                if not self.confirm('Add release?', default=False):
+                    return
+
             self.s.write("Adding '%s' to the catalog.\n" %
                          result['disc']['release-list'][choice]['title'])
 
