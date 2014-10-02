@@ -1195,18 +1195,15 @@ class Catalog(object):
         See also: digestReleaseXml()"""
         relDict = self.getRelease(releaseId)
 
+        # Update words -> (word, recordings) and
+        # recordings -> (recording, releases)
+        self.unDigestTrackWords(releaseId)
+
         # Update words table
         rel_words = self.getReleaseWords(relDict)
         for word in rel_words:
             self.cm.execute('delete from words where release=?',
                 (releaseId,))
-
-        # Update words -> (word, recordings) and
-        # recordings -> (recording, releases)
-        self.unDigestTrackWords(releaseId)
-
-        # Update discids -> (id, media)
-        #self.curs.execute('delete from discids where release=?', (releaseId,))
 
         if delete:
             # Update releases table
