@@ -558,8 +558,9 @@ class Shell:
         """Search for release groups on musicbrainz by title"""
 
         title = self.s.nextLine('Enter title: ')
-        results = musicbrainzngs.search_release_groups(releasegroup=title,
-                                                       limit=self.searchResultsLimit)
+        results = musicbrainzngs.search_release_groups(
+                releasegroup=title,
+                limit=self.searchResultsLimit)
 
         if results:
             self.printGroupQueryResults(results)
