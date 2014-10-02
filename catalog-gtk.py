@@ -1809,10 +1809,13 @@ class MBCatGtk:
                 self.setSelectedRow(selRow)
 
     def viewXml(self, widget=None):
+        import xml.dom.minidom
         selRelId = self.getSelection()
+        xml = xml.dom.minidom.parseString(
+                self.catalog.getReleaseXml(selRelId))
         TextViewEntry(self.window,
                 message='Release XML for \'%s\'' % selRelId,
-                default=self.catalog.getReleaseXml(selRelId),
+                default=xml.toprettyxml(),
                 editable=False)
 
     def scrollToSelected(self, widget=None):
