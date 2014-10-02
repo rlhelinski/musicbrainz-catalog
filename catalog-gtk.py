@@ -2276,7 +2276,7 @@ class MBCatGtk:
         menu.append(submenuitem)
 
         ## Refresh
-        submenuitem = gtk.MenuItem(gtk.STOCK_REFRESH)
+        submenuitem = gtk.ImageMenuItem(gtk.STOCK_REFRESH)
         submenuitem.connect('activate', self.refreshView)
         menu.append(submenuitem)
 
