@@ -1186,6 +1186,8 @@ class Catalog(object):
         # recordings -> (recording, releases)
         self.digestTrackWords(relDict['release'])
 
+        return releaseId # because it can change due to a merge
+
     def unDigestRelease(self, releaseId, delete=True):
         """Remove all references to a release from the data structures.
         Optionally, leave the release in the releases table.
@@ -1365,7 +1367,7 @@ class Catalog(object):
             return 0
 
         metaXml = self.fetchReleaseMetaXml(releaseId)
-        self.digestReleaseXml(releaseId, metaXml)
+        releaseId = self.digestReleaseXml(releaseId, metaXml)
         self.cm.commit()
 
         _log.info("Added '%s'" % self.getReleaseTitle(releaseId))
