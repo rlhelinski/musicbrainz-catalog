@@ -1,4 +1,5 @@
 from . import catalog
+from . import barcode
 import re
 import time
 import datetime

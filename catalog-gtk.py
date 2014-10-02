@@ -11,7 +11,6 @@ import gobject
 import gtk
 import pango
 import mbcat
-import mbcat.barcode # why does this not automatically import?
 import mbcat.dialogs
 import musicbrainzngs as mb
 import argparse
