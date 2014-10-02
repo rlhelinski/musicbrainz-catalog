@@ -234,8 +234,10 @@ class Shell:
         maxAge = int(maxAge) * 60 if maxAge else 60
 
         if not releaseId:
-            pbar = progressbar.ProgressBar(widgets=self.widgets)
-            self.c.refreshAllMetaData(maxAge, pbar)
+            t = mbcat.dialogs.TextProgress(
+                self.c.refreshAllMetaData(self.c, maxAge))
+            t.start()
+            t.join()
         elif releaseId not in self.c:
             self.s.write("Release not found\n")
             return
@@ -275,8 +277,10 @@ class Shell:
             fileName = 'catalog.html'
         widgets = ["Releases: ", progressbar.Bar(
             marker="=", left="[", right="]"), " ", progressbar.Percentage()]
-        pbar = progressbar.ProgressBar(widgets=self.widgets)
-        self.c.makeHtml(fileName=fileName, pbar=pbar)
+        t = mbcat.dialogs.TextProgress(
+            self.c.makeHtml(self.c, fileName=fileName))
+        t.start()
+        t.join()
 
         answer = self.s.nextLine('Open browser to view HTML? [y/N]')
         if answer and answer.lower().startswith('y'):
@@ -443,8 +447,11 @@ class Shell:
     def GetSimilar(self):
         """Helps the user identify similar, possibly duplicate, releases."""
         number = 20
-        pbar = progressbar.ProgressBar(widgets=self.widgets)
-        lds = self.c.checkLevenshteinDistances(pbar)
+        t = mbcat.dialogs.TextProgress(
+            self.c.checkLevenshteinDistances(self.c, limit=2))
+        t.start()
+        t.join()
+        lds = t.task.result
         for i in range(number):
             self.s.write(str(lds[i][0]) + '\t' +
                          self.formatReleaseInfo(lds[i][1]) + ' <-> ' +
