@@ -2223,20 +2223,17 @@ class MBCatGtk:
         menu.append(sep)
 
         ## Refresh Metadata
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_REFRESH)
-        submenuitem.get_child().set_label('Refresh Metadata')
+        submenuitem = gtk.ImageMenuItem('mbcat-refresh-metadata')
         submenuitem.connect('activate', self.menuCatalogRefresh)
         menu.append(submenuitem)
 
         ## Vacuum
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_CLEAR)
-        submenuitem.get_child().set_label('Vacuum')
+        submenuitem = gtk.ImageMenuItem('mbcat-vacuum')
         submenuitem.connect('activate', self.menuCatalogVacuum)
         menu.append(submenuitem)
 
         ## Rebuild
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_EXECUTE)
-        submenuitem.get_child().set_label('Rebuild Indexes')
+        submenuitem = gtk.ImageMenuItem('mbcat-rebuild')
         submenuitem.connect('activate', self.menuCatalogRebuild)
         menu.append(submenuitem)
 
@@ -2252,7 +2249,7 @@ class MBCatGtk:
         ## Quit
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_QUIT, self.agr)
         key, mod = gtk.accelerator_parse('Q')
-        submenuitem.add_accelerator('activate', self.agr, key, mod, 
+        submenuitem.add_accelerator('activate', self.agr, key, mod,
             gtk.ACCEL_VISIBLE)
         submenuitem.connect('activate', self.destroy)
         menu.append(submenuitem)
@@ -2278,7 +2275,7 @@ class MBCatGtk:
         menu.append(submenuitem)
 
         ## Refresh
-        submenuitem = gtk.MenuItem('Refresh')
+        submenuitem = gtk.MenuItem(gtk.STOCK_REFRESH)
         submenuitem.connect('activate', self.refreshView)
         menu.append(submenuitem)
 
@@ -2303,7 +2300,6 @@ class MBCatGtk:
 
         ## Add
         submenuitem = gtk.ImageMenuItem(gtk.STOCK_ADD)
-        submenuitem.get_child().set_label('_Add')
         key, mod = gtk.accelerator_parse('<Control>a')
         submenuitem.add_accelerator('activate', self.agr, key, mod,
             gtk.ACCEL_VISIBLE)
@@ -2311,8 +2307,7 @@ class MBCatGtk:
         menu.append(submenuitem)
 
         ## Delete
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_REMOVE)
-        submenuitem.get_child().set_label('_Delete')
+        submenuitem = gtk.ImageMenuItem('mbcat-delete')
         key, mod = gtk.accelerator_parse('<Control>Delete')
         submenuitem.add_accelerator('activate', self.agr, key, mod,
             gtk.ACCEL_VISIBLE)
@@ -2321,29 +2316,25 @@ class MBCatGtk:
         self.menu_release_items.append(submenuitem)
 
         ## Switch
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_CONVERT)
-        submenuitem.get_child().set_label('_Switch')
+        submenuitem = gtk.ImageMenuItem('mbcat-switch')
         submenuitem.connect('activate', self.switchRelease)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
 
         ## Cover Art
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_REFRESH)
-        submenuitem.get_child().set_label('Get Cover Art')
+        submenuitem = gtk.ImageMenuItem('mbcat-coverart')
         submenuitem.connect('activate', self.getCoverArt)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
 
         ## Refresh
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_REFRESH)
-        submenuitem.get_child().set_label('_Refresh')
+        submenuitem = gtk.ImageMenuItem('mbcat-refresh-metadata')
         submenuitem.connect('activate', self.refreshRelease)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
 
         ## Track List
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_INDEX)
-        submenuitem.get_child().set_label('Track List')
+        submenuitem = gtk.ImageMenuItem('mbcat-tracklist')
         submenuitem.connect('activate', self.showTrackList)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
@@ -2359,8 +2350,7 @@ class MBCatGtk:
         self.menu_release_items.append(submenuitem)
 
         ## Comment
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_EDIT)
-        submenuitem.get_child().set_label('Comment')
+        submenuitem = gtk.ImageMenuItem('mbcat-comment')
         submenuitem.connect('activate', self.editComment)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
@@ -2472,8 +2462,7 @@ class MBCatGtk:
         mb.append(menuitem)
 
         ## Disc lookup
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_CDROM)
-        submenuitem.get_child().set_label('Disc lookup')
+        submenuitem = gtk.ImageMenuItem('mbcat-discid')
         submenuitem.connect('activate', self.readDiscTOC)
         menu.append(submenuitem)
 
@@ -2566,6 +2555,44 @@ class MBCatGtk:
         self.scrolledwindow = gtk.ScrolledWindow()
         self.scrolledwindow.add(self.treeview)
 
+    def registerNewStock(self, window):
+        ####
+        items = [('mbcat-refresh-metadata', '_Refresh Metadata', 0, 0, None),
+                ('mbcat-vacuum', '_Vacuum', 0, 0, None),
+                ('mbcat-rebuild', 'Re_build Indexes', 0, 0, None),
+                ('mbcat-delete', '_Delete', 0, 0, None),
+                ('mbcat-switch', '_Switch', 0, 0, None),
+                ('mbcat-switch', '_Switch', 0, 0, None),
+                ('mbcat-coverart', 'Fetch Co_ver Art', 0, 0, None),
+                ('mbcat-tracklist', 'Track _List', 0, 0, None),
+                ('mbcat-comment', 'Co_mment', 0, 0, None),
+                ('mbcat-discid', '_Disc Lookup', 0, 0, None),
+                ]
+
+        # We're too lazy to make our own icons,
+        # so we use regular stock icons.
+        aliases = [('mbcat-refresh-metadata', gtk.STOCK_REFRESH),
+                 ('mbcat-vacuum', gtk.STOCK_CLEAR),
+                 ('mbcat-rebuild', gtk.STOCK_EXECUTE),
+                 ('mbcat-delete', gtk.STOCK_DELETE),
+                 ('mbcat-switch', gtk.STOCK_CONVERT),
+                 ('mbcat-coverart', gtk.STOCK_REFRESH),
+                 ('mbcat-tracklist', gtk.STOCK_INDEX),
+                 ('mbcat-comment', gtk.STOCK_EDIT),
+                 ('mbcat-discid', gtk.STOCK_CDROM),
+                ]
+
+        gtk.stock_add(items)
+        factory = gtk.IconFactory()
+        factory.add_default()
+        style= window.get_style()
+        for new_stock, alias in aliases:
+            icon_set = style.lookup_icon_set(alias)
+            factory.add(new_stock, icon_set)
+
+        # Create the relabeled buttons
+        #button = gtk.Button(stock='mbcat-refresh-metadata')
+
     def __init__(self, dbPath, cachePath):
         self.catalog = mbcat.catalog.Catalog(dbPath, cachePath)
         self.filt = ''
@@ -2575,6 +2602,8 @@ class MBCatGtk:
         self.window.set_title('mbcat')
         self.window.set_size_request(800, 600)
         self.window.set_position(gtk.WIN_POS_CENTER)
+
+        self.registerNewStock(self.window)
 
         # When the window is given the "delete_event" signal (this is given
         # by the window manager, usually by the "close" option, or on the
