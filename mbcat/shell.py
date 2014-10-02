@@ -557,6 +557,15 @@ class Shell:
         if results:
             self.printQueryResults(results)
 
+    def MBReleaseGroup(self):
+        """Search for releases on musicbrainz by group ID"""
+        rgid = self.s.nextLine('Enter release group ID: ')
+        results = musicbrainzngs.search_releases(rgid=rgid,
+                limit=self.searchResultsLimit)
+
+        if results:
+            self.printQueryResults(results)
+
     def MBRelGroupTitle(self):
         """Search for release groups on musicbrainz by title"""
 
@@ -733,6 +742,7 @@ to the catalog"""
                 'barcode': MBReleaseBarcode,
                 'catno': MBReleaseCatno,
                 'title': MBReleaseTitle,
+                'group': MBReleaseGroup,
             },
             'group': {
                 'title': MBRelGroupTitle,
