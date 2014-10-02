@@ -174,6 +174,16 @@ class Shell:
                 float(priceStr),
                 vendorStr)
 
+    def promptDate(self, prompt='Enter a date'):
+        response = self.s.nextLine(
+            prompt+' (' + mbcat.dateFmtUsr + \
+            ') [blank for none, "now" for current time]: ')
+        if response:
+            return float(mbcat.encodeDate(response)) \
+                if response.lower() != 'now' else time.time()
+        else:
+            return None
+
     def AddListenDate(self):
         """Add a listen date."""
         releaseId = self.Search()
@@ -181,13 +191,8 @@ class Shell:
         listenDates = self.c.getListenDates(releaseId)
         for listenDate in listenDates:
             self.s.write(str(mbcat.decodeDateTime(listenDate))+'\n')
-        dateStr = self.s.nextLine(
-            'Enter listen date (' + mbcat.dateFmtUsr + \
-            ') [blank for none, "now" for current time]: ')
-        if dateStr:
-            date = float(mbcat.encodeDate(dateStr)) \
-                if dateStr.lower() != 'now' else time.time()
-
+        date = self.promptDate('Enter listen date')
+        if date:
             self.c.addListenDate(releaseId, date)
 
     # TODO also need a delete comment function
@@ -337,37 +342,45 @@ class Shell:
         self.c.checkReleases()
         self.s.write("DONE\n")
 
+    def PrintCheckOutEvents(self, releaseId):
+        """List the check out and in events."""
+        for event in self.c.getCheckOutHistory(releaseId):
+            if len(event) == 2:
+                self.s.write('Checked out on: '+mbcat.decodeDate(event[0])+\
+                        ' by: '+event[1]+'.\n')
+            elif len(event) == 1:
+                self.s.write('Checked in on: '+mbcat.decodeDate(event[0])+\
+                        '.\n')
+
     def CheckOut(self):
         """Check out a release."""
         releaseId = self.Search()
 
-        lendEvents = self.c.getLendEvents(releaseId)
-        for event in lendEvents:
-            self.s.write(str(event) + '\n')
+        self.PrintCheckOutEvents(releaseId)
+
+        if self.c.getCheckOutStatus(releaseId):
+            raise ValueError('Release is already checked out. Check in first.')
 
         borrower = self.s.nextLine("Borrower (leave empty to return): ")
         if not borrower:
             raise ValueError('No borrower specified.')
 
-        date = self.s.nextLine(
-            "Lend date  (" + dateFmtUsr + ") (leave empty for today): ")
-        if not date:
-            date = time.time()
-        self.c.addLendEvent(releaseId, CheckOutEvent(borrower, date))
+        date = self.promptDate("Lend date")
+        if date:
+            self.c.addCheckOutEvent(releaseId, borrower, date)
 
     def CheckIn(self):
         """Check in a release."""
         releaseId = self.Search()
 
-        lendEvents = self.c.getLendEvents(releaseId)
-        if not lendEvents or not isinstance(lendEvents[-1], CheckOutEvent):
-            raise ValueError('Release is not checked out.')
+        self.PrintCheckOutEvents(releaseId)
 
-        date = self.s.nextLine(
-            "Return date (" + dateFmtUsr + ") (leave empty for today): ")
-        if not date:
-            date = time.time()
-        self.c.addLendEvent(releaseId, CheckInEvent(date))
+        if not self.c.getCheckOutStatus(releaseId):
+            raise ValueError('Release is not checked out. Check out first.')
+
+        date = self.promptDate("Return date")
+        if date:
+            self.c.addCheckInEvent(releaseId, date)
 
     def DigitalPath(self):
         """Add a path to a digital copy of a release."""
