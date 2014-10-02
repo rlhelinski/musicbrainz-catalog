@@ -597,13 +597,63 @@ class QueryTask(mbcat.dialogs.ThreadedCall):
         self.app = app
         self.result_viewer = result_viewer
     def run(self):
-        mbcat.dialogs.ThreadedCall.run(self)
+        try:
+            mbcat.dialogs.ThreadedCall.run(self)
+        except mb.ResponseError as e:
+            ErrorDialog(self.window, 'MusicBrainz response error: '+str(e))
+            # TODO in case of get_releases_by_discid, call askBrowseSubmission()
+
         if not self.result:
             ErrorDialog(self.window, 'No results found for "%s"' % str(kwargs))
         else:
             self.result_viewer(self.window, self.app, self.result)
+            # TODO can implement this with a killParent flag to __init__
             #if type(self.app) == BarcodeQueryDialog:
                 #self.window.destroy()
+
+class DiscQueryTask(QueryTask):
+    def __init__(self, window, app, result_viewer, submission_url,
+            fun, *args, **kwargs):
+        mbcat.dialogs.ThreadedCall.__init__(self, fun, *args, **kwargs)
+        self.window = window
+        self.app = app
+        self.result_viewer = result_viewer
+        self.submission_url = submission_url
+    def run(self):
+        try:
+            mbcat.dialogs.ThreadedCall.run(self)
+        except mb.ResponseError as e:
+            ErrorDialog(self.window, 'MusicBrainz response error: '+str(e))
+            self.askBrowseSubmission()
+        else:
+            if self.result.get("disc"):
+                _log.info('Showing query results for disc ID "%s"'\
+                    %self.result['disc']['id'])
+                self.result_viewer(self.window, self.app, self.submission_url,
+                        self.result['disc'])
+                # TODO can implement this with a killParent flag to __init__
+                #if type(self.app) == BarcodeQueryDialog:
+                    #self.window.destroy()
+            elif self.result.get("cdstub"):
+                # TODO this should be a dialog?
+                for label, key in [
+                        ('CD Stub', 'id'),
+                        ('Artist', 'artist'),
+                        ('Title', 'title'),
+                        ('Barcode', 'barcode')]:
+                    if key in self.result['cdstub']:
+                        _log.info('%10s: %s\n' %
+                                     (label, self.result['cdstub'][key]))
+                self.askBrowseSubmission('There was only a CD stub. '
+                    'Open browser to Submission URL?')
+
+                return
+
+    def askBrowseSubmission(self, msg='Open browser to Submission URL?'):
+        answer = ConfirmDialog(self.window, msg)
+        if answer:
+            _log.info('Opening web browser to submission URL.')
+            webbrowser.open(self.submission_url)
 
 class QueryResultsDialog:
     """
@@ -2170,35 +2220,14 @@ class MBCatGtk:
         except discid.DiscError as e:
             ErrorDialog(self.window, "DiscID calculation failed: " + str(e))
             return
+        _log.info("Disc submission URL: %s" % disc.submission_url)
 
-        try:
-            _log.info("Querying MusicBrainz...")
-            result = mb.get_releases_by_discid(disc.id,
-                                               includes=["artists"])
-            _log.info('OK\n')
-        except mb.ResponseError:
-            _log.warning('Disc not found or bad MusicBrainz response.')
-            askBrowseSubmission()
-        else:
-            if result.get("disc"):
-                _log.info('Showing query results for disc ID "%s"'\
-                    %result['disc']['id'])
-                # TODO pass in submission URL in disc.submission_url here
-                # and add button to dialog to bring up that URL
-                DiscQueryResultsDialog(self.window, self, disc.submission_url, result['disc'])
-            elif result.get("cdstub"):
-                for label, key in [
-                        ('CD Stub', 'id'),
-                        ('Artist', 'artist'),
-                        ('Title', 'title'),
-                        ('Barcode', 'barcode')]:
-                    if key in result['cdstub']:
-                        _log.info('%10s: %s\n' %
-                                     (label, result['cdstub'][key]))
-                askBrowseSubmission()
-
-                ErrorDialog(self.window, 'There was only a CD stub.')
-                return
+        _log.info("Querying MusicBrainz for DiscID '%s'..." % disc.id)
+        mbcat.dialogs.PulseDialog(self.window,
+            DiscQueryTask(self.window, self,
+                DiscQueryResultsDialog, disc.submission_url,
+                mb.get_releases_by_discid,
+                disc.id, includes=['artists'])).start()
 
     def createMenuBar(self, widget):
         # Menu bar
