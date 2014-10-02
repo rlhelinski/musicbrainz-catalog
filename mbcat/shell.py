@@ -539,8 +539,11 @@ class Shell:
     def MBReleaseCatno(self):
         """Search for release on musicbrainz by catalog number"""
         catno = self.s.nextLine('Enter catalog number: ')
+        if ' ' in catno:
+            _log.warning('Removing whitespaces from string (workaround)')
+            catno = catno.replace(' ', '')
         results = musicbrainzngs.search_releases(catno=catno,
-                                                 limit=self.searchResultsLimit)
+                limit=self.searchResultsLimit)
 
         if results:
             self.printQueryResults(results)
