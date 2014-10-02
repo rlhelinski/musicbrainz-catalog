@@ -964,7 +964,7 @@ class Catalog(object):
         else:
             info = self.cm.executeAndFetchOne(
                 'select borrower, date from checkout_events '
-                'where release=? order by date limit 1', (releaseId,))
+                'where release=? order by date desc limit 1', (releaseId,))
             return info
 
     def addCheckOutEvent(self, releaseId, borrower, date):

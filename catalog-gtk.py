@@ -1457,6 +1457,7 @@ class DetailPane(gtk.HBox):
         l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
         self.checkOutLbl = gtk.Label()
+        self.checkOutLbl.set_ellipsize(pango.ELLIPSIZE_END)
         self.lt.attach(self.checkOutLbl, 1, 2, r, r+1)
         r += 1
 
@@ -1527,7 +1528,7 @@ class DetailPane(gtk.HBox):
         self.countSpinButton.set_value(int(count) if count and count != 'None' else 0)
 
         checkedOut = self.catalog.getCheckOutStatus(releaseId)
-        self.checkOutLbl.set_text(checkedOut[1] if checkedOut else 'No')
+        self.checkOutLbl.set_text(checkedOut[0] if checkedOut else 'No')
 
 class MBCatGtk:
     """
