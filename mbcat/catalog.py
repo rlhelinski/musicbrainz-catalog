@@ -239,6 +239,7 @@ class Catalog(object):
         'trackwords',
         'media',
         'recordings',
+        'medium_recordings',
         'discids'
         ]
 
@@ -386,8 +387,11 @@ class Catalog(object):
             'id TEXT PRIMARY KEY, '
             'length INTEGER, '
             'number INTEGER, '
+            'title TEXT)')
+
+        self.cm.execute('CREATE TABLE medium_recordings ('
+            'recording TEXT, '
             'position INTEGER, '
-            'title TEXT, '
             'medium TEXT, '
             'FOREIGN KEY(medium) REFERENCES media(id) '
             'ON DELETE CASCADE ON UPDATE CASCADE)')
@@ -679,13 +683,19 @@ class Catalog(object):
                     (disc['id'], disc['sectors'], medium_id))
             for track in medium['track-list']:
                 if 'recording' in track:
-                    # Add recording and reference the release
-                    self.cm.execute('insert into recordings '
-                        '(id, title, length, medium) values (?,?,?,?)',
-                        (   track['recording']['id'],
+                    # Add recording
+                    self.cm.execute('insert or replace into recordings '
+                        '(id, title, length) values (?,?,?)',
+                            (track['recording']['id'],
                             track['recording']['title'],
                             track['recording']['length'] \
-                            if 'length' in track['recording'] else None,
+                            if 'length' in track['recording'] else None)
+                        )
+                    # and reference the release
+                    self.cm.execute('insert into medium_recordings '
+                        '(recording, position, medium) values (?,?,?)',
+                            (track['recording']['id'],
+                            track['position'],
                             medium_id)
                         )
                     if 'title' in track['recording']:
@@ -710,13 +720,13 @@ class Catalog(object):
 
             # Iterate through the results
             for recordingId in self.cm.executeAndFetch(
-                    'select id from recordings where medium=?',
+                    'select recording from medium_recordings where medium=?',
                     (mediumId,)):
                 self.cm.execute('delete from trackwords where recording=?',
                     (recordingId[0],))
             # Then, delete the rows in the recordings table referencing this
             # medium ID
-            self.cm.execute( 'delete from recordings where medium=?',
+            self.cm.execute( 'delete from medium_recordings where medium=?',
                 (mediumId,))
         # Then, delete the rows in the media table referencing this
         # release ID
@@ -764,15 +774,11 @@ class Catalog(object):
         return self._search(query, table='trackwords', keycolumn='trackword')
 
     def recordingGetReleases(self, recordingId):
-# need a join?
-#> select discids.discid, releases.id from discids inner join releases on discids.release=releases.id;
         return self.cm.executeAndChain(
-            #'select medium from recordings where id = ?',
             'select releases.id from media '
             'inner join releases on media.release=releases.id '
-            'inner join recordings on recordings.medium=media.id '
-            'where recordings.id=?',
-#select releases.id from media inner join releases on media.release=releases.id inner join recordings on recordings.medium=media.id where recordings.id='a8247cc4-2cce-408a-bbdb-78318a7a459f';
+            'inner join medium_recordings on medium_recordings.medium=media.id '
+            'where medium_recordings.recording=?',
             (recordingId,))
 
     def formatRecordingInfo(self, recordingId):
@@ -1600,8 +1606,13 @@ class Catalog(object):
                         self.getMediumLen(mediumId)
                     )))
             for recId,recLength,recPosition,title in self.cm.executeAndFetch(
-                    'select id,length,position,title from recordings '
-                    'where medium=? order by position',
+                    'select recordings.id, recordings.length, '
+                    'medium_recordings.position, recordings.title '
+                    'from recordings '
+                    'inner join medium_recordings on '
+                    'medium_recordings.recording=recordings.id '
+                    'inner join media on medium_recordings.medium=media.id '
+                    'where media.id=? order by medium_recordings.position',
                     (mediumId,)):
                 stream.write(
                     '%-60s ' % title +
