@@ -2118,7 +2118,7 @@ class MBCatGtk:
     def webserviceSyncCollection(self, widget):
         """Synchronize with a musicbrainz collection (currently only pushes releases)."""
         if not self.catalog.prefs.username:
-            username = TextEntry('Enter username:')
+            username = TextEntry(self.window, 'Enter username:')
             self.catalog.prefs.username = username
             self.catalog.prefs.save()
         else:
