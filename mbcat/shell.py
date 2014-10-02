@@ -11,6 +11,7 @@ import webbrowser
 import itertools
 _log = logging.getLogger("mbcat")
 import tempfile
+import traceback
 
 
 class Shell:
@@ -777,6 +778,8 @@ to the catalog"""
                 except KeyError as e:
                     self.s.write(str(e) + " Command failed.\n")
                 except Exception as e:
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    traceback.print_tb(exc_traceback)
                     self.s.write(str(e) + " Command failed.\n")
         except KeyError as e:
             self.s.write(str(e) + " Invalid command.\n")
