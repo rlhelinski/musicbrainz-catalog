@@ -90,6 +90,59 @@ class ProgressDialog(threading.Thread):
         self.task.stop()
         self.quit()
 
+import progressbar
+class TextProgress(ProgressDialog):
+    """Text-mode version of ProgressDialog"""
+    detWidgets = [
+            progressbar.Bar(marker="=", left="[", right="]"),
+            " ",
+            progressbar.Percentage()
+            ]
+
+    undetWidgets = [
+            progressbar.Counter(),
+            " ",
+            progressbar.AnimatedMarker()
+            ]
+
+    def __init__(self, task):
+        super(ProgressDialog, self).__init__()
+        # not sure if we need this if this window is destroyed with its parent
+        self.setDaemon(True)
+        self.task = task
+
+
+    def run(self):
+        """Run method, this is the code that runs while thread is alive."""
+        self.task.start()
+        self.method = None
+
+        tstart = time.time()
+        while self.task.isAlive():
+            seconds_elapsed = time.time() - tstart
+            if self.task.denom != 0:
+                if not self.method or self.method != 'det':
+                    self.method = 'det'
+                    self.pbar = progressbar.ProgressBar(
+                            widgets=[self.task.status]+self.detWidgets)
+                    self.pbar.start()
+                self.pbar.maxval=self.task.denom
+            else:
+                if not self.method or self.method != 'undet':
+                    self.method = 'undet'
+                    self.pbar = progressbar.ProgressBar(
+                            widgets=[self.task.status]+self.undetWidgets)
+                    self.pbar.start()
+                self.pbar.maxval = progressbar.progressbar.UnknownLength
+            self.pbar.update(self.task.numer)
+            time.sleep(0.1)
+
+        self.quit()
+
+    def quit(self):
+        self.pbar.finish()
+
+
 class PulseDialog(ProgressDialog):
     def run(self):
         """Start the sub-thread; pulse the progress bar until it finishes"""

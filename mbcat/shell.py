@@ -14,11 +14,7 @@ import traceback
 
 
 class Shell:
-
     """An interactive shell that prompts the user for inputs and renders output for the catalog."""
-    widgets = ["Releases: ", progressbar.Bar(
-        marker="=", left="[", right="]"),
-        " ", progressbar.Percentage()]
 
     def __init__(self, stdin=sys.stdin, stdout=sys.stdout, catalog=None):
         self.c = catalog if catalog != None else Catalog()
@@ -427,7 +423,10 @@ class Shell:
         col_i = int(self.s.nextLine('Enter collection index: '))
         colId = result['collection-list'][col_i]['id']
 
-        self.c.syncCollection(colId)
+        t = mbcat.dialogs.TextProgress(
+            self.c.syncCollection(self.c, colId))
+        t.start()
+        t.join()
 
     def LabelTrack(self):
         """Create label track file for Audacity; useful when transferring vinyl."""
@@ -626,8 +625,10 @@ class Shell:
 
     def RebuildCache(self):
         """Rebuild cache database tables (used for searching)"""
-        pbar = progressbar.ProgressBar(widgets=self.widgets)
-        self.c.rebuildCacheTables(pbar=pbar)
+        t = mbcat.dialogs.TextProgress(
+            self.c.rebuildCacheTables(self.c))
+        t.start()
+        t.join()
 
     def ReadDiscTOC(self):
         """Read table of contents from a CD-ROM, search for a release, and add
