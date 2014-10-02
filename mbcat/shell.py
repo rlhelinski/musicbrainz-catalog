@@ -1,6 +1,5 @@
 from __future__ import unicode_literals
 from mbcat.catalog import *
-from mbcat.extradata import *
 from mbcat.barcode import UPC
 import mbcat
 import os
