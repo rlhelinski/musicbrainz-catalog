@@ -518,9 +518,12 @@ class Shell:
         self.s.write('Release Group Results:\n')
         for group in results['release-group-list']:
             self.s.write(group['id'] + ' ' +
-                         ', '.join(['"' + cred['artist']['name'] + '"'
-                                    for cred in group['artist-credit']]) +
-                         ' "' + group['title'] + '" (%d releases)\n' % len(group['release-list']))
+                ''.join([
+                        (('"' + cred['artist']['name'] + '"') \
+                        if type(cred) == dict else cred)
+                        for cred in group['artist-credit']]) +
+                ' "' + group['title'] + '" (%d releases)\n' % \
+                    len(group['release-list']))
 
     searchResultsLimit = 20
 
