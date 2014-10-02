@@ -434,11 +434,13 @@ class Catalog(object):
                 # Note: the added_dates, listened_dates, and purchases tables are
                 # not transient.
                 self.catalog.cm.execute('drop table if exists '+tab)
+                self.numer += 1
 
             for index in self.catalog.indexes:
                 if self.stopthread.isSet():
                     return
                 self.catalog.cm.execute('drop index if exists '+index)
+                self.numer += 1
 
             self.catalog._createCacheTables()
 
