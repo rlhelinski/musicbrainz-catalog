@@ -1319,7 +1319,7 @@ class PurchaseHistoryDialog(QueryResultsDialog):
             self.update()
             self.app.updateDetailPane()
 
-def TextViewEntry(parent, message, default=''):
+def TextViewEntry(parent, message, default='', editable=True):
     """
     Display a dialog with a text entry.
     Returns the text, or None if canceled.
@@ -1327,13 +1327,14 @@ def TextViewEntry(parent, message, default=''):
     d = gtk.MessageDialog(parent,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
             gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL,
+            gtk.BUTTONS_OK_CANCEL if editable else gtk.BUTTONS_CLOSE,
             message)
     d.set_size_request(400,300)
     d.set_resizable(True)
     sw = gtk.ScrolledWindow()
     sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
     textview = gtk.TextView()
+    textview.set_editable(editable)
     textbuffer = textview.get_buffer()
     sw.add(textview)
     textbuffer.set_text(default)
@@ -1807,6 +1808,13 @@ class MBCatGtk:
             else:
                 self.setSelectedRow(selRow)
 
+    def viewXml(self, widget=None):
+        selRelId = self.getSelection()
+        TextViewEntry(self.window,
+                message='Release XML for \'%s\'' % selRelId,
+                default=self.catalog.getReleaseXml(selRelId),
+                editable=False)
+
     def scrollToSelected(self, widget=None):
         row = self.getSelectedRow()
         self.treeview.scroll_to_cell(row, use_align=True, row_align=0.5)
@@ -2277,6 +2285,12 @@ class MBCatGtk:
         ## Scroll to Selected
         submenuitem = gtk.MenuItem('Scroll to Selected')
         submenuitem.connect('activate', self.scrollToSelected)
+        self.menu_release_items.append(submenuitem)
+        menu.append(submenuitem)
+
+        ## View XML
+        submenuitem = gtk.MenuItem('View XML')
+        submenuitem.connect('activate', self.viewXml)
         self.menu_release_items.append(submenuitem)
         menu.append(submenuitem)
 
