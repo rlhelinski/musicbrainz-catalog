@@ -151,9 +151,15 @@ class Shell:
         releaseId = self.Search()
 
         purchases = self.c.getPurchases(releaseId)
-        for purchase in purchases:
-            self.s.write(str(purchase) + '\n')
-        dateStr = self.s.nextLine('Enter purchase date (' + dateFmtUsr + '): ')
+        hdrFmtStr = '%-10s %-7s %-20s\n'
+        rowFmtStr = '%-10s %7s %-20s\n'
+        if purchases:
+            self.s.write(''.join([
+                    hdrFmtStr % ('Date', 'Price', 'Vendor')]))
+            for date,price,vendor in purchases:
+                self.s.write(rowFmtStr % (mbcat.decodeDate(date),price,vendor))
+        dateStr = self.s.nextLine(
+                'Enter purchase date ('+mbcat.dateFmtUsr+'): ')
         if not dateStr:
             raise ValueError('Empty date string.')
         vendorStr = self.s.nextLine('Vendor: ')
@@ -163,8 +169,10 @@ class Shell:
         if not vendorStr:
             raise ValueError('Empty price string.')
 
-        pe = PurchaseEvent(dateStr, priceStr, vendorStr)
-        self.c.addPurchase(releaseId, pe)
+        self.c.addPurchase(releaseId,
+                float(mbcat.encodeDate(dateStr)),
+                float(priceStr),
+                vendorStr)
 
     def AddListenDate(self):
         """Add a listen date."""
