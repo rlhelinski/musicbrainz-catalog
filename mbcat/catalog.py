@@ -1195,11 +1195,6 @@ class Catalog(object):
         See also: digestReleaseXml()"""
         relDict = self.getRelease(releaseId)
 
-        if delete:
-            # Update releases table
-            self.cm.execute('delete from releases where id = ?',
-                (releaseId,))
-
         # Update words table
         rel_words = self.getReleaseWords(relDict)
         for word in rel_words:
@@ -1212,6 +1207,11 @@ class Catalog(object):
 
         # Update discids -> (id, media)
         #self.curs.execute('delete from discids where release=?', (releaseId,))
+
+        if delete:
+            # Update releases table
+            self.cm.execute('delete from releases where id = ?',
+                (releaseId,))
 
     @staticmethod
     def fmtTitle(relDict):
