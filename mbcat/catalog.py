@@ -1247,110 +1247,6 @@ class Catalog(object):
             (info['catalog-number'] if 'catalog-number' in info else '')
             for info in rel['label-info-list']])
 
-    # TODO move this to a Digital class
-    @staticmethod
-    def getArtistPathVariations(release):
-        return set([
-                # the non-sorting-friendly string
-                release['artist-credit-phrase'],
-                # if just the first artist is used
-                release['artist-credit'][0]['artist']['sort-name'],
-                # if just the first artist is used, sort-friendly
-                release['artist-credit'][0]['artist']['name'],
-                # the sort-friendly string with all artists credited
-                mbcat.catalog.getArtistSortPhrase(release)
-                ])
-
-    # TODO move this to a Digital class
-    @staticmethod
-    def getTitlePathVariations(release):
-        s = set()
-        s.add(release['title'])
-        if 'disambiguation' in release:
-            s.add(release['disambiguation'])
-            s.add(release['title']+' ('+release['disambiguation']+')')
-        return s
-
-    # TODO move this to a Digital class
-    @staticmethod
-    def getPathAlNumPrefixes(path):
-        """Returns a set of prefixes used for directory balancing"""
-        return set([
-                '', # in case nothing is used
-                path[0].lower(), # most basic implementation
-                path[0:1].lower(), # have never seen this
-                (path[0]+'/'+path[0:2]).lower(), # used by Wikimedia
-                ])
-
-    # TODO move this to a Digital class
-    def getDigitalPathVariations(self, root, release):
-        for artistName in self.getArtistPathVariations(release):
-            for prefix in self.getPathAlNumPrefixes(artistName):
-                artistPath = os.path.join(root, prefix, artistName)
-                if os.path.isdir(artistPath):
-                    for titleName in self.getTitlePathVariations(release):
-                        yield os.path.join(artistPath, titleName)
-                else:
-                    _log.debug(artistPath+' does not exist')
-
-    # TODO move this to a Digital class
-    def searchDigitalPaths(self, releaseId='', pbar=None):
-        """Search for files for a release in all locations and with variations
-        """
-        releaseIdList = [releaseId] if releaseId else self.getReleaseIds()
-
-        if pbar:
-            pbar.maxval = len(self)*len(self.prefs.pathRoots)
-            pbar.start()
-        # TODO need to be more flexible in capitalization and re-order of words
-        for path in self.prefs.pathRoots:
-            _log.info("Searching '%s'"%path)
-            for relId in releaseIdList:
-                rel = self.getRelease(relId)
-                if pbar:
-                    pbar.update(pbar.currval + 1)
-
-                # Try to guess the sub-directory path
-                for titlePath in self.getDigitalPathVariations(path, rel):
-                    if os.path.isdir(titlePath):
-                        _log.info('Found '+relId+' at '+titlePath)
-                        self.addDigitalPath(relId, titlePath)
-                    else:
-                        _log.debug('Did not find '+relId+' at '+titlePath)
-        if pbar:
-            pbar.finish()
-
-        if releaseId and not self.extraIndex[relId].digitalPaths:
-            _log.warning('No digital paths found for '+releaseId)
-
-    # TODO move this to a Digital class
-    def getDigitalPath(self, releaseId, pathSpec=None):
-        """Returns the file path for a release given a specific release ID and
-        a path specification string (mbcat.digital)."""
-        if not pathSpec:
-            pathSpec = self.prefs.defaultPathSpec
-        return mbcat.digital.DigitalPath(pathSpec).\
-                toString(self.getRelease(releaseId))
-
-    # TODO move this to a Digital class
-    def fixDigitalPath(self, releaseId, digitalPathRoot=None):
-        """This function moves a digital path to the correct location, which is
-        specified by a path root string"""
-        pathSpec = self.prefs.pathFmts[digitalPathRoot] \
-            if digitalPathRoot else \
-            self.prefs.defaultPathSpec
-        if not digitalPathRoot:
-            raise NotImplemented('You need to specify a digital path root')
-
-        assert digitalPathRoot in self.prefs.pathRoots
-        pathFmt = self.prefs.pathFmts[digitalPathRoot]
-        correctPath = self.getDigitalPath(releaseId, pathFmt)
-        for path in self.getDigitalPaths(releaseId):
-            path = os.path.join(digitalPathRoot, DigitalPath(pathFmt))
-            if path != correctPath:
-                _log.info('Moving "%s" to "%s"' % (path, correctPath))
-                shutil.move(path, correctPath)
-
     def getMetaTime(self, releaseId):
         r = self.cm.executeAndFetchOne(
             'select metatime from releases where id = ?',
@@ -1558,7 +1454,9 @@ class Catalog(object):
                 self.numer += 1
 
     def makeLabelTrack(self, releaseId, outPath='Audacity Label Track.txt'):
-        """Useful for importing into Audacity."""
+        """
+        Useful for importing a label track into Audacity for vinyl transfer.
+        """
         rel = self.getRelease(releaseId)
         with open(outPath, 'w') as f:
             pos = 0.0

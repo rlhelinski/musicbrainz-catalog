@@ -423,7 +423,7 @@ class Shell:
         result = mb.get_collections()
         for i, collection in enumerate(result['collection-list']):
             self.s.write('%d: "%s" by %s (%s)\n' % (i, collection['name'],
-                                                    collection['editor'], collection['id']))
+                        collection['editor'], collection['id']))
 
         col_i = int(self.s.nextLine('Enter collection index: '))
         colId = result['collection-list'][col_i]['id']
