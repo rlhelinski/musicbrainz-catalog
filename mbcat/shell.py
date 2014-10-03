@@ -34,7 +34,9 @@ class Shell:
             self.s.write(
                 ('\033[92m' if relId == highlightId else "")+\
                 relId+\
+                ' '+\
                 sortStr+\
+                ' '+\
                 ("[" + self.c.getReleaseFormat(relId) + "]")+\
                 (' <<<\033[0m' if relId == highlightId else "")+\
                 '\n')
