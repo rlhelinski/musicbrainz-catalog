@@ -538,6 +538,10 @@ class Catalog(object):
         return self.cm.executeAndChain(
             'select id from releases where sortformat=?', (fmt,))
 
+    def getReleaseCountByFormat(self, fmt):
+        return self.cm.executeAndChain(
+            'select count(id) from releases where sortformat=?', (fmt,))
+
     def getFormats(self):
         return self.cm.executeAndChain(
             'select distinct sortformat from releases')

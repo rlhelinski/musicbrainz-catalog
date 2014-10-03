@@ -1,54 +1,67 @@
+import logging
+_log = logging.getLogger("mbcat")
+import jinja2
+import datetime
+from . import dialogs
+from . import formats
 
-class Html(object):
-    def __init__(self, catalog):
+class HtmlWriter(dialogs.ThreadedTask):
+    def __init__(self, catalog, htmlFileName='catalog.html'):
+        dialogs.ThreadedTask.__init__(self, 0)
         self.catalog = catalog
+        self.htmlFileName = htmlFileName
 
-    def writeFile(fileName=None, pbar=None):
+    def run(self):
+        self.writeFile(self.htmlFileName)
+
+    def writeFile(self, fileName=None):
         _log.info('Writing HTML to \'%s\'' % fileName)
         with open(fileName, 'wt') as htf:
-            self.render(htf, pbar)
+            self.render(htf)
 
-    def render(self, htf=None, pbar=None):
+    def render(self, htf=None):
         """
         Write HTML representing the catalog to a file
         """
 
+        self.numer = 0; self.denom=len(self.catalog)
+
         def fmt(s):
             return s.encode('ascii', 'xmlcharrefreplace').decode()
 
-        if pbar:
-            pbar.maxval=len(self)
-            pbar.start()
+        templateLoader = jinja2.FileSystemLoader(searchpath='templates')
+        templateEnv = jinja2.Environment(
+                loader=templateLoader,
+                autoescape='html',
+                extensions=['jinja2.ext.autoescape'])
+        templateEnv.globals['catalog'] = self.catalog
+        template = templateEnv.get_template('catalog.jinja')
 
-        # TODO need a more extensible solution for replacing symbols in this
-        # template file
-        with open ('mbcat/catalog_html.template') as template_file:
-            htf.write(template_file.read())
+        formatList = sorted(self.catalog.getFormats(),
+                key=lambda s: formats.getFormatObj(s))
 
-        formatsBySize = sorted(self.catalog.getFormats(),
-                key=lambda s: mbcat.formats.getFormatObj(s))
+        templateVars = {
+                'title' : 'MusicBrainz Catalog',
+                'date' : str(datetime.datetime.now()),
+                'releaseIds' : self.catalog.getReleaseIds(),
+                'formatsBySize' : formatList,
+                'formatCnts' : {k: self.catalog.getReleaseCountByFormat(k) \
+                        for k in formatList},
+                'formatIds' : {k: self.catalog.getReleaseIdsByFormat(k) \
+                        for k in formatList},
+                }
 
-        htf.write('<a name="top">\n')
-        htf.write('<div id="toc">\n')
-        htf.write('<div id="toctitle">\n')
-        htf.write('<h2>Contents</h2>\n')
-        htf.write('<span class="toctoggle">&nbsp;[<a href="#" class="internal"'
-                ' id="togglelink">hide</a>]&nbsp;</span>\n</div>\n')
-        htf.write('<ul>\n')
-        for releaseType in formatsBySize:
-            htf.write('\t<li><a href="#'+releaseType+'">'+\
-                releaseType+'</a></li>\n')
-        htf.write('</ul>\n')
-        htf.write('</div>\n')
+        outputText = template.render( templateVars )
+        htf.write(outputText)
+        return
+################################################################################
+
 
         for releaseType in formatsBySize:
             sortedList = self.catalog.getSortedList(
-                    mbcat.formats.getFormatObj(releaseType).__class__)
+                    formats.getFormatObj(releaseType).__class__)
             if len(sortedList) == 0:
                 continue
-            htf.write("<h2><a name=\""+str(releaseType)+"\">" + \
-                    str(releaseType) + (" (%d Releases)" %
-            len(sortedList)) + " <a href=\"#top\">top</a></h2>\n")
 
             htf.write("<table class=\"formattable\">\n")
             mainCols = ['Artist',
@@ -70,8 +83,8 @@ class Html(object):
                 if pbar:
                     pbar.update(pbar.currval + 1)
 
-                #coverartUrl = mbcat.amazonservices.getAsinImageUrl(rel.asin,
-                #        mbcat.amazonservices.AMAZON_SERVER["amazon.com"], 'S')
+                #coverartUrl = amazonservices.getAsinImageUrl(rel.asin,
+                #        amazonservices.AMAZON_SERVER["amazon.com"], 'S')
                 # Refer to local copy instead
                 imgPath = self.catalog._getCoverArtPath(releaseId)
                 coverartUrl = imgPath if os.path.isfile(imgPath) else None
@@ -108,7 +121,7 @@ class Html(object):
                     rel['barcode'] if rel['barcode'] else
                     '[none]')+"</td>\n")
                 htf.write("<td>"+("<a href=\"" + \
-                    mbcat.amazonservices.getAsinProductUrl(rel['asin']) + \
+                    amazonservices.getAsinProductUrl(rel['asin']) + \
                     "\">" + rel['asin'] + "</a>" if 'asin' in rel else '') + \
                     "</td>\n")
                 htf.write("</tr>\n")
@@ -134,7 +147,7 @@ class Html(object):
                 for medium in rel['medium-list']:
                     for track in medium['track-list']:
                         rec = track['recording']
-                        length = mbcat.Catalog.formatRecordingLength(
+                        length = formatRecordingLength(
                             rec['length'] if 'length' in rec else None)
                         htf.write('<tr><td class="time">'+
                             fmt(rec['title']) + '</td><td>' + length + \

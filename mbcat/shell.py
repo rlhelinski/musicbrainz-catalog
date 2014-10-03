@@ -273,6 +273,7 @@ class Shell:
 
     def Html(self):
         """Write HTML file."""
+        import mbcat.html
         fileName = self.s.nextLine(
             'Path for HTML file [empty for catalog.html]: ')
         if not fileName:
@@ -280,7 +281,7 @@ class Shell:
         widgets = ["Releases: ", progressbar.Bar(
             marker="=", left="[", right="]"), " ", progressbar.Percentage()]
         t = mbcat.dialogs.TextProgress(
-            self.c.makeHtml(self.c, fileName=fileName))
+            mbcat.html.HtmlWriter(self.c, htmlFileName=fileName))
         t.start()
         t.join()
 

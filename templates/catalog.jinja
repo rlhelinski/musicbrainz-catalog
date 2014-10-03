@@ -1,4 +1,5 @@
 <!DOCTYPE HTML>
+<!-- This file is generated automatically by musicbrainz-catalog DO NOT EDIT -->
 <html>
 <head>
 <title>Music Catalog</title>
@@ -123,3 +124,46 @@ tr.releaserow:hover{
 </style>
 </head>
 <body>
+<a name="top">
+<div id="toc">
+    <div id="toctitle">
+        <h2>Contents</h2>
+        <span class="toctoggle">&nbsp;
+            [<a href="#" class="internal" id="togglelink">hide</a>]&nbsp;
+        </span>
+    </div>
+    <ul>
+    {% for formatSize in formatsBySize %}
+        <li><a href="#{{ formatSize }}">{{ formatSize }}</a></li>
+    {% endfor %}
+    </ul>
+</div>
+<h1>{{title}}</h1>
+
+{% for formatSize in formatsBySize %}
+<h2>
+<a name="{{ formatSize }}">{{ formatSize }}
+({{ formatCnts[formatSize] }} Releases)
+<a href="top">top</a></h2>
+
+<table class=\"formattable\">
+    <tr>
+        <th>Artist</th>
+        <th>Title</th>
+        <th>Date</th>
+    </tr>
+    {% for releaseId in formatIds[formatSize] %}
+        <tr class="releaserow">
+            <td>{{ catalog.getReleaseArtist(releaseId) }}</td>
+            <td><a href="{{ catalog.releaseUrl }}{{ releaseId }}">
+                    {{ catalog.getReleaseTitle(releaseId) }}
+            </a></td>
+            <td>{{ catalog.getReleaseDate(releaseId) }}</td>
+        <tr>
+    {% endfor %}
+</table>
+
+{% endfor %}
+
+</body>
+</html>
