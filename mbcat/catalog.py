@@ -1605,6 +1605,18 @@ class Catalog(object):
             'where medium_recordings.medium=?',
             (mediumId,))[0]
 
+    def getReleaseLen(self, releaseId):
+        return self.cm.executeAndFetchOne(
+            'select sum(recordings.length) from releases '
+            'inner join media '
+            'on media.release=releases.id '
+            'inner join medium_recordings '
+            'on medium_recordings.medium = media.id '
+            'inner join recordings '
+            'on medium_recordings.recording=recordings.id '
+            'where releases.id=?',
+            (releaseId,))[0]
+
 def recLengthAsString(recLength):
     if not recLength:
         return '?:??'
