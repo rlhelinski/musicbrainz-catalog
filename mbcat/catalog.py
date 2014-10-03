@@ -248,6 +248,16 @@ class Catalog(object):
         'trackword_index'
         ]
 
+    badReleaseFilter = 'format like "%[unknown]%"'\
+                ' or barcode=""'\
+                ' or asin=""'\
+                ' or label=""'\
+                ' or catno=""'\
+                ' or country=""'\
+                ' or date=""'\
+                ' or artist=""'\
+                ' or title=""'
+
     def __init__(self, dbPath=None, cachePath=None):
         """Open or create a new catalog"""
 
@@ -1402,15 +1412,9 @@ class Catalog(object):
         Check releases for ugliness such as no barcode, no release format, etc.
         For now, this creates warnings in the log.
         """
-        for releaseId in self.getReleaseIds():
-            release = self.getRelease(releaseId)
-            if 'date' not in release or not release['date']:
-                _log.warning("No date for " + releaseId)
-            if 'barcode' not in release or not release['barcode']:
-                _log.warning("No barcode for " + releaseId)
-            for medium in release['medium-list']:
-                if 'format' not in medium or not medium['format']:
-                    _log.warning("No format for a medium of " + releaseId)
+        return self.cm.executeAndFetch(
+                'select id,sortstring from releases where '+\
+                self.badReleaseFilter)
 
     # TODO maybe cover art tasks should be in another class
     def _getCoverArtPath(self, releaseId):

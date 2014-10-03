@@ -1921,15 +1921,7 @@ class MBCatGtk:
         self.refreshView(widget)
 
     def menuCatalogCheck(self, widget):
-        self.filt = 'format like "%[unknown]%"'\
-                ' or barcode=""'\
-                ' or asin=""'\
-                ' or label=""'\
-                ' or catno=""'\
-                ' or country=""'\
-                ' or date=""'\
-                ' or artist=""'\
-                ' or title=""'
+        self.filt = catalog.badReleaseFilter
         self.refreshView(widget)
 
     def menuFilterQuick(self, widget):

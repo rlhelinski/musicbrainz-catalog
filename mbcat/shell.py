@@ -341,8 +341,7 @@ class Shell:
     def Check(self):
         """Check releases for missing information."""
         self.s.write("Running checks...\n")
-        self.c.checkReleases()
-        self.s.write("DONE\n")
+        self.printReleaseList(self.c.checkReleases())
 
     def PrintCheckOutEvents(self, releaseId):
         """List the check out and in events."""
