@@ -460,25 +460,26 @@ class Shell:
 
     def ZipExport(self):
         """Export the catalog to a zip file containing release XML files."""
-        defaultPath = 'mbcat-catalog.zip'
         path = self.s.nextLine('Enter path for file [empty for \'%s\']: '
-                               % defaultPath)
+                               % self.c.defaultZipPath)
         if not path:
-            path = defaultPath
+            path = self.c.defaultZipPath
 
-        pbar = progressbar.ProgressBar(widgets=self.widgets)
-        self.c.saveZip(path, pbar)
+        t = mbcat.dialogs.TextProgress(self.c.saveZip(self.c, path))
+        t.start()
+        t.join()
 
     def ZipImport(self):
         """Import a zip file containing XML files into the catalog."""
         defaultPath = 'mbcat-catalog.zip'
         path = self.s.nextLine('Enter path for file [empty for \'%s\']: '
-                               % defaultPath)
+                               % self.c.defaultZipPath)
         if not path:
-            path = defaultPath
+            path = self.c.defaultZipPath
 
-        pbar = progressbar.ProgressBar(widgets=self.widgets)
-        self.c.loadZip(path, pbar)
+        t = mbcat.dialogs.TextProgress(self.c.loadZip(self.c, path))
+        t.start()
+        t.join()
 
     def printQueryResults(self, results):
         self.s.write('Release Results:\n')

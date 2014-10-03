@@ -571,84 +571,88 @@ class Catalog(object):
                 (count, releaseId))
         self.cm.commit()
 
-    def saveZip(self, zipName='catalog.zip', pbar=None):
+    defaultZipPath='catalog.zip'
+    class saveZip(mbcat.dialogs.ThreadedTask):
         """Exports the database as a ZIP archive"""
-        import zipfile
+        def __init__(self, catalog, zipName=None):
+            mbcat.dialogs.ThreadedTask.__init__(self, 0)
+            self.catalog = catalog
+            self.zipName = zipName if zipName else catalog.defaultZipPath
 
-        _log.info('Saving ZIP file for catalog to \'%s\'' % zipName)
+        def run(self):
+            import zipfile
+            _log.info('Saving ZIP file for catalog to \'%s\'' % self.zipName)
 
-        if pbar:
-            pbar.maxval=len(self)
-            pbar.start()
-        with zipfile.ZipFile(zipName, 'w', zipfile.ZIP_DEFLATED) as zf:
-            for releaseId in self.getReleaseIds():
-                zipReleasePath = self.zipReleaseRoot+'/'+releaseId
-                zf.writestr(zipReleasePath+'/'+'metadata.xml',
-                        self.getReleaseXml(releaseId))
+            self.numer=0
+            self.denom=len(self.catalog)
+            with zipfile.ZipFile(self.zipName, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for releaseId in self.catalog.getReleaseIds():
+                    zipReleasePath = self.catalog.zipReleaseRoot+'/'+releaseId
+                    zf.writestr(zipReleasePath+'/'+'metadata.xml',
+                            self.catalog.getReleaseXml(releaseId))
 
-                # add coverart if is cached
-                # use store method because JPEG is already compressed
-                coverArtPath = self._getCoverArtPath(releaseId)
-                if os.path.isfile(coverArtPath):
-                    zf.write(coverArtPath,
-                            zipReleasePath+'/cover.jpg',
-                            zipfile.ZIP_STORED)
+                    # add coverart if is cached
+                    # use 'store' method because JPEG is already compressed
+                    coverArtPath = self.catalog._getCoverArtPath(releaseId)
+                    if os.path.isfile(coverArtPath):
+                        zf.write(coverArtPath,
+                                zipReleasePath+'/cover.jpg',
+                                zipfile.ZIP_STORED)
 
-                #zf.writestr('extra.xml', \
-                #    self.extraIndex[releaseId].toString())
-                ed = self.getExtraData(releaseId)
-                zf.writestr(zipReleasePath+'/extra.xml',
-                        ed.toString())
+                    #ed = self.catalog.getExtraData(releaseId)
+                    #zf.writestr(zipReleasePath+'/extra.xml',
+                            #ed.toString())
 
-                if pbar:
-                    pbar.update(pbar.currval + 1)
-            if pbar:
-                pbar.finish()
+                    self.numer += 1
 
-    def loadZip(self, zipName='catalog.zip', pbar=None):
+    class loadZip(mbcat.dialogs.ThreadedTask):
         """Imports the data from a ZIP archive into the database"""
-        import zipfile
+        def __init__(self, catalog, zipName=None):
+            mbcat.dialogs.ThreadedTask.__init__(self, 0)
+            self.catalog = catalog
+            self.zipName = zipName if zipName else catalog.defaultZipPath
 
-        _log.info('Loading ZIP file into catalog from \'%s\'' % zipName)
+        def run(self):
+            import zipfile
+            _log.info('Loading ZIP file into catalog from \'%s\'' %\
+                    self.zipName)
 
-        if pbar:
-            pbar.maxval=len(self)
-            pbar.start()
-        with zipfile.ZipFile(zipName, 'r') as zf:
-            for fInfo in zf.infolist():
-                try:
-                    rootPath, releaseId, fileName = fInfo.filename.split('/')
-                except ValueError:
-                    # this must not be a file that is part of a release
-                    continue
+            self.numer = 0
+            self.denom = len(self.catalog)
+            with zipfile.ZipFile(self.zipName, 'r') as zf:
+                for fInfo in zf.infolist():
+                    try:
+                        rootPath, releaseId, fileName = \
+                                fInfo.filename.split('/')
+                    except ValueError:
+                        # this must not be a file that is part of a release
+                        continue
 
-                if rootPath!= self.zipReleaseRoot:
-                    # must not be part of a release, do nothing for now
-                    continue
+                    if rootPath!= self.catalog.zipReleaseRoot:
+                        # must not be part of a release, do nothing for now
+                        _log.warning('Ignoring zip element "%s"' % rootPath)
+                        continue
 
-                if len(releaseId) != 36:
-                    _log.error('Release ID in path \'%s\' not expected length '
-                            '(36)' % releaseId)
-                    continue
+                    if len(releaseId) != 36:
+                        _log.error('Release ID in path \'%s\' not expected '
+                                'length (36)' % releaseId)
+                        continue
 
-                if fileName == 'metadata.xml':
-                    self.digestReleaseXml(releaseId, zf.read(fInfo))
+                    if fileName == 'metadata.xml':
+                        self.catalog.digestReleaseXml(releaseId, zf.read(fInfo))
 
-                if fileName == 'extra.xml':
-                    ed = mbcat.extradata.ExtraData(releaseId)
-                    ed.loads(zf.read(fInfo))
-                    self.digestExtraData(releaseId, ed)
+                    #if fileName == 'extra.xml':
+                        #ed = mbcat.extradata.ExtraData(releaseId)
+                        #ed.loads(zf.read(fInfo))
+                        #self.catalog.digestExtraData(releaseId, ed)
 
-                if fileName == 'cover.jpg':
-                    coverArtPath = self._getCoverArtPath(releaseId)
-                    with file(coverArtPath, 'w') as f:
-                        f.write(zf.read(fInfo))
+                    if fileName == 'cover.jpg':
+                        coverArtPath = self.catalog._getCoverArtPath(releaseId)
+                        with file(coverArtPath, 'w') as f:
+                            f.write(zf.read(fInfo))
 
-                if pbar:
-                    pbar.update(pbar.currval + 1)
-            self.cm.commit()
-            if pbar:
-                pbar.finish()
+                    self.numer += 1
+                self.catalog.cm.commit()
 
     @staticmethod
     def getReleaseWords(rel):
