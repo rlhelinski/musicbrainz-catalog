@@ -29,23 +29,23 @@ class Shell:
         else:
             return answer and answer.lower().startswith('y')
 
+    def printReleaseList(self, neighborhood, highlightId=None):
+        for relId, sortStr in neighborhood:
+            self.s.write(
+                ('\033[92m' if relId == highlightId else "")+\
+                relId+\
+                sortStr+\
+                ("[" + self.c.getReleaseFormat(relId) + "]")+\
+                (' <<<\033[0m' if relId == highlightId else "")+\
+                '\n')
+
     def SearchSort(self):
         """Search for a release and display its neighbors in the sorting scheme.
         Useful for sorting physical media."""
         releaseId = self.Search()
         (index, neighborhood) = self.c.getSortNeighbors(
             releaseId, matchFormat=True)
-
-        for i, (sortId, sortStr) in neighborhood:
-            self.s.write(' '.join([
-                ('\033[92m' if i == index else "") + "%4d" % i,
-                sortId,
-                sortStr,
-                ("[" +
-                 str(mbcat.formats.getReleaseFormat(self.c.getRelease(sortId))) + "]"),
-                (" <<<" if i == index else "") +
-                ('\033[0m' if i == index else "")
-            ]) + '\n')
+        self.printReleaseList(neighborhood, highlightId=releaseId)
 
     def Search(self, prompt="Enter search terms (or release ID): "):
         """Search for a release and return release ID."""
