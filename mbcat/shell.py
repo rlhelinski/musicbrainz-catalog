@@ -213,7 +213,7 @@ class Shell:
         """Add a rating."""
         releaseId = self.Search()
         currentRating = self.c.getRating(releaseId)
-        if currentRating:
+        if currentRating is not None and currentRating != 'None':
             self.s.write('Current rating: %d/5\n' % currentRating)
         else:
             self.s.write('No rating set\n')
