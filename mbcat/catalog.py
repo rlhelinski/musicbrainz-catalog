@@ -1478,8 +1478,8 @@ class Catalog(object):
                     return min(len(self.catalog), leftIdx+1+limit)
 
             releaseIds = self.catalog.getReleaseIds('order by sortstring')
-            for leftIdx in range(len(self.catalog)):
-                for rightIdx in range(leftIdx+1,
+            for leftIdx in xrange(len(self.catalog)):
+                for rightIdx in xrange(leftIdx+1,
                         getRightUpper(leftIdx,self.limit)):
                     leftId = releaseIds[leftIdx]
                     rightId = releaseIds[rightIdx]

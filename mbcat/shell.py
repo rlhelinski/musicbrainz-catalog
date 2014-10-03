@@ -452,7 +452,7 @@ class Shell:
         t.start()
         t.join()
         lds = t.task.result
-        for i in range(number):
+        for i in xrange(number):
             self.s.write(str(lds[i][0]) + '\t' +
                          self.formatReleaseInfo(lds[i][1]) + ' <-> ' +
                          self.formatReleaseInfo(lds[i][2]) + '\n')

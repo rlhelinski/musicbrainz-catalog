@@ -1612,7 +1612,7 @@ class MBCatGtk:
 
     @staticmethod
     def getColumnWidth(i):
-        sl = [self.releaseList[j][i] for j in range(len(self.releaseList))]
+        sl = [self.releaseList[j][i] for j in xrange(len(self.releaseList))]
         sl = filter(None, sl)
         ll = [len(s) for s in sl]
         return int(numpy.mean(ll) + 3*numpy.std(ll))
