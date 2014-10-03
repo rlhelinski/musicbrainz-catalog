@@ -829,12 +829,15 @@ class Catalog(object):
 
 
     def getSortedList(self, matchFmt=None):
-        relIds = self.getReleaseIdsByFormat(matchFmt.__name__) if matchFmt \
-                else self.getReleaseIds()
-
-        sortKeys = [(relId, self.getReleaseSortStr(relId)) for relId in relIds]
-
-        return sorted(sortKeys, key=lambda sortKey: sortKey[1].lower())
+        if matchFmt is not None:
+            return self.cm.executeAndFetch(
+                    'select id,sortstring from releases '
+                    'where format=? '
+                    'order by sortstring', (matchFmt,))
+        else:
+            return self.cm.executeAndFetch(
+                    'select id,sortstring from releases '
+                    'order by sortstring')
 
     def getSortNeighbors(self, releaseId, neighborHood=5, matchFormat=False):
         """
@@ -842,26 +845,18 @@ class Catalog(object):
         of releases.
         """
 
-        # TODO use 'SELECT id FROM releases ORDER BY sortstring' instead
         if matchFormat:
-            try:
-                sortedList = self.getSortedList(\
-                    mbcat.formats.getReleaseFormat(\
-                        self.getRelease(releaseId)).__class__)
-            except KeyError as e:
-                _log.warning("Sorting release " + releaseId + " with no format"
-                        " into a list of all releases.")
-                sortedList = self.getSortedList()
+            fmt = self.getReleaseFormat(releaseId)
         else:
-            sortedList = self.getSortedList()
+            fmt = None
+            _log.warning("Sorting release "+releaseId+" with no format"
+                    " into a list of all releases.")
+        rows = self.getSortedList(fmt)
 
-        index = sortedList.index((releaseId,
-                self.getReleaseSortStr(releaseId)))
+        index = rows.index((releaseId, self.getReleaseSortStr(releaseId)))
         neighborhoodIndexes = range(max(0,index-neighborHood),
-                min(len(sortedList), index+neighborHood))
-        return (index,
-                zip(neighborhoodIndexes,
-                        [sortedList[i] for i in neighborhoodIndexes]))
+                min(len(rows), index+neighborHood))
+        return (index, [rows[i] for i in neighborhoodIndexes])
 
     def getWordCount(self):
         """Fetch the number of words in the release search word table."""
