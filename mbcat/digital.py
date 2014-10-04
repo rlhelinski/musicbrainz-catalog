@@ -3,8 +3,11 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 import mbcat
+import os
 import re
 import collections
+import logging
+_log = logging.getLogger("mbcat")
 
 class DigitalPathSymbol(object):
     def __init__(self):
