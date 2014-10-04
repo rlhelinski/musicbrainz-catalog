@@ -1,5 +1,5 @@
 # Several classes which inherit the same base class and contain a reference to
-# a release dictionary for making callbacks and resolving the symbolic names. 
+# a release dictionary for making callbacks and resolving the symbolic names.
 from __future__ import print_function
 from __future__ import unicode_literals
 import mbcat
@@ -45,7 +45,7 @@ defaultPathSpec = '{Artist}/{Title}'
 class DigitalPath(list):
     """A list of digital path parts that can be resolved to a specific path for
     a specific release.
-    
+
     Examples:
     >>> import mbcat.digital
     >>> rel = s.c.getRelease('4867ceba-ffe7-40c0-a093-45be6c03c655')
@@ -113,10 +113,10 @@ class DigitalPath(list):
             ])
 
 class DigitalSearch(object):
-    def __init__(self, catalog):
+    def __init__(self, catalog, prefs=None):
         self.catalog = catalog
+        self.prefs = catalog.prefs if not prefs else prefs
 
-    # TODO move this to a Digital class
     @staticmethod
     def getArtistPathVariations(release):
         return set([
@@ -130,7 +130,6 @@ class DigitalSearch(object):
                 mbcat.catalog.getArtistSortPhrase(release)
                 ])
 
-    # TODO move this to a Digital class
     @staticmethod
     def getTitlePathVariations(release):
         s = set()
@@ -140,7 +139,6 @@ class DigitalSearch(object):
             s.add(release['title']+' ('+release['disambiguation']+')')
         return s
 
-    # TODO move this to a Digital class
     @staticmethod
     def getPathAlNumPrefixes(path):
         """Returns a set of prefixes used for directory balancing"""
@@ -151,7 +149,6 @@ class DigitalSearch(object):
                 (path[0]+'/'+path[0:2]).lower(), # used by Wikimedia
                 ])
 
-    # TODO move this to a Digital class
     def getDigitalPathVariations(self, root, release):
         for artistName in self.getArtistPathVariations(release):
             for prefix in self.getPathAlNumPrefixes(artistName):
@@ -162,20 +159,20 @@ class DigitalSearch(object):
                 else:
                     _log.debug(artistPath+' does not exist')
 
-    # TODO move this to a Digital class
     def searchDigitalPaths(self, releaseId='', pbar=None):
         """Search for files for a release in all locations and with variations
         """
-        releaseIdList = [releaseId] if releaseId else self.getReleaseIds()
+        releaseIdList = [releaseId] if releaseId else \
+                self.catalog.getReleaseIds()
 
         if pbar:
-            pbar.maxval = len(self)*len(self.prefs.pathRoots)
+            pbar.maxval = len(self.catalog)*len(self.prefs.pathRoots)
             pbar.start()
         # TODO need to be more flexible in capitalization and re-order of words
         for path in self.prefs.pathRoots:
             _log.info("Searching '%s'"%path)
             for relId in releaseIdList:
-                rel = self.getRelease(relId)
+                rel = self.catalog.getRelease(relId)
                 if pbar:
                     pbar.update(pbar.currval + 1)
 
@@ -183,31 +180,30 @@ class DigitalSearch(object):
                 for titlePath in self.getDigitalPathVariations(path, rel):
                     if os.path.isdir(titlePath):
                         _log.info('Found '+relId+' at '+titlePath)
-                        self.addDigitalPath(relId, titlePath)
+                        self.catalog.addDigitalPath(relId, titlePath)
                     else:
                         _log.debug('Did not find '+relId+' at '+titlePath)
         if pbar:
             pbar.finish()
 
-        if releaseId and not self.extraIndex[relId].digitalPaths:
+        if releaseId and not self.catalog.getDigitalPaths(releaseId):
             _log.warning('No digital paths found for '+releaseId)
 
-    # TODO move this to a Digital class
     def getDigitalPath(self, releaseId, pathSpec=None):
-        """Returns the file path for a release given a specific release ID and
-        a path specification string (mbcat.digital)."""
+        """
+        Returns the expectedfile path for a release given a specific release ID
+        and a path specification string (mbcat.digital).
+        """
         if not pathSpec:
             pathSpec = self.prefs.defaultPathSpec
-        return mbcat.digital.DigitalPath(pathSpec).\
-                toString(self.getRelease(releaseId))
+        return DigitalPath(pathSpec).toString(
+                self.catalog.getRelease(releaseId))
 
-    # TODO move this to a Digital class
     def fixDigitalPath(self, releaseId, digitalPathRoot=None):
         """This function moves a digital path to the correct location, which is
         specified by a path root string"""
         pathSpec = self.prefs.pathFmts[digitalPathRoot] \
-            if digitalPathRoot else \
-            self.prefs.defaultPathSpec
+            if digitalPathRoot else self.prefs.defaultPathSpec
         if not digitalPathRoot:
             raise NotImplemented('You need to specify a digital path root')
 
