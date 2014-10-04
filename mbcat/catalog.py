@@ -622,8 +622,8 @@ class Catalog(object):
                     self.zipName)
 
             self.numer = 0
-            self.denom = len(self.catalog)
             with zipfile.ZipFile(self.zipName, 'r') as zf:
+                self.denom = len(zf.namelist())
                 for fInfo in zf.infolist():
                     try:
                         rootPath, releaseId, fileName = \
