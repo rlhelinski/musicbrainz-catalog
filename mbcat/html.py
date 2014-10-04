@@ -35,6 +35,7 @@ class HtmlWriter(dialogs.ThreadedTask):
         templateLoader = jinja2.FileSystemLoader(searchpath='templates')
         templateEnv = jinja2.Environment(
                 loader=templateLoader,
+                trim_blocks=True, lstrip_blocks=True,
                 extensions=['jinja2.ext.autoescape'],
                 autoescape='html',
                 )

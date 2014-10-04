@@ -163,9 +163,7 @@ tr.releaserow:hover{
         in catalog.getBasicTable('sortformat="%s"'%formatSize) %}
     <tr class=releaserow>
         <td>{{ artist }}</td>
-        <td><a href="{{ catalog.releaseUrl }}{{ releaseId }}">
-                {{ title }}
-        </a></td>
+        <td><a href="{{ catalog.releaseUrl }}{{ releaseId }}">{{ title }}</a></td>
         <td>{{ date }}</td>
         <td>{{ country }}</td>
         <td>{{ label }}</td>
