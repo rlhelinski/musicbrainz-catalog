@@ -908,14 +908,18 @@ class Catalog(object):
         self.cm.commit()
 
     def getDigitalPaths(self, releaseId):
-        return self.cm.executeAndFetchOne(
-            'select digital from releases where id=?',
-            (releaseId,))[0]
+        return self.cm.executeAndChain(
+            'select path from digital where release=?',
+            (releaseId,))
 
     def addDigitalPath(self, releaseId, format, path):
-        existingPaths = self.getDigitalPaths(releaseId)
         self.cm.execute('insert into digital (release, format, path) '
                 'values (?,?,?)', (releaseId, format, path))
+        self.cm.commit()
+
+    def deleteDigitalPath(self, releaseId, path):
+        self.cm.execute('delete from digital where release=? and path=?',
+                (releaseId, path))
         self.cm.commit()
 
     def getFirstAdded(self, releaseId):
