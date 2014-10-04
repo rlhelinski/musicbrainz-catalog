@@ -58,6 +58,7 @@ class HtmlWriter(dialogs.ThreadedTask):
                         for k in formatList},
                 'formatIds' : {k: self.catalog.getReleaseIdsByFormat(k) \
                         for k in formatList},
+                'includeDetails' : False,
                 }
 
         outputText = template.render( templateVars )
