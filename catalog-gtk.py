@@ -1774,7 +1774,11 @@ class MBCatGtk:
         dialog.destroy()
 
     def menuCatalogExportHtml(self, widget):
-        import mbcat.html
+        try:
+            import mbcat.html
+        except ImportError:
+            ErrorDialog(self.window, 'Error importing: '+str(e))
+
         dialog = gtk.FileChooserDialog(
             title='Export to HTML file',
             action=gtk.FILE_CHOOSER_ACTION_SAVE,
@@ -1840,6 +1844,12 @@ class MBCatGtk:
                 self.catalog.rebuildCacheTables(self.catalog))).start()
 
     def menuCatalogGetSimilar(self, widget):
+        # Check to make sure we can import Levenshtein module
+        # TODO find a way to return an exception from the child thread
+        try:
+            import Levenshtein
+        except ImportError as e:
+            ErrorDialog(self.window, 'Error importing: '+str(e))
         # TODO could implement a simple dialog here that asks for the limit on
         # the distance of neighbors to compare and the number of results to keep
         self.CheckTask(self.window, self, ReleaseDistanceDialog,
@@ -2271,7 +2281,7 @@ class MBCatGtk:
         try:
             import discid
         except ImportError as e:
-            ErrorDialog(self.window, 'Could not import discid')
+            ErrorDialog(self.window, 'Error importing: '+str(e))
             return
         default_device = discid.get_default_device()
         # bring up a dialog to allow the user to specify a device
