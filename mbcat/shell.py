@@ -285,8 +285,7 @@ class Shell:
         t.start()
         t.join()
 
-        answer = self.s.nextLine('Open browser to view HTML? [y/N]')
-        if answer and answer.lower().startswith('y'):
+        if self.confirm('Open browser to view HTML?', default=False):
             _log.info('Opening web browser.')
             webbrowser.open(fileName)
 
