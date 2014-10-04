@@ -170,7 +170,7 @@ tr.releaserow:hover{
         <td>{{ label }}</td>
         <td>{{ catno }}</td>
         <td>{{ barcode }}</td>
-        <td>{{ asin }}</td>
+        <td><a href="{{getAsinProductUrl(asin)}}">{{ asin }}</a></td>
     </tr>
     <tr class=detailrow>
         <td colspan=8>
@@ -213,6 +213,8 @@ tr.releaserow:hover{
 </table>
 
 {% endfor %}
+
+<p>{{ releaseCnt }} releases</p>
 
 </body>
 </html>
