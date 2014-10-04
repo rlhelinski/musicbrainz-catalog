@@ -1610,6 +1610,10 @@ class MBCatGtk:
         ('db files', '*.db'), # not specific
         ]
 
+    zipFilePatterns = [('zip files', '*.zip')]
+
+    htmlFilePatterns = [('html files', '*.html')]
+
     @staticmethod
     def getColumnWidth(i):
         sl = [self.releaseList[j][i] for j in xrange(len(self.releaseList))]
@@ -1674,21 +1678,24 @@ class MBCatGtk:
         # Open the new copy
         self.openDatabase(filename)
 
+    def addPatternsToDialog(self, dialog, patterns):
+        for desc, pattern in patterns:
+            filt = gtk.FileFilter()
+            filt.set_name(desc)
+            filt.add_pattern(pattern)
+            dialog.add_filter(filt)
+
     def menuCatalogOpen(self, widget):
         # Ask the user where to store the new database
         dialog = gtk.FileChooserDialog(
-            title='Choose file',
+            title='Open database file',
             action=gtk.FILE_CHOOSER_ACTION_OPEN,
             buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                 gtk.STOCK_OPEN, gtk.RESPONSE_OK))
 
         dialog.set_default_response(gtk.RESPONSE_OK)
 
-        for desc, pattern in self.filePatterns:
-            filt = gtk.FileFilter()
-            filt.set_name(desc)
-            filt.add_pattern(pattern)
-            dialog.add_filter(filt)
+        self.addPatternsToDialog(dialog, self.filepatterns)
 
         response = dialog.run()
         if response != gtk.RESPONSE_OK:
@@ -1703,18 +1710,14 @@ class MBCatGtk:
     def menuCatalogSaveAs(self, widget):
         # Ask the user where to store the new database
         dialog = gtk.FileChooserDialog(
-            title='Choose file',
+            title='Save database file as',
             action=gtk.FILE_CHOOSER_ACTION_SAVE,
             buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                 gtk.STOCK_SAVE, gtk.RESPONSE_OK))
 
         dialog.set_default_response(gtk.RESPONSE_OK)
 
-        for desc, pattern in self.filePatterns:
-            filt = gtk.FileFilter()
-            filt.set_name(desc)
-            filt.add_pattern(pattern)
-            dialog.add_filter(filt)
+        self.addPatternsToDialog(dialog, self.filepatterns)
 
         response = dialog.run()
         if response != gtk.RESPONSE_OK:
@@ -1725,6 +1728,73 @@ class MBCatGtk:
         dialog.destroy()
 
         self.openDatabase(filename)
+
+    def menuCatalogImportZip(self, widget):
+        dialog = gtk.FileChooserDialog(
+            title='Import from zip file',
+            action=gtk.FILE_CHOOSER_ACTION_SAVE,
+            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+
+        dialog.set_default_response(gtk.RESPONSE_OK)
+
+        self.addPatternsToDialog(dialog, self.zipFilePatterns)
+
+        response = dialog.run()
+        if response != gtk.RESPONSE_OK:
+            dialog.destroy()
+            return
+
+        self.CatalogTask(self,
+            mbcat.dialogs.ProgressDialog(self.window,
+                self.catalog.loadZip(self.catalog,
+                        dialog.get_filename()))).start()
+        dialog.destroy()
+
+    def menuCatalogExportZip(self, widget):
+        dialog = gtk.FileChooserDialog(
+            title='Export to zip file',
+            action=gtk.FILE_CHOOSER_ACTION_SAVE,
+            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+
+        dialog.set_default_response(gtk.RESPONSE_OK)
+
+        self.addPatternsToDialog(dialog, self.zipFilePatterns)
+
+        response = dialog.run()
+        if response != gtk.RESPONSE_OK:
+            dialog.destroy()
+            return
+
+        self.CatalogTask(self,
+            mbcat.dialogs.ProgressDialog(self.window,
+                self.catalog.saveZip(self.catalog,
+                        dialog.get_filename()))).start()
+        dialog.destroy()
+
+    def menuCatalogExportHtml(self, widget):
+        import mbcat.html
+        dialog = gtk.FileChooserDialog(
+            title='Export to HTML file',
+            action=gtk.FILE_CHOOSER_ACTION_SAVE,
+            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+
+        dialog.set_default_response(gtk.RESPONSE_OK)
+
+        self.addPatternsToDialog(dialog, self.htmlFilePatterns)
+
+        response = dialog.run()
+        if response != gtk.RESPONSE_OK:
+            dialog.destroy()
+            return
+
+        self.CatalogTask(self,
+            mbcat.dialogs.ProgressDialog(self.window,
+                mbcat.html.HtmlWriter(self.catalog,
+                        dialog.get_filename()))).start()
+        dialog.destroy()
 
     def menuCatalogVacuum(self, widget):
         self.CatalogTask(self,
@@ -2242,6 +2312,36 @@ class MBCatGtk:
         submenuitem.set_sensitive(False) # should be enabled when opened
         self.menuCatalogSaveAsItem = submenuitem
         submenuitem.connect('activate', self.menuCatalogSaveAs)
+        menu.append(submenuitem)
+
+        ## Separator
+        sep = gtk.SeparatorMenuItem()
+        menu.append(sep)
+
+        ## Import
+        submenuitem = gtk.MenuItem('_Import')
+        submenu = gtk.Menu()
+        submenuitem.set_submenu(submenu)
+
+        subsubmenuitem = gtk.MenuItem('_Zip')
+        subsubmenuitem.connect('activate', self.menuCatalogImportZip)
+        submenu.append(subsubmenuitem)
+
+        menu.append(submenuitem)
+
+        ## Export
+        submenuitem = gtk.MenuItem('_Export')
+        submenu = gtk.Menu()
+        submenuitem.set_submenu(submenu)
+
+        subsubmenuitem = gtk.MenuItem('_Zip')
+        subsubmenuitem.connect('activate', self.menuCatalogExportZip)
+        submenu.append(subsubmenuitem)
+
+        subsubmenuitem = gtk.MenuItem('_HTML')
+        subsubmenuitem.connect('activate', self.menuCatalogExportHtml)
+        submenu.append(subsubmenuitem)
+
         menu.append(submenuitem)
 
         ## Separator
