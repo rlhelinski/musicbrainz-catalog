@@ -1,9 +1,11 @@
+from __future__ import unicode_literals
 import logging
 _log = logging.getLogger("mbcat")
 import jinja2
 import datetime
 from . import dialogs
 from . import formats
+from . import catalog
 
 class HtmlWriter(dialogs.ThreadedTask):
     def __init__(self, catalog, htmlFileName='catalog.html'):
@@ -32,9 +34,13 @@ class HtmlWriter(dialogs.ThreadedTask):
         templateLoader = jinja2.FileSystemLoader(searchpath='templates')
         templateEnv = jinja2.Environment(
                 loader=templateLoader,
+                extensions=['jinja2.ext.autoescape'],
                 autoescape='html',
-                extensions=['jinja2.ext.autoescape'])
+                )
         templateEnv.globals['catalog'] = self.catalog
+        templateEnv.globals['incr'] = self.incr
+        templateEnv.globals['recLengthAsString'] = \
+                catalog.recLengthAsString
         template = templateEnv.get_template('catalog.jinja')
 
         formatList = sorted(self.catalog.getFormats(),

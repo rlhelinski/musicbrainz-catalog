@@ -1325,6 +1325,9 @@ class Catalog(object):
         return os.path.join(self.cachePath, releaseId[0], releaseId[0:2],
                 releaseId, 'cover.jpg')
 
+    def haveCoverArt(self, releaseId):
+        return os.path.isfile(self._getCoverArtPath(releaseId))
+
     def getCoverArt(self, releaseId, maxage=60*60):
         imgPath = self._getCoverArtPath(releaseId)
         if os.path.isfile(imgPath) and os.path.getmtime(imgPath) > \
@@ -1621,6 +1624,7 @@ class Catalog(object):
             'where releases.id=?',
             (releaseId,))[0]
 
+# TODO move to mbcat/ and change to lengthAsTime
 def recLengthAsString(recLength):
     if not recLength:
         return '?:??'

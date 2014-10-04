@@ -142,24 +142,73 @@ tr.releaserow:hover{
 
 {% for formatSize in formatsBySize %}
 <h2>
-<a name="{{ formatSize }}">{{ formatSize }}
+<a name="{{ formatSize }}"/>{{ formatSize }}
 ({{ formatCnts[formatSize] }} Releases)
 <a href="top">top</a></h2>
 
-<table class=\"formattable\">
+<table class="formattable">
     <tr>
         <th>Artist</th>
         <th>Title</th>
         <th>Date</th>
+        <th>Country</th>
+        <th>Label</th>
+        <th>Catalog #</th>
+        <th>Barcode</th>
+        <th>ASIN</th>
     </tr>
-    {% for releaseId in formatIds[formatSize] %}
-        <tr class="releaserow">
-            <td>{{ catalog.getReleaseArtist(releaseId) }}</td>
-            <td><a href="{{ catalog.releaseUrl }}{{ releaseId }}">
-                    {{ catalog.getReleaseTitle(releaseId) }}
-            </a></td>
-            <td>{{ catalog.getReleaseDate(releaseId) }}</td>
-        <tr>
+    {% for releaseId,sortstring,artist,title,date,
+        country,label,catno,barcode,asin,format
+        in catalog.getBasicTable('sortformat="%s"'%formatSize) %}
+    <tr class=releaserow>
+        <td>{{ artist }}</td>
+        <td><a href="{{ catalog.releaseUrl }}{{ releaseId }}">
+                {{ title }}
+        </a></td>
+        <td>{{ date }}</td>
+        <td>{{ country }}</td>
+        <td>{{ label }}</td>
+        <td>{{ catno }}</td>
+        <td>{{ barcode }}</td>
+        <td>{{ asin }}</td>
+    </tr>
+    <tr class=detailrow>
+        <td colspan=8>
+            <div class=togglediv>
+                <table class=releasedetail>
+                    <tr>
+                        {% if catalog.haveCoverArt(releaseId) %}
+                        <th>Cover Art</th>
+                        {% endif %}
+                        <th>Track List</th>
+                        <th>Digital Paths</th>
+                        <th>Date Added</th>
+                        <th>Format(s)</th>
+                    </tr>
+                    <tr>
+                        {% if catalog.haveCoverArt(releaseId) %}
+                        <td><img class=coverart src="{{
+                                catalog._getCoverArtPath(releaseId) }}"></td>
+                        {% endif %}
+                        <td>
+                            <table class=tracklist>
+                            {% for recId, recTitle, recLength in
+                                    catalog.getTrackList(releaseId) %}
+                                <tr>
+                                    <td><a href="{{catalog.recordingUrl}}{{recId}}">{{ recTitle }}</a></td>
+                                    <td>{{ recLength }}</td>
+                                </tr>
+                            {% endfor %}
+                            </table>
+                        </td>
+                        <td></td>
+                        <td>{{ catalog.getFirstAdded(releaseId) }}</td>
+                        <td>{{ format }}</td>
+                    </tr>
+                </table>
+            </div>
+        </td>
+    </tr>
     {% endfor %}
 </table>
 
