@@ -11,6 +11,8 @@ import collections
 import logging
 _log = logging.getLogger("mbcat")
 
+extre = re.compile('^.*\.([^.]*)$')
+
 class DigitalPathSymbol(object):
     def __init__(self):
         self.subset = list()
@@ -115,82 +117,109 @@ class DigitalPath(list):
                 elem.eval(release) for elem in self
             ])
 
-class DigitalSearch(object):
-    def __init__(self, catalog, prefs=None):
+def getArtistPathVariations(release):
+    return set([
+            # the non-sorting-friendly string
+            release['artist-credit-phrase'],
+            # if just the first artist is used
+            release['artist-credit'][0]['artist']['sort-name'],
+            # if just the first artist is used, sort-friendly
+            release['artist-credit'][0]['artist']['name'],
+            # the sort-friendly string with all artists credited
+            catalog.getArtistSortPhrase(release)
+            ])
+
+def getTitlePathVariations(release):
+    s = set()
+    s.add(release['title'])
+    if 'disambiguation' in release:
+        s.add(release['disambiguation'])
+        s.add(release['title']+' ('+release['disambiguation']+')')
+    return s
+
+def getPathAlNumPrefixes(path):
+    """Returns a set of prefixes used for directory balancing"""
+    return set([
+            '', # in case nothing is used
+            path[0].lower(), # most basic implementation
+            path[0:1].lower(), # have never seen this
+            (path[0]+'/'+path[0:2]).lower(), # used by Wikimedia
+            ])
+
+def guessDigitalFormat(path):
+    extension_counter = collections.Counter(
+        [extre.match(fileName).group(1) \
+                for fileName in os.listdir(path)])
+    return extension_counter.most_common(1)[0][0]
+
+class DigitalSearch(dialogs.ThreadedTask):
+
+    def __init__(self, catalog, prefs=None, releaseId=''):
+        dialogs.ThreadedTask.__init__(self, 0)
         self.catalog = catalog
         self.prefs = catalog.prefs if not prefs else prefs
+        self.releaseId = releaseId
 
-    @staticmethod
-    def getArtistPathVariations(release):
-        return set([
-                # the non-sorting-friendly string
-                release['artist-credit-phrase'],
-                # if just the first artist is used
-                release['artist-credit'][0]['artist']['sort-name'],
-                # if just the first artist is used, sort-friendly
-                release['artist-credit'][0]['artist']['name'],
-                # the sort-friendly string with all artists credited
-                mbcat.catalog.getArtistSortPhrase(release)
-                ])
+    def run(self):
+        self.checkExistingPaths(self.releaseId)
+        self.searchDigitalPaths(self.releaseId)
 
-    @staticmethod
-    def getTitlePathVariations(release):
-        s = set()
-        s.add(release['title'])
-        if 'disambiguation' in release:
-            s.add(release['disambiguation'])
-            s.add(release['title']+' ('+release['disambiguation']+')')
-        return s
+    def checkExistingPaths(self, releaseId=''):
+        releaseIdList = [releaseId] if releaseId else \
+                self.catalog.getReleaseIds()
 
-    @staticmethod
-    def getPathAlNumPrefixes(path):
-        """Returns a set of prefixes used for directory balancing"""
-        return set([
-                '', # in case nothing is used
-                path[0].lower(), # most basic implementation
-                path[0:1].lower(), # have never seen this
-                (path[0]+'/'+path[0:2]).lower(), # used by Wikimedia
-                ])
+        self.status = 'Searching for digital copy paths...'
+        self.numer = 0
+        self.denom = len(releaseIdList)
+        for relId in releaseIdList:
+            for path,fmt in self.catalog.getDigitalPaths(relId):
+                if not os.path.isdir(path):
+                    self.catalog.deleteDigitalPath(relId, path)
+            self.numer += 1
 
-    def getDigitalPathVariations(self, root, release):
-        for artistName in self.getArtistPathVariations(release):
-            for prefix in self.getPathAlNumPrefixes(artistName):
-                artistPath = os.path.join(root, prefix, artistName)
-                if os.path.isdir(artistPath):
-                    for titleName in self.getTitlePathVariations(release):
-                        yield os.path.join(artistPath, titleName)
-                else:
-                    _log.debug(artistPath+' does not exist')
-
-    def searchDigitalPaths(self, releaseId='', pbar=None):
-        """Search for files for a release in all locations and with variations
+    def searchDigitalPaths(self, releaseId=''):
+        """
+        Search for files for a release in all locations and with variations. If
+        no release is specified, search for all releases in the catalog.
         """
         releaseIdList = [releaseId] if releaseId else \
                 self.catalog.getReleaseIds()
 
-        if pbar:
-            pbar.maxval = len(self.catalog)*len(self.prefs.pathRoots)
-            pbar.start()
+        self.status = 'Searching for digital copy paths...'
+        self.numer = 0
+        self.denom = len(releaseIdList)*len(self.prefs.pathRoots)
         # TODO need to be more flexible in capitalization and re-order of words
         for path in self.prefs.pathRoots:
             _log.info("Searching '%s'"%path)
             for relId in releaseIdList:
-                rel = self.catalog.getRelease(relId)
-                if pbar:
-                    pbar.update(pbar.currval + 1)
-
-                # Try to guess the sub-directory path
-                for titlePath in self.getDigitalPathVariations(path, rel):
-                    if os.path.isdir(titlePath):
-                        _log.info('Found '+relId+' at '+titlePath)
-                        self.catalog.addDigitalPath(relId, titlePath)
-                    else:
-                        _log.debug('Did not find '+relId+' at '+titlePath)
-        if pbar:
-            pbar.finish()
+                self.searchForRelease(relId, path)
 
         if releaseId and not self.catalog.getDigitalPaths(releaseId):
             _log.warning('No digital paths found for '+releaseId)
+
+    def searchForRelease(self, relId, path):
+        rel = self.catalog.getRelease(relId)
+
+        # Try to guess the sub-directory path
+        for titlePath in self.getDigitalPathVariations(path, rel):
+            if os.path.isdir(titlePath):
+                _log.info('Found '+relId+' at '+titlePath)
+                self.catalog.addDigitalPath(relId,
+                        guessDigitalFormat(titlePath),
+                        titlePath)
+            else:
+                _log.debug('Did not find '+relId+' at '+titlePath)
+        self.numer += 1
+
+    def getDigitalPathVariations(self, root, release):
+        for artistName in getArtistPathVariations(release):
+            for prefix in getPathAlNumPrefixes(artistName):
+                artistPath = os.path.join(root, prefix, artistName)
+                if os.path.isdir(artistPath):
+                    for titleName in getTitlePathVariations(release):
+                        yield os.path.join(artistPath, titleName)
+                else:
+                    _log.debug(artistPath+' does not exist')
 
     def getDigitalPath(self, releaseId, pathSpec=None):
         """
