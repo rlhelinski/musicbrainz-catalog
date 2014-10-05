@@ -1,11 +1,13 @@
-from . import catalog
-from . import barcode
+__all__ = ["catalog", "utils", "barcode"]
+
 import re
 import time
 import datetime
 
 dateFmtStr = '%m/%d/%Y'
 dateFmtUsr = 'MM/DD/YYYY'
+
+defaultPathSpec = '{Artist}/{Title}'
 
 def decodeDate(date):
     return time.strftime(dateFmtStr, time.localtime(float(date)))

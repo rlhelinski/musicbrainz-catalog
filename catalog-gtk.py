@@ -11,7 +11,9 @@ import gobject
 import gtk
 import pango
 import mbcat
+import mbcat.catalog
 import mbcat.dialogs
+import mbcat.digital
 import musicbrainzngs as mb
 import argparse
 import time

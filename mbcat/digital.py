@@ -2,7 +2,9 @@
 # a release dictionary for making callbacks and resolving the symbolic names.
 from __future__ import print_function
 from __future__ import unicode_literals
-import mbcat
+from . import catalog
+from . import dialogs
+from . import utils
 import os
 import re
 import collections
@@ -24,7 +26,7 @@ class DigitalPathSymbol(object):
 class PathArtist(DigitalPathSymbol):
     symbol = '{artist}'
     def _eval(self, release):
-        return mbcat.utils.formatSortCredit(release)
+        return utils.formatSortCredit(release)
 
 class PathTitle(DigitalPathSymbol):
     symbol = '{title}'
@@ -42,8 +44,6 @@ class PathDate(DigitalPathSymbol):
     symbol = '{date}'
     def _eval(self, release):
         return release['date'] if 'date' in release else '', \
-
-defaultPathSpec = '{Artist}/{Title}'
 
 class DigitalPath(list):
     """A list of digital path parts that can be resolved to a specific path for

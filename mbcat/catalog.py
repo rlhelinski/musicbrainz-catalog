@@ -6,13 +6,13 @@ import time
 import musicbrainzngs.mbxml as mbxml
 import musicbrainzngs.util as mbutil
 import musicbrainzngs.musicbrainz as mb
-import mbcat.formats
-import mbcat.amazonservices
-import mbcat.coverart
-import mbcat.userprefs
-import mbcat.utils
-import mbcat.extradata
-import mbcat.dialogs
+from . import formats
+from . import amazonservices
+from . import coverart
+from . import userprefs
+from . import utils
+from . import extradata
+from . import dialogs
 import shutil
 from datetime import datetime
 from collections import defaultdict
@@ -269,7 +269,7 @@ class Catalog(object):
         if not os.path.isdir(prefPath):
             os.mkdir(prefPath)
 
-        self.prefs = mbcat.userprefs.PrefManager()
+        self.prefs = userprefs.PrefManager()
 
         _log.info('Using \'%s\' for the catalog database' % self.dbPath)
         _log.info('Using \'%s\' for the file cache path' % self.cachePath)
@@ -423,10 +423,10 @@ class Catalog(object):
         self.cm.execute('create index trackword_index '
             'on trackwords (trackword)')
 
-    class rebuildCacheTables(mbcat.dialogs.ThreadedTask):
+    class rebuildCacheTables(dialogs.ThreadedTask):
         def __init__(self, catalog):
             self.catalog = catalog
-            mbcat.dialogs.ThreadedTask.__init__(self, 0)
+            dialogs.ThreadedTask.__init__(self, 0)
 
         def run(self):
             self.rebuildCacheTables()
@@ -576,10 +576,10 @@ class Catalog(object):
         self.cm.commit()
 
     defaultZipPath='catalog.zip'
-    class saveZip(mbcat.dialogs.ThreadedTask):
+    class saveZip(dialogs.ThreadedTask):
         """Exports the database as a ZIP archive"""
         def __init__(self, catalog, zipName=None):
-            mbcat.dialogs.ThreadedTask.__init__(self, 0)
+            dialogs.ThreadedTask.__init__(self, 0)
             self.catalog = catalog
             self.zipName = zipName if zipName else catalog.defaultZipPath
 
@@ -609,10 +609,10 @@ class Catalog(object):
 
                     self.numer += 1
 
-    class loadZip(mbcat.dialogs.ThreadedTask):
+    class loadZip(dialogs.ThreadedTask):
         """Imports the data from a ZIP archive into the database"""
         def __init__(self, catalog, zipName=None):
-            mbcat.dialogs.ThreadedTask.__init__(self, 0)
+            dialogs.ThreadedTask.__init__(self, 0)
             self.catalog = catalog
             self.zipName = zipName if zipName else catalog.defaultZipPath
 
@@ -646,7 +646,7 @@ class Catalog(object):
                         self.catalog.digestReleaseXml(releaseId, zf.read(fInfo))
 
                     #if fileName == 'extra.xml':
-                        #ed = mbcat.extradata.ExtraData(releaseId)
+                        #ed = extradata.ExtraData(releaseId)
                         #ed.loads(zf.read(fInfo))
                         #self.catalog.digestExtraData(releaseId, ed)
 
@@ -664,16 +664,16 @@ class Catalog(object):
         relId = rel['id']
 
         for field in ['title', 'artist-credit-phrase', 'disambiguation']:
-            words.update(mbcat.processWords(field, rel))
+            words.update(processWords(field, rel))
         for credit in rel['artist-credit']:
             for field in ['sort-name', 'disambiguation', 'name']:
                 if field in credit:
-                    words.update(mbcat.processWords(field, credit))
+                    words.update(processWords(field, credit))
 
         return words
 
     @staticmethod
-    @mbcat.utils.deprecated
+    @utils.deprecated
     def getReleaseTracks(rel):
         # Format of track (recording) title list
         # r['medium-list'][0]['track-list'][0]['recording']['title']
@@ -719,7 +719,7 @@ class Catalog(object):
                             medium_id)
                         )
                     if 'title' in track['recording']:
-                        for word in mbcat.processWords('title',
+                        for word in processWords('title',
                             track['recording']):
                             # Reference each word to this recording
                             self.cm.execute('insert into trackwords '
@@ -752,7 +752,7 @@ class Catalog(object):
         # release ID
         self.cm.execute('delete from media where release=?', (relId,))
 
-    @mbcat.utils.deprecated
+    @utils.deprecated
     def mapWordsToRelease(self, words, releaseId):
         word_set = set(words)
         for word in word_set:
@@ -807,7 +807,7 @@ class Catalog(object):
             'where id=?', (recordingId,))
 
         return '%s: %s (%s)' % (recordingId, title,
-            mbcat.catalog.recLengthAsString(length))
+            catalog.recLengthAsString(length))
 
     def getRecordingTitle(self, recordingId):
         return self.cm.executeAndFetchOne('select title from recordings '
@@ -820,7 +820,7 @@ class Catalog(object):
     @staticmethod
     def getSortStringFromRelease(release):
         return ' - '.join ( [ \
-                mbcat.utils.formatSortCredit(release), \
+                utils.formatSortCredit(release), \
                 release['date'] if 'date' in release else '', \
                 release['title'] + \
                 (' ('+release['disambiguation']+')' if 'disambiguation' in \
@@ -1050,7 +1050,7 @@ class Catalog(object):
                 (releaseId, date))
         self.cm.commit()
 
-    @mbcat.utils.deprecated
+    @utils.deprecated
     def getExtraData(self, releaseId):
         """Put together all of the metadata added by mbcat. This might be
         removed in a later release, only need it when upgrading from 0.1."""
@@ -1059,7 +1059,7 @@ class Catalog(object):
                 'select purchases,added,lent,listened,digital,count,'
                 'comment,rating from releases where id=?', (releaseId,))
 
-        ed = mbcat.extradata.ExtraData(releaseId)
+        ed = extradata.ExtraData(releaseId)
         ed.purchases = purchases
         ed.addDates = added
         ed.lendEvents = lent
@@ -1071,7 +1071,7 @@ class Catalog(object):
 
         return ed
 
-    @mbcat.utils.deprecated
+    @utils.deprecated
     def digestExtraData(self, releaseId, ed):
         """Take an ExtraData object and update the metadata in the catalog for
         a release"""
@@ -1169,7 +1169,7 @@ class Catalog(object):
         metaColumns = [
             ('sortstring', self.getSortStringFromRelease(
                 relDict['release'])),
-            ('artist', mbcat.catalog.getArtistSortPhrase(
+            ('artist', catalog.getArtistSortPhrase(
                 relDict['release'])),
             ('title', self.fmtTitle(relDict['release'])),
             ('date', (relDict['release']['date'] \
@@ -1183,7 +1183,7 @@ class Catalog(object):
             ('asin', (relDict['release']['asin'] \
                 if 'asin' in relDict['release'] else '')),
             ('format', formatReleaseFormat(relDict['release'])),
-            ('sortformat', mbcat.formats.getReleaseFormat(
+            ('sortformat', formats.getReleaseFormat(
                 relDict['release']).name()),
             ]
 
@@ -1267,7 +1267,7 @@ class Catalog(object):
         This function does commit its changes.
         """
 
-        releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
+        releaseId = utils.getReleaseIdFromInput(releaseId)
         if releaseId in self:
             _log.info("Release %s is already in catalog." % releaseId)
         metaTime = self.getMetaTime(releaseId)
@@ -1285,7 +1285,7 @@ class Catalog(object):
         self.getCoverArt(releaseId, olderThan)
 
     def deleteRelease(self, releaseId):
-        releaseId = mbcat.utils.getReleaseIdFromInput(releaseId)
+        releaseId = utils.getReleaseIdFromInput(releaseId)
         if releaseId not in self:
             raise KeyError('Release does not exist')
 
@@ -1295,11 +1295,11 @@ class Catalog(object):
 
         _log.info("Deleted '%s'" % title)
 
-    class refreshAllMetaData(mbcat.dialogs.ThreadedTask):
+    class refreshAllMetaData(dialogs.ThreadedTask):
         def __init__(self, catalog, olderThan=0):
             self.catalog = catalog
             self.olderThan = olderThan
-            mbcat.dialogs.ThreadedTask.__init__(self, 0)
+            dialogs.ThreadedTask.__init__(self, 0)
 
         def run(self):
             self.status = 'Fetching all metadata older than %d seconds...'\
@@ -1341,8 +1341,8 @@ class Catalog(object):
             return
 
         try:
-            meta = mbcat.coverart.getCoverArtMeta(releaseId)
-            mbcat.coverart.saveCoverArt(meta, imgPath)
+            meta = coverart.getCoverArtMeta(releaseId)
+            coverart.saveCoverArt(meta, imgPath)
 
         except mb.ResponseError as e:
             _log.warning('No cover art for ' + releaseId +
@@ -1353,8 +1353,8 @@ class Catalog(object):
             asin = self.getReleaseASIN(releaseId)
             if asin:
                 _log.info('Trying to fetch cover art from Amazon instead')
-                mbcat.amazonservices.saveImage(asin,
-                        mbcat.amazonservices.AMAZON_SERVER["amazon.com"],
+                amazonservices.saveImage(asin,
+                        amazonservices.AMAZON_SERVER["amazon.com"],
                         imgPath)
             else:
                 _log.warning('No ASIN for '+releaseId+
@@ -1364,7 +1364,7 @@ class Catalog(object):
         for releaseId in self.getReleaseIds():
             self.getCoverArt(releaseId, maxage=maxage)
 
-    class checkLevenshteinDistances(mbcat.dialogs.ThreadedTask):
+    class checkLevenshteinDistances(dialogs.ThreadedTask):
         """
         Compute the Levenshtein (edit) distance of each pair of releases.
 
@@ -1373,7 +1373,7 @@ class Catalog(object):
         def __init__(self, catalog, limit=None):
             self.catalog = catalog
             self.limit = limit
-            mbcat.dialogs.ThreadedTask.__init__(self, 0)
+            dialogs.ThreadedTask.__init__(self, 0)
 
         def run(self):
             import Levenshtein
@@ -1408,7 +1408,7 @@ class Catalog(object):
             # TODO could sort the list and truncate it in each iteration above
             self.result = sorted(dists, key=lambda sortKey: sortKey[0])
 
-    class syncCollection(mbcat.dialogs.ThreadedTask):
+    class syncCollection(dialogs.ThreadedTask):
         """
         Synchronize the catalog with a MusicBrainz collection.
 
@@ -1424,7 +1424,7 @@ class Catalog(object):
         def __init__(self, catalog, collectionId):
             self.catalog = catalog
             self.collectionId = collectionId
-            mbcat.dialogs.ThreadedTask.__init__(self, 0)
+            dialogs.ThreadedTask.__init__(self, 0)
 
         def run(self):
             self.status = 'Fetching list of releases in collection...'
@@ -1459,7 +1459,7 @@ class Catalog(object):
                 % len(relIdsToAdd)
             self.numer = 0
             self.denom = len(relIdsToAdd) / self.releasesPerPost
-            for relIdChunk in mbcat.utils.chunks(relIdsToAdd,
+            for relIdChunk in utils.chunks(relIdsToAdd,
                     self.releasesPerPost):
                 mb.add_releases_to_collection(self.collectionId, relIdChunk)
                 self.numer += 1
@@ -1649,7 +1649,7 @@ def formatQueryArtist(releaseDict):
             for cred in releaseDict['artist-credit']])
 
 def formatQueryMedia(releaseDict):
-    return ' + '.join(mbcat.utils.mergeList(
+    return ' + '.join(utils.mergeList(
          [[medium['format']] if medium and 'format' in medium else []
           for medium in releaseDict['medium-list']]))
 

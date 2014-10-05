@@ -5,7 +5,7 @@ import logging
 _log = logging.getLogger("mbcat")
 import os
 import xml.etree.ElementTree as etree
-import mbcat.digital
+from . import defaultPathSpec
 
 # http://stackoverflow.com/questions/749796/pretty-printing-xml-in-python/4590052#4590052
 def xml_indent(elem, level=0):
@@ -34,7 +34,7 @@ class PrefManager:
         self.username = ''
         self.htmlPubPath = ''
         self.pathFmts = dict()
-        self.defaultPathSpec = mbcat.digital.defaultPathSpec
+        self.defaultPathSpec = defaultPathSpec
 
         if (os.path.isfile(self.prefFile)):
             self.load()
@@ -55,7 +55,7 @@ class PrefManager:
                     self.pathRoots.append(path.text)
                     self.pathFmts[path.text] = path.attrib['pathspec'] \
                             if 'pathspec' in path.attrib else \
-                                mbcat.digital.defaultPathSpec
+                                defaultPathSpec
             elif (child.tag == 'default'):
                 if 'pathspec' in child.attrib:
                     self.defaultPathSpec = child.attrib['pathspec']
