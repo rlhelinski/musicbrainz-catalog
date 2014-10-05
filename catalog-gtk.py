@@ -1282,6 +1282,105 @@ class ListenHistoryDialog(QueryResultsDialog):
             self.update()
             self.app.updateDetailPane()
 
+class DigitalPathListDialog(QueryResultsDialog):
+    """Manage digital paths for a release."""
+
+    row_contains = 'Digital Path'
+
+    def __init__(self,
+            parentWindow,
+            app,
+            releaseId,
+            message='Digital Paths',
+            ):
+        self.releaseId = releaseId
+        QueryResultsDialog.__init__(self, parentWindow, app, releaseId, message)
+        self.selInfo.set_ellipsize(pango.ELLIPSIZE_END)
+        self.selInfo.set_text('Release "%s" (%s)' %
+                (self.app.catalog.getReleaseTitle(releaseId), releaseId))
+
+    def on_row_select(self, treeview):
+        # When a row is selected, sensitize the Delete Event button
+        pass
+
+    def update(self):
+        self.buildListStore(self.releaseId)
+
+    def buildTreeView(self):
+        self.tv = gtk.TreeView()
+        for i, (label, textWidth, xalign) in enumerate([
+            ('Path', 52, 0),
+            ('Format', 6, 1.0),
+            ]):
+            cell = gtk.CellRendererText()
+            cell.set_property('xalign', xalign)
+            cell.set_property('width-chars', textWidth)
+            if i == 0:
+                cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            col = gtk.TreeViewColumn(label, cell)
+            col.add_attribute(cell, 'text', i)
+            col.set_resizable(True)
+            self.tv.append_column(col)
+
+    def buildListStore(self, releaseId):
+        resultListStore = gtk.ListStore(str, str)
+
+        for path,fmt in self.app.catalog.getDigitalPaths(self.releaseId):
+            resultListStore.append((path, fmt))
+        self.tv.set_model(resultListStore)
+
+    def buildButtons(self):
+        # Buttons
+        hbox = gtk.HBox(False, 10)
+        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        btn.connect('clicked', self.on_close)
+        hbox.pack_end(btn, expand=False, fill=False)
+
+        self.checkInBtn = gtk.Button('Delete Path')
+        self.checkInBtn.connect('clicked', self.delete_path)
+        hbox.pack_end(self.checkInBtn, expand=False, fill=False)
+
+        self.checkOutBtn = gtk.Button('Add Path')
+        self.checkOutBtn.connect('clicked', self.add_path)
+        hbox.pack_end(self.checkOutBtn, expand=False, fill=False)
+
+        return hbox
+
+    def get_selection(self):
+        """Return the unique date float for the selected row, if any."""
+        model, it = self.tv.get_selection().get_selected()
+        return model.get_value(it, 0) if it else None
+
+    def add_path(self, button):
+        dialog = gtk.FileChooserDialog(
+            title='Choose path to digital copy',
+            action=gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
+            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+        dialog.set_default_response(gtk.RESPONSE_OK)
+        response = dialog.run()
+        if response != gtk.RESPONSE_OK:
+            dialog.destroy()
+            return
+
+        path = dialog.get_filename()
+        dialog.destroy()
+
+        if path:
+            fmt = mbcat.digital.guessDigitalFormat(path)
+            self.app.catalog.addDigitalPath(self.releaseId, fmt, path)
+            self.update()
+            self.app.updateDetailPane()
+
+    def delete_path(self, button):
+        selected_path = self.get_selection()
+        if selected_path:
+            self.app.catalog.deleteDigitalPath(releaseId=self.releaseId,
+                    path=selected_path)
+            self.update()
+            self.app.updateDetailPane()
+
+
 class PurchaseHistoryDialog(QueryResultsDialog):
     """Manage purchase dates."""
 
@@ -1813,6 +1912,18 @@ class MBCatGtk:
             mbcat.dialogs.ProgressDialog(self.window,
                 self.catalog.refreshAllMetaData(self.catalog, 60*60*24))).start()
 
+    def menuCatalogIndexDigital(self, widget):
+        self.CatalogTask(self,
+            mbcat.dialogs.ProgressDialog(self.window,
+                mbcat.digital.DigitalSearch(self.catalog))).start()
+
+    def menuReleaseIndexDigital(self, widget):
+        selRelId = self.getSelection()
+        self.CatalogTask(self,
+            mbcat.dialogs.ProgressDialog(self.window,
+                mbcat.digital.DigitalSearch(self.catalog,
+                    releaseId=selRelId))).start()
+
     class CatalogTask(threading.Thread):
         """
         This is a thread that runs a specified task and then refreshes the
@@ -2185,6 +2296,9 @@ class MBCatGtk:
     def listen(self, widget):
         ListenHistoryDialog(self.window, self, self.getSelection())
 
+    def digitalPaths(self, widget):
+        DigitalPathListDialog(self.window, self, self.getSelection())
+
     def purchaseInfo(self, widget):
         PurchaseHistoryDialog(self.window, self, self.getSelection())
 
@@ -2365,6 +2479,11 @@ class MBCatGtk:
         submenuitem.connect('activate', self.menuCatalogRefresh)
         menu.append(submenuitem)
 
+        ## Index Digital Copies
+        submenuitem = gtk.ImageMenuItem('mbcat-indexdigital')
+        submenuitem.connect('activate', self.menuCatalogIndexDigital)
+        menu.append(submenuitem)
+
         ## Vacuum
         submenuitem = gtk.ImageMenuItem('mbcat-vacuum')
         submenuitem.connect('activate', self.menuCatalogVacuum)
@@ -2471,6 +2590,12 @@ class MBCatGtk:
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
 
+        ## Index Digital Copies
+        submenuitem = gtk.ImageMenuItem('mbcat-indexdigital')
+        submenuitem.connect('activate', self.menuReleaseIndexDigital)
+        menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
+
         ## Track List
         submenuitem = gtk.ImageMenuItem('mbcat-tracklist')
         submenuitem.connect('activate', self.showTrackList)
@@ -2502,6 +2627,12 @@ class MBCatGtk:
         ## Listen
         submenuitem = gtk.MenuItem('Listen Events')
         submenuitem.connect('activate', self.listen)
+        menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
+
+        ## Digital Paths
+        submenuitem = gtk.MenuItem('Digital Paths')
+        submenuitem.connect('activate', self.digitalPaths)
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
 
@@ -2705,6 +2836,7 @@ class MBCatGtk:
                 ('mbcat-tracklist', 'Track _List', 0, 0, None),
                 ('mbcat-comment', 'Co_mment', 0, 0, None),
                 ('mbcat-discid', '_Disc Lookup', 0, 0, None),
+                ('mbcat-indexdigital', '_Index Digital Copies', 0, 0, None),
                 ]
 
         # We're too lazy to make our own icons,
@@ -2718,6 +2850,7 @@ class MBCatGtk:
                  ('mbcat-tracklist', gtk.STOCK_INDEX),
                  ('mbcat-comment', gtk.STOCK_EDIT),
                  ('mbcat-discid', gtk.STOCK_CDROM),
+                 ('mbcat-indexdigital', gtk.STOCK_HARDDISK),
                 ]
 
         gtk.stock_add(items)
