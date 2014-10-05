@@ -384,25 +384,31 @@ class Shell:
         if date:
             self.c.addCheckInEvent(releaseId, date)
 
-    def DigitalPath(self):
+    def DigitalPathAdd(self):
         """Add a path to a digital copy of a release."""
         releaseId = self.Search()
 
         path = self.s.nextLine("Enter path to add: ")
         if path.startswith("'") and path.endswith("'"):
             path = path[1:-1]
-        self.c.addDigitalPath(releaseId, path)
+        if not os.path.isdir(path):
+            raise ValueError('Path is not an existing directory')
+        fmt = mbcat.digital.guessDigitalFormat(path)
+        self.c.addDigitalPath(releaseId, fmt, path)
 
     def DigitalSearch(self):
         """Search for digital copies of releases."""
-        pbar = progressbar.ProgressBar(widgets=self.widgets)
         try:
             releaseId = self.Search(
                 "Enter search terms or release ID [enter for all]: ")
         except ValueError as e:
-            self.c.searchDigitalPaths(pbar=pbar)
-        else:
-            self.c.searchDigitalPaths(releaseId=releaseId, pbar=pbar)
+            releaseId = ''
+
+        t = mbcat.dialogs.TextProgress(
+                mbcat.digital.DigitalSearch(
+                    self.c, releaseId=releaseId))
+        t.start()
+        t.join()
 
     def SyncCollection(self):
         """Synchronize with a musicbrainz collection (currently only pushes releases)."""
@@ -768,7 +774,7 @@ to the catalog"""
             'check': Check,
             },
         'digital': {
-            'path': DigitalPath,
+            'path': DigitalPathAdd,
             'search': DigitalSearch,
             #'list' : DigitalList,
         },
