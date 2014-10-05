@@ -366,9 +366,9 @@ class Catalog(object):
 
         # Digital copy table
         self.cm.execute('CREATE TABLE digital ('
+            'path TEXT primary key, '
             'release TEXT, '
             'format TEXT, '
-            'path TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
@@ -908,13 +908,14 @@ class Catalog(object):
         self.cm.commit()
 
     def getDigitalPaths(self, releaseId):
-        return self.cm.executeAndChain(
-            'select path from digital where release=?',
+        return self.cm.executeAndFetch(
+            'select path,format from digital where release=?',
             (releaseId,))
 
     def addDigitalPath(self, releaseId, format, path):
-        self.cm.execute('insert into digital (release, format, path) '
-                'values (?,?,?)', (releaseId, format, path))
+        self.cm.execute('insert or replace into digital '
+                '(release, format, path) values (?,?,?)',
+                (releaseId, format, path))
         self.cm.commit()
 
     def deleteDigitalPath(self, releaseId, path):
