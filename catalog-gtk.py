@@ -26,6 +26,117 @@ gobject.threads_init()
 
 _log = logging.getLogger("mbcat")
 
+class PreferencesDialog(gtk.Window):
+    def __init__(self, prefs=None):
+        self.prefs = prefs if prefs else mbcat.userprefs.PrefManager()
+        gtk.Window.__init__(self)
+        self.buildWidgets()
+        self.show()
+
+    def buildWidgets(self):
+        self.notebook = gtk.Notebook()
+        self.add(self.notebook)
+
+        tablbl = gtk.Label('MusicBrainz.org')
+        mbframe = gtk.Frame('User Account')
+        mbframe.set_border_width(10)
+        self.notebook.append_page(mbframe, tablbl)
+
+        mbprefs = gtk.Table(2, 4, homogeneous=False)
+        mbprefs.set_border_width(10)
+        mbframe.add(mbprefs)
+
+        r = 0
+        lbl = gtk.Label('Username')
+        mbprefs.attach(lbl, 0, 1, r, r+1)
+        entry = gtk.Entry()
+        entry.set_text(self.prefs.username)
+        mbprefs.attach(entry, 1, 2, r, r+1)
+
+        tablbl = gtk.Label('Digital Paths')
+        digvbox = gtk.VBox(False, 10)
+        self.notebook.append_page(digvbox, tablbl)
+
+        digpathsw = gtk.ScrolledWindow()
+        digpathsw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        digvbox.pack_start(digpathsw, True, True)
+
+        self.digpathtv = gtk.TreeView()
+        self.digpathtv.set_headers_visible(False)
+        digpathsw.add(self.digpathtv)
+
+        self.pathmodel = gtk.ListStore(str)
+
+        for i, (label, textWidth) in enumerate(
+            [('Root Path', 60),
+            ]):
+            cell = gtk.CellRendererText()
+            cell.set_property('editable', True)
+            cell.connect('edited', self.edited_path_cb, self.pathmodel)
+            cell.set_property('xalign', 0)
+            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('width-chars', textWidth)
+            col = gtk.TreeViewColumn(label, cell)
+            col.add_attribute(cell, 'text', i)
+            col.set_resizable(True)
+            self.digpathtv.append_column(col)
+
+        self.digpathtv.connect('cursor-changed', self.on_digpath_select)
+
+        self.buildDigPathTv()
+
+        digpathbtns = gtk.HBox()
+        digvbox.pack_start(digpathbtns, False, False)
+
+        addbtn = gtk.Button(stock=gtk.STOCK_ADD)
+        digpathbtns.pack_start(addbtn, False, False)
+
+        digspecframe = gtk.Frame('Release Path Spec.')
+        digvbox.pack_start(digspecframe, False, False)
+        self.digspecentry = gtk.Entry()
+        self.digspecentry.connect('activate', self.on_specentry_activate)
+        digspecframe.add(self.digspecentry)
+
+        digprefs = gtk.Table(2, 4, homogeneous=False)
+        digprefs.set_border_width(10)
+
+        r = 0
+        lbl = gtk.Label('Default Path Spec.')
+        digprefs.attach(lbl, 0, 1, r, r+1)
+        entry = gtk.Entry()
+        entry.set_text(self.prefs.defaultPathSpec)
+        digprefs.attach(entry, 1, 2, r, r+1)
+
+        digvbox.pack_start(digprefs, False, False)
+
+        self.notebook.show_all()
+
+    def buildDigPathTv(self):
+        for path in self.prefs.pathRoots:
+            self.pathmodel.append((path,))
+        self.digpathtv.set_model(self.pathmodel)
+        self.digpathtv.expand_all()
+
+    def edited_path_cb(self, cell, path, new_text, user_data):
+        old_text = self.pathmodel[path][0]
+        self.prefs.editPathRoot(old_text, new_text)
+        self.pathmodel[path][0] = new_text
+        return
+
+    def get_digpath_selected(self):
+        model, it = self.digpathtv.get_selection().get_selected()
+        return model.get_value(it, 0)
+
+    def on_digpath_select(self, treeview):
+        path = self.get_digpath_selected()
+        pathspec = self.prefs.pathFmts[path]
+        self.digspecentry.set_text(pathspec)
+
+    def on_specentry_activate(self, entry):
+        newspec = entry.get_text()
+        self.prefs.setPathSpec(self.get_digpath_selected(),
+            newspec)
+
 # Thanks http://stackoverflow.com/a/8907574/3098007
 def TextEntry(parent, message, default='', textVisible=True):
     """
@@ -1901,6 +2012,9 @@ class MBCatGtk:
                         dialog.get_filename()))).start()
         dialog.destroy()
 
+    def menuPreferences(self, widget):
+        PreferencesDialog()
+
     def menuCatalogVacuum(self, widget):
         self.CatalogTask(self,
             mbcat.dialogs.PulseDialog(
@@ -2473,6 +2587,14 @@ class MBCatGtk:
         ## Separator
         sep = gtk.SeparatorMenuItem()
         menu.append(sep)
+
+        ## Preferences
+        submenuitem = gtk.MenuItem('Preferences')
+        key, mod = gtk.accelerator_parse('<Control>p')
+        submenuitem.add_accelerator('activate', self.agr, key, mod,
+            gtk.ACCEL_VISIBLE)
+        submenuitem.connect('activate', self.menuPreferences)
+        menu.append(submenuitem)
 
         ## Refresh Metadata
         submenuitem = gtk.ImageMenuItem('mbcat-refresh-metadata')

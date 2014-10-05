@@ -77,6 +77,7 @@ class PrefManager:
         for path in self.pathRoots:
             pathTag = etree.SubElement(pathsTag, 'path')
             pathTag.text = path
+            pathTag.attrib['pathspec'] = self.pathFmts[path]
         defaultPathSpec = etree.SubElement(myxml, 'default', 
                 attrib={'pathspec':self.defaultPathSpec})
         accountTag = etree.SubElement(myxml, 'account', attrib={'username':self.username})
@@ -92,3 +93,12 @@ class PrefManager:
 
         _log.info("Preferences saved to '%s'" % self.prefFile)
     
+    def editPathRoot(self, old_path, new_path):
+        self.pathRoots[self.pathRoots.index(old_path)] = new_path
+        self.pathFmts[new_path] = self.pathFmts[old_path]
+        del self.pathFmts[old_path]
+        self.save()
+
+    def setPathSpec(self, dig_path, path_spec):
+        self.pathFmts[dig_path] = path_spec
+        self.save()
