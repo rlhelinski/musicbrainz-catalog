@@ -37,29 +37,23 @@ class PreferencesDialog(gtk.Window):
         self.notebook = gtk.Notebook()
         self.add(self.notebook)
 
-        tablbl = gtk.Label('MusicBrainz.org')
-        mbframe = gtk.Frame('User Account')
-        mbframe.set_border_width(10)
-        self.notebook.append_page(mbframe, tablbl)
-
-        mbprefs = gtk.Table(2, 4, homogeneous=False)
-        mbprefs.set_border_width(10)
-        mbframe.add(mbprefs)
-
-        r = 0
-        lbl = gtk.Label('Username')
-        mbprefs.attach(lbl, 0, 1, r, r+1)
-        entry = gtk.Entry()
-        entry.set_text(self.prefs.username)
-        mbprefs.attach(entry, 1, 2, r, r+1)
-
+        ####
         tablbl = gtk.Label('Digital Paths')
         digvbox = gtk.VBox(False, 10)
+        #digvbox.set_border_width(10)
         self.notebook.append_page(digvbox, tablbl)
+
+        pathRootFrame = gtk.Frame('Path Roots')
+        pathRootFrame.set_border_width(10)
+        digvbox.pack_start(pathRootFrame, True, True)
+
+        digRootFrameVBox = gtk.VBox(False, 10)
+        digRootFrameVBox.set_border_width(10)
+        pathRootFrame.add(digRootFrameVBox)
 
         digpathsw = gtk.ScrolledWindow()
         digpathsw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        digvbox.pack_start(digpathsw, True, True)
+        digRootFrameVBox.pack_start(digpathsw, True, True)
 
         self.digpathtv = gtk.TreeView()
         self.digpathtv.set_headers_visible(False)
@@ -86,14 +80,21 @@ class PreferencesDialog(gtk.Window):
         self.buildDigPathTv()
 
         digpathbtns = gtk.HBox()
-        digvbox.pack_start(digpathbtns, False, False)
+        digRootFrameVBox.pack_start(digpathbtns, False, False)
 
         addbtn = gtk.Button(stock=gtk.STOCK_ADD)
+        addbtn.connect('clicked', self.on_rootpath_add)
         digpathbtns.pack_start(addbtn, False, False)
 
+        delbtn = gtk.Button(stock=gtk.STOCK_REMOVE)
+        delbtn.connect('clicked', self.on_rootpath_del)
+        digpathbtns.pack_start(delbtn, False, False)
+
         digspecframe = gtk.Frame('Release Path Spec.')
+        digspecframe.set_border_width(10)
         digvbox.pack_start(digspecframe, False, False)
         self.digspecentry = gtk.Entry()
+        #self.digspecentry.set_border_width(10)
         self.digspecentry.connect('activate', self.on_specentry_activate)
         digspecframe.add(self.digspecentry)
 
@@ -105,10 +106,29 @@ class PreferencesDialog(gtk.Window):
         digprefs.attach(lbl, 0, 1, r, r+1)
         entry = gtk.Entry()
         entry.set_text(self.prefs.defaultPathSpec)
+        entry.connect('activate', self.on_defaultPathSpec_activate)
         digprefs.attach(entry, 1, 2, r, r+1)
 
         digvbox.pack_start(digprefs, False, False)
 
+        ####
+        tablbl = gtk.Label('MusicBrainz.org')
+        mbframe = gtk.Frame('User Account')
+        mbframe.set_border_width(10)
+        self.notebook.append_page(mbframe, tablbl)
+
+        mbprefs = gtk.Table(2, 4, homogeneous=False)
+        mbprefs.set_border_width(10)
+        mbframe.add(mbprefs)
+
+        r = 0
+        lbl = gtk.Label('Username')
+        mbprefs.attach(lbl, 0, 1, r, r+1)
+        entry = gtk.Entry()
+        entry.set_text(self.prefs.username)
+        mbprefs.attach(entry, 1, 2, r, r+1)
+
+        ####
         self.notebook.show_all()
 
     def buildDigPathTv(self):
