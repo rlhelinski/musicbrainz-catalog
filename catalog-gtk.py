@@ -1751,6 +1751,13 @@ class DetailPane(gtk.HBox):
         self.lt.attach(self.lastListenedLbl, 1, 2, r, r+1)
         r += 1
 
+        l = gtk.Label('Digital Formats:')
+        l.set_alignment(0, 0.5)
+        self.lt.attach(l, 0, 1, r, r+1)
+        self.digFormatsLbl = gtk.Label()
+        self.lt.attach(self.digFormatsLbl, 1, 2, r, r+1)
+        r += 1
+
         l = gtk.Label('Rating:')
         l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
@@ -1839,6 +1846,10 @@ class DetailPane(gtk.HBox):
         lastListened = self.catalog.getLastListened(releaseId)
         lastListened = mbcat.decodeDate(lastListened) if lastListened else '-'
         self.lastListenedLbl.set_text(lastListened)
+
+        digFormats = self.catalog.getDigitalFormats(releaseId)
+        self.digFormatsLbl.set_text(', '.join(digFormats) \
+                if digFormats else 'None')
 
         rating = self.catalog.getRating(releaseId)
         self.ratingLbl.set_active(int(rating) if rating and rating != 'None' else 0)

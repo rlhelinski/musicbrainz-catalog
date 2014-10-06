@@ -912,6 +912,11 @@ class Catalog(object):
             'select path,format from digital where release=?',
             (releaseId,))
 
+    def getDigitalFormats(self, releaseId):
+        return self.cm.executeAndChain(
+            'select distinct(format) from digital where release=?',
+            (releaseId,))
+
     def addDigitalPath(self, releaseId, format, path):
         self.cm.execute('insert or replace into digital '
                 '(release, format, path) values (?,?,?)',
