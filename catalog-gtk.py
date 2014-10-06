@@ -139,6 +139,8 @@ class PreferencesDialog(gtk.Window):
 
     def edited_path_cb(self, cell, path, new_text, user_data):
         old_text = self.pathmodel[path][0]
+        if new_text == old_text:
+            return
         self.prefs.editPathRoot(old_text, new_text)
         self.pathmodel[path][0] = new_text
         return
@@ -156,6 +158,35 @@ class PreferencesDialog(gtk.Window):
         newspec = entry.get_text()
         self.prefs.setPathSpec(self.get_digpath_selected(),
             newspec)
+
+    def on_defaultPathSpec_activate(self, entry):
+        newspec = entry.get_text()
+        self.prefs.setDefaultPathSpec(newspec)
+
+    def on_rootpath_add(self, button):
+        dialog = gtk.FileChooserDialog(
+            title='Choose path to digital copy',
+            action=gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
+            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+        dialog.set_default_response(gtk.RESPONSE_OK)
+        response = dialog.run()
+        if response != gtk.RESPONSE_OK:
+            dialog.destroy()
+            return
+
+        path = dialog.get_filename()
+        dialog.destroy()
+
+        self.prefs.addPathRoot(path)
+
+        self.pathmodel.append((path,))
+
+    def on_rootpath_del(self, button):
+        path = self.get_digpath_selected()
+        self.prefs.delPathRoot(path)
+        model, it = self.digpathtv.get_selection().get_selected()
+        self.pathmodel.remove(it)
 
 # Thanks http://stackoverflow.com/a/8907574/3098007
 def TextEntry(parent, message, default='', textVisible=True):
