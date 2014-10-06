@@ -2644,14 +2644,6 @@ class MBCatGtk:
         sep = gtk.SeparatorMenuItem()
         menu.append(sep)
 
-        ## Preferences
-        submenuitem = gtk.MenuItem('Preferences')
-        key, mod = gtk.accelerator_parse('<Control>p')
-        submenuitem.add_accelerator('activate', self.agr, key, mod,
-            gtk.ACCEL_VISIBLE)
-        submenuitem.connect('activate', self.menuPreferences)
-        menu.append(submenuitem)
-
         ## Refresh Metadata
         submenuitem = gtk.ImageMenuItem('mbcat-refresh-metadata')
         submenuitem.connect('activate', self.menuCatalogRefresh)
@@ -2675,6 +2667,18 @@ class MBCatGtk:
         ## Similar
         submenuitem = gtk.MenuItem('Similar')
         submenuitem.connect('activate', self.menuCatalogGetSimilar)
+        menu.append(submenuitem)
+
+        ## Separator
+        sep = gtk.SeparatorMenuItem()
+        menu.append(sep)
+
+        ## Preferences
+        submenuitem = gtk.MenuItem('Preferences')
+        key, mod = gtk.accelerator_parse('<Control>p')
+        submenuitem.add_accelerator('activate', self.agr, key, mod,
+            gtk.ACCEL_VISIBLE)
+        submenuitem.connect('activate', self.menuPreferences)
         menu.append(submenuitem)
 
         ## Separator
