@@ -102,3 +102,19 @@ class PrefManager:
     def setPathSpec(self, dig_path, path_spec):
         self.pathFmts[dig_path] = path_spec
         self.save()
+
+    def setDefaultPathSpec(self, path_spec):
+        self.defaultPathSpec = path_spec
+        self.save()
+
+    def addPathRoot(self, new_path, new_fmt=None):
+        if not new_fmt:
+            new_fmt = self.defaultPathSpec
+        self.pathRoots.append(new_path)
+        self.pathFmts[new_path] = new_fmt
+        self.save()
+
+    def delPathRoot(self, path):
+        del self.pathRoots[self.pathRoots.index(path)]
+        del self.pathFmts[path]
+        self.save()
