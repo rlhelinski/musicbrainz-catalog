@@ -39,7 +39,7 @@ class PreferencesDialog(gtk.Window):
 
         ####
         tablbl = gtk.Label('Digital Paths')
-        digvbox = gtk.VBox(False, 10)
+        digvbox = gtk.VBox(False, 0)
         #digvbox.set_border_width(10)
         self.notebook.append_page(digvbox, tablbl)
 
@@ -57,6 +57,7 @@ class PreferencesDialog(gtk.Window):
 
         self.digpathtv = gtk.TreeView()
         self.digpathtv.set_headers_visible(False)
+        self.digpathtv.set_size_request(400, 150)
         digpathsw.add(self.digpathtv)
 
         self.pathmodel = gtk.ListStore(str)
@@ -91,25 +92,28 @@ class PreferencesDialog(gtk.Window):
         digpathbtns.pack_start(delbtn, False, False)
 
         digspecframe = gtk.Frame('Release Path Spec.')
-        digspecframe.set_border_width(10)
-        digvbox.pack_start(digspecframe, False, False)
+        #digspecframe.set_border_width(10)
+        digRootFrameVBox.pack_start(digspecframe, False, False)
+        digspecentryvbox = gtk.VBox(False, 10)
+        digspecframe.add(digspecentryvbox)
+        digspecentryvbox.set_border_width(10)
         self.digspecentry = gtk.Entry()
-        #self.digspecentry.set_border_width(10)
+        self.digspecentry.set_sensitive(False)
         self.digspecentry.connect('activate', self.on_specentry_activate)
-        digspecframe.add(self.digspecentry)
+        digspecentryvbox.add(self.digspecentry)
 
-        digprefs = gtk.Table(2, 4, homogeneous=False)
-        digprefs.set_border_width(10)
+        defPathSpecFrame = gtk.Frame('Default Path Spec.')
+        defPathSpecFrame.set_border_width(10)
+        digvbox.pack_start(defPathSpecFrame, False, False)
 
-        r = 0
-        lbl = gtk.Label('Default Path Spec.')
-        digprefs.attach(lbl, 0, 1, r, r+1)
+        defPathSpecFrameVBox = gtk.VBox(False, 10)
+        defPathSpecFrameVBox.set_border_width(10)
+        defPathSpecFrame.add(defPathSpecFrameVBox)
         entry = gtk.Entry()
         entry.set_text(self.prefs.defaultPathSpec)
         entry.connect('activate', self.on_defaultPathSpec_activate)
-        digprefs.attach(entry, 1, 2, r, r+1)
+        defPathSpecFrameVBox.pack_start(entry, False, False)
 
-        digvbox.pack_start(digprefs, False, False)
 
         ####
         tablbl = gtk.Label('MusicBrainz.org')
@@ -146,6 +150,7 @@ class PreferencesDialog(gtk.Window):
         return
 
     def get_digpath_selected(self):
+        self.digspecentry.set_sensitive(True)
         model, it = self.digpathtv.get_selection().get_selected()
         return model.get_value(it, 0)
 
