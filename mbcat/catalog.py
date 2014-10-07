@@ -366,7 +366,9 @@ class Catalog(object):
 
         # Digital copy table
         self.cm.execute('CREATE TABLE digital ('
-            'path TEXT primary key, '
+            'root TEXT, '
+            'path TEXT, '
+            'PRIMARY KEY (root, path), '
             'release TEXT, '
             'format TEXT, '
             'FOREIGN KEY(release) REFERENCES releases(id) '
@@ -404,6 +406,8 @@ class Catalog(object):
             'position INTEGER, '
             'medium TEXT, '
             'FOREIGN KEY(medium) REFERENCES media(id) '
+            'ON DELETE CASCADE ON UPDATE CASCADE, '
+            'FOREIGN KEY (recording) REFERENCES recordings(id) '
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
         self.cm.execute('CREATE TABLE trackwords('
