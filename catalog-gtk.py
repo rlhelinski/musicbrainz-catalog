@@ -30,6 +30,7 @@ class PreferencesDialog(gtk.Window):
     def __init__(self, prefs=None):
         self.prefs = prefs if prefs else mbcat.userprefs.PrefManager()
         gtk.Window.__init__(self)
+        self.set_title('Preferences')
         self.buildWidgets()
         self.show()
 
@@ -1864,7 +1865,7 @@ class MBCatGtk:
     """
     A GTK interface for managing a music collection using MusicBrainz.
     """
-    __name__ = 'MusicBrainz Catalog GTK Gui'
+    __name__ = 'MusicBrainz Catalog GTK GUI'
     __version__ = mbcat.catalog.__version__
     __copyright__ = 'Ryan Helinski'
     __website__ = 'https://github.com/rlhelinski/musicbrainz-catalog'
@@ -3063,7 +3064,7 @@ class MBCatGtk:
 
         # create a new window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        self.window.set_title('mbcat')
+        self.window.set_title(self.__name__)
         self.window.set_size_request(800, 600)
         self.window.set_position(gtk.WIN_POS_CENTER)
 
