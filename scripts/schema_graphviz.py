@@ -4,14 +4,15 @@ import shlex
 A script to convert an SQL schema into a GraphViz diagram.
 """
 
-dot_lines = ["""digraph schema {
+dot_lines = ["""// This file was created by %s, DO NOT EDIT
+digraph schema {
     rankdir="BT";
     node [shape=plaintext]
-""",
+""" % __file__,
     ]
 edge_lines = []
 
-with open('mbcat.schema', 'r') as f:
+with open('schema.sql', 'r') as f:
     for line in f:
         lexer = shlex.shlex(line)
         if lexer.get_token().lower() == 'create':
@@ -35,7 +36,7 @@ with open('mbcat.schema', 'r') as f:
                         foreign_parent_column = lexer.get_token()
                         assert lexer.get_token() == ')'
 
-                        edge_lines.append("""    %s:%s -> %s:%s;""" % \
+                        edge_lines.append("""    %s:%s:n -> %s:%s:s;""" % \
                             (table_name, foreign_child_column,
                             foreign_parent_table, foreign_parent_column))
 
@@ -44,6 +45,14 @@ with open('mbcat.schema', 'r') as f:
                         while tok != ';' and tok != ',':
                             foreign_options.append(tok)
                             tok = lexer.get_token()
+                    elif tok.lower() == 'primary':
+                        assert lexer.get_token().lower() == 'key'
+                        tok = lexer.get_token()
+                        if tok == '(':
+                            while tok != ')':
+                                tok = lexer.get_token()
+                        tok = lexer.get_token()
+                        assert tok == ',' or tok == ')'
                     elif tok != '':
                         column_name = tok
                         dot_lines.append('        <TD PORT="%s">%s</TD>'%\
