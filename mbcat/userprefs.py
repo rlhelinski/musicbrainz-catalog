@@ -118,3 +118,7 @@ class PrefManager:
         del self.pathRoots[self.pathRoots.index(path)]
         del self.pathFmts[path]
         self.save()
+
+    def setUserName(self, username):
+        self.username = username
+        self.save()

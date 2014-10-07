@@ -131,6 +131,7 @@ class PreferencesDialog(gtk.Window):
         mbprefs.attach(lbl, 0, 1, r, r+1)
         entry = gtk.Entry()
         entry.set_text(self.prefs.username)
+        entry.connect('activate', self.on_username_activate)
         mbprefs.attach(entry, 1, 2, r, r+1)
 
         ####
@@ -168,6 +169,10 @@ class PreferencesDialog(gtk.Window):
     def on_defaultPathSpec_activate(self, entry):
         newspec = entry.get_text()
         self.prefs.setDefaultPathSpec(newspec)
+
+    def on_username_activate(self, entry):
+        newusername = entry.get_text()
+        self.prefs.setUserName(newusername)
 
     def on_rootpath_add(self, button):
         dialog = gtk.FileChooserDialog(
