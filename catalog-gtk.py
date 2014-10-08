@@ -73,7 +73,7 @@ class PreferencesDialog(gtk.Window):
             cell.set_property('ellipsize', pango.ELLIPSIZE_END)
             cell.set_property('width-chars', textWidth)
             col = gtk.TreeViewColumn(label, cell)
-            col.add_attribute(cell, 'text', i)
+            col.add_attribute(cell, 'text', i+1)
             col.set_resizable(True)
             self.digpathtv.append_column(col)
 
@@ -171,8 +171,8 @@ class PreferencesDialog(gtk.Window):
         self.notebook.show_all()
 
     def buildDigPathTv(self):
-        for path in self.prefs.pathRoots:
-            self.pathmodel.append((path,))
+        for id, path in self.prefs.pathRoots:
+            self.pathmodel.append((id, path))
         self.digpathtv.set_model(self.pathmodel)
         self.digpathtv.expand_all()
 
