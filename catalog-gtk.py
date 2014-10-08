@@ -1926,6 +1926,7 @@ class MBCatGtk:
     __version__ = mbcat.catalog.__version__
     __copyright__ = 'Ryan Helinski'
     __website__ = 'https://github.com/rlhelinski/musicbrainz-catalog'
+    __icon_file__ = 'mb-white.svg'
 
     columnNames = ['Artist', 'Release Title', 'Date', 'Country', 'Label',
         'Catalog #', 'Barcode', 'ASIN', 'Format']
@@ -3124,6 +3125,7 @@ class MBCatGtk:
         # create a new window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_title(self.__name__)
+        self.window.set_icon_from_file(self.__icon_file__)
         self.window.set_size_request(800, 600)
         self.window.set_position(gtk.WIN_POS_CENTER)
 
