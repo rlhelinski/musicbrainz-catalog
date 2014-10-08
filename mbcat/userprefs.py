@@ -5,27 +5,9 @@ import logging
 _log = logging.getLogger("mbcat")
 import os
 import xml.etree.ElementTree as etree
+import xml.dom.minidom
 from . import defaultPathSpec
-
-# http://stackoverflow.com/questions/749796/pretty-printing-xml-in-python/4590052#4590052
-def xml_indent(elem, level=0):
-    """Add white space to XML DOM so that when it is converted to a string, it is pretty."""
-
-    i = "\n" + level*"  "
-    if len(elem):
-        if not elem.text or not elem.text.strip():
-            elem.text = i + "  "
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
-        for elem in elem:
-            xml_indent(elem, level+1)
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
-    else:
-        if level and (not elem.tail or not elem.tail.strip()):
-            elem.tail = i
-
-    return elem
+import musicbrainzngs
 
 class PrefManager:
     def __init__(self):
@@ -67,6 +49,12 @@ class PrefManager:
             elif (child.tag == 'htmlpub'):
                 if 'path' in child.attrib:
                     self.htmlPubPath = child.attrib['path']
+            elif (child.tag == 'musicbrainz'):
+                if 'hostname' in child.attrib:
+                    musicbrainzngs.set_hostname = child.attrib['hostname']
+                if 'caa_hostname' in child.attrib:
+                    musicbrainzngs.set_caa_hostname = \
+                            child.attrib['caa_hostname']
 
         _log.info("Loaded preferences from '%s'" % self.prefFile)
 
@@ -80,16 +68,23 @@ class PrefManager:
             pathTag.attrib['pathspec'] = self.pathFmts[path]
         defaultPathSpec = etree.SubElement(myxml, 'default', 
                 attrib={'pathspec':self.defaultPathSpec})
-        accountTag = etree.SubElement(myxml, 'account', attrib={'username':self.username})
+        accountTag = etree.SubElement(myxml, 'account',
+                attrib={'username':self.username})
         # could also load password
-        htmlPathTag = etree.SubElement(myxml, 'htmlpub', attrib={'path':self.htmlPubPath})
+        htmlPathTag = etree.SubElement(myxml, 'htmlpub',
+                attrib={'path':self.htmlPubPath})
+        hostnameTag = etree.SubElement(myxml, 'musicbrainz',
+                # TODO the hostname variable in the root namespace is being
+                # cascaded by the caa namespace?
+                attrib={'hostname':musicbrainzngs.hostname,
+                        'caa_hostname':musicbrainzngs.caa.hostname})
 
         if (not os.path.isdir(os.path.dirname(self.prefFile))):
             os.mkdir(os.path.dirname(self.prefFile))
 
-        xml_indent(myxml)
         with open(self.prefFile, 'wb') as xmlfile:
-            xmlfile.write(etree.tostring(myxml))
+            xmlfile.write(xml.dom.minidom.parseString(
+                    etree.tostring(myxml)).toprettyxml())
 
         _log.info("Preferences saved to '%s'" % self.prefFile)
     
@@ -121,4 +116,12 @@ class PrefManager:
 
     def setUserName(self, username):
         self.username = username
+        self.save()
+
+    def setHostName(self, hostname):
+        musicbrainzngs.set_hostname = hostname
+        self.save()
+
+    def setCAAHostName(self, hostname):
+        musicbrainzngs.set_caa_hostname = hostname
         self.save()
