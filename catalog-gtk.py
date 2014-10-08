@@ -92,6 +92,10 @@ class PreferencesDialog(gtk.Window):
         delbtn.connect('clicked', self.on_rootpath_del)
         digpathbtns.pack_start(delbtn, False, False)
 
+        editbtn = gtk.Button(stock='mbcat-edit-path')
+        editbtn.connect('clicked', self.on_rootpath_edit)
+        digpathbtns.pack_start(editbtn, False, False)
+
         digspecframe = gtk.Frame('Release Path Spec.')
         #digspecframe.set_border_width(10)
         digRootFrameVBox.pack_start(digspecframe, False, False)
@@ -118,16 +122,45 @@ class PreferencesDialog(gtk.Window):
 
         ####
         tablbl = gtk.Label('MusicBrainz.org')
-        mbframe = gtk.Frame('User Account')
-        mbframe.set_border_width(10)
-        self.notebook.append_page(mbframe, tablbl)
+        mbvbox = gtk.VBox(False, 10)
+        self.notebook.append_page(mbvbox, tablbl)
+
+        serverframe = gtk.Frame('Servers')
+        serverframe.set_border_width(10)
+        mbvbox.pack_start(serverframe, False, False)
 
         mbprefs = gtk.Table(2, 4, homogeneous=False)
         mbprefs.set_border_width(10)
-        mbframe.add(mbprefs)
+        serverframe.add(mbprefs)
 
         r = 0
-        lbl = gtk.Label('Username')
+        lbl = gtk.Label('Host Name :')
+        mbprefs.attach(lbl, 0, 1, r, r+1)
+        entry = gtk.Entry()
+        # TODO the hostname variable in the root namespace is being
+        # cascaded by the caa namespace?
+        entry.set_text(mb.hostname)
+        entry.connect('activate', self.on_hostname_activate)
+        mbprefs.attach(entry, 1, 2, r, r+1)
+
+        r += 1
+        lbl = gtk.Label('Cover Art Archive :')
+        mbprefs.attach(lbl, 0, 1, r, r+1)
+        entry = gtk.Entry()
+        entry.set_text(mb.caa.hostname)
+        entry.connect('activate', self.on_caa_hostname_activate)
+        mbprefs.attach(entry, 1, 2, r, r+1)
+
+        acctframe = gtk.Frame('User Account')
+        acctframe.set_border_width(10)
+        mbvbox.pack_start(acctframe, False, False)
+
+        mbprefs = gtk.Table(2, 4, homogeneous=False)
+        mbprefs.set_border_width(10)
+        acctframe.add(mbprefs)
+
+        r = 0
+        lbl = gtk.Label('Username :')
         mbprefs.attach(lbl, 0, 1, r, r+1)
         entry = gtk.Entry()
         entry.set_text(self.prefs.username)
@@ -174,7 +207,15 @@ class PreferencesDialog(gtk.Window):
         newusername = entry.get_text()
         self.prefs.setUserName(newusername)
 
-    def on_rootpath_add(self, button):
+    def on_hostname_activate(self, entry):
+        newhostname = entry.get_text()
+        self.prefs.setHostName(newhostname)
+
+    def on_caa_hostname_activate(self, entry):
+        newhostname = entry.get_text()
+        self.prefs.setCAAHostName(newhostname)
+
+    def choose_rootpath(self):
         dialog = gtk.FileChooserDialog(
             title='Choose path to digital copy',
             action=gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
@@ -188,9 +229,11 @@ class PreferencesDialog(gtk.Window):
 
         path = dialog.get_filename()
         dialog.destroy()
+        return path
 
+    def on_rootpath_add(self, button):
+        path = self.choose_rootpath()
         self.prefs.addPathRoot(path)
-
         self.pathmodel.append((path,))
 
     def on_rootpath_del(self, button):
@@ -198,6 +241,15 @@ class PreferencesDialog(gtk.Window):
         self.prefs.delPathRoot(path)
         model, it = self.digpathtv.get_selection().get_selected()
         self.pathmodel.remove(it)
+
+    def on_rootpath_edit(self, button):
+        path = self.get_digpath_selected()
+        old_text = self.pathmodel[path][0]
+        new_text = self.choose_rootpath()
+        if new_text == old_text:
+            return
+        self.prefs.editPathRoot(old_text, new_text)
+        self.pathmodel[path][0] = new_text
 
 # Thanks http://stackoverflow.com/a/8907574/3098007
 def TextEntry(parent, message, default='', textVisible=True):
@@ -3036,6 +3088,7 @@ class MBCatGtk:
                 ('mbcat-comment', 'Co_mment', 0, 0, None),
                 ('mbcat-discid', '_Disc Lookup', 0, 0, None),
                 ('mbcat-indexdigital', '_Index Digital Copies', 0, 0, None),
+                ('mbcat-edit-path', '_Choose Path', 0, 0, None),
                 ]
 
         # We're too lazy to make our own icons,
@@ -3050,6 +3103,7 @@ class MBCatGtk:
                  ('mbcat-comment', gtk.STOCK_EDIT),
                  ('mbcat-discid', gtk.STOCK_CDROM),
                  ('mbcat-indexdigital', gtk.STOCK_HARDDISK),
+                 ('mbcat-edit-path', gtk.STOCK_OPEN),
                 ]
 
         gtk.stock_add(items)
