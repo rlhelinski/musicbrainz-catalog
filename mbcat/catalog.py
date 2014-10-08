@@ -295,25 +295,24 @@ class Catalog(object):
         """Create the SQL tables for the catalog. Database is assumed empty."""
 
         # TODO maybe store the metadata dict from musicbrainz instead of the XML?
-        self.cm.execute("CREATE TABLE releases("
-            "id TEXT PRIMARY KEY, "
-            "meta BLOB, "
-            "sortstring TEXT, "
-            "artist TEXT, "
-            "title TEXT, "
-            # This date is for printing, so we will keep it in a string
-            "date TEXT, "
-            "country TEXT, "
-            "label TEXT, "
-            "catno TEXT, "
-            "barcode TEXT, "
-            "asin TEXT, "
-            "format TEXT, "
-            "sortformat TEXT, "
-            "metatime FLOAT, "
-            "count INT DEFAULT 1, "
-            "comment TEXT, "
-            "rating INT DEFAULT 0)")
+        self.cm.execute("""CREATE TABLE releases(
+    id TEXT PRIMARY KEY,
+    meta BLOB,
+    sortstring TEXT,
+    artist TEXT,
+    title TEXT,
+    date TEXT,
+    country TEXT,
+    label TEXT,
+    catno TEXT,
+    barcode TEXT,
+    asin TEXT,
+    format TEXT,
+    sortformat TEXT,
+    metatime FLOAT,
+    count INT DEFAULT 1,
+    comment TEXT,
+    rating INT DEFAULT 0)""")
 
         # Indexes for speed (it's all about performance...)
         self.cm.execute('create unique index release_id on releases(id)')
@@ -331,101 +330,98 @@ class Catalog(object):
         """Add the user (meta) data tables to the database.
         This method does not commit its changes."""
 
-        self.cm.execute('CREATE TABLE added_dates('
-            'date FLOAT, '
-            'release TEXT'
-            ')')
+        self.cm.execute("""CREATE TABLE added_dates(
+    date FLOAT,
+    release TEXT)""")
 
-        self.cm.execute('CREATE TABLE listened_dates('
-            'date FLOAT, '
-            'release TEXT, '
-            'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON UPDATE CASCADE ON DELETE CASCADE)')
+        self.cm.execute("""CREATE TABLE listened_dates(
+    date FLOAT,
+    release TEXT,
+    FOREIGN KEY(release) REFERENCES releases(id)
+    ON UPDATE CASCADE ON DELETE CASCADE)""")
 
-        self.cm.execute('CREATE TABLE purchases ('
-            'date FLOAT, '
-            'price FLOAT, '
-            'vendor TEXT, '
-            'release TEXT, '
-            'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON DELETE CASCADE ON UPDATE CASCADE)')
+        self.cm.execute("""CREATE TABLE purchases (
+    date FLOAT,
+    price FLOAT,
+    vendor TEXT,
+    release TEXT,
+    FOREIGN KEY(release) REFERENCES releases(id)
+    ON DELETE CASCADE ON UPDATE CASCADE)""")
 
         # checkout, checkin (lent out, returned) tables
-        self.cm.execute('CREATE TABLE checkout_events ('
-            'borrower TEXT, '
-            'date FLOAT, '
-            'release TEXT, '
-            'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON DELETE CASCADE ON UPDATE CASCADE)')
+        self.cm.execute("""CREATE TABLE checkout_events (
+    borrower TEXT,
+    date FLOAT,
+    release TEXT,
+    FOREIGN KEY(release) REFERENCES releases(id)
+    ON DELETE CASCADE ON UPDATE CASCADE)""")
 
-        self.cm.execute('CREATE TABLE checkin_events ('
-            'date FLOAT, '
-            'release TEXT, '
-            'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON DELETE CASCADE ON UPDATE CASCADE)')
+        self.cm.execute("""CREATE TABLE checkin_events (
+    date FLOAT,
+    release TEXT,
+    FOREIGN KEY(release) REFERENCES releases(id)
+    ON DELETE CASCADE ON UPDATE CASCADE)""")
 
         # Digital copy table
-        self.cm.execute('CREATE TABLE digital ('
-            'root TEXT, '
-            'path TEXT, '
-            'PRIMARY KEY (root, path), '
-            'release TEXT, '
-            'format TEXT, '
-            'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON DELETE CASCADE ON UPDATE CASCADE)')
+        self.cm.execute("""CREATE TABLE digital (
+    root TEXT,
+    path TEXT,
+    release TEXT,
+    format TEXT,
+    PRIMARY KEY (root, path),
+    FOREIGN KEY(release) REFERENCES releases(id)
+    ON DELETE CASCADE ON UPDATE CASCADE)""")
 
     def _createCacheTables(self):
         """Add the release-derived tables to the database.
         This method does not commit its changes."""
         # tables that map specific things to a list of releases
-        for columnName, columnType in [
-                ('word', 'TEXT'),
-                ]:
 
-            self.cm.execute('CREATE TABLE '+columnName+'s('+\
-                columnName+' '+columnType+', release TEXT, '
-                'FOREIGN KEY(release) REFERENCES releases(id) '
-                'ON DELETE CASCADE ON UPDATE CASCADE)')
+        self.cm.execute("""CREATE TABLE words(
+    word TEXT, release TEXT,
+    FOREIGN KEY(release) REFERENCES releases(id)
+    ON DELETE CASCADE ON UPDATE CASCADE)""")
 
-        self.cm.execute('CREATE TABLE media ('
-            'id TEXT PRIMARY KEY, '
-            'position INTEGER, '
-            'format TEXT, '
-            'release TEXT, '
-            'FOREIGN KEY(release) REFERENCES releases(id) '
-            'ON DELETE CASCADE ON UPDATE CASCADE)')
+        self.cm.execute("""CREATE TABLE media (
+    id TEXT PRIMARY KEY,
+    position INTEGER,
+    format TEXT,
+    release TEXT,
+    FOREIGN KEY(release) REFERENCES releases(id)
+    ON DELETE CASCADE ON UPDATE CASCADE)""")
 
-        self.cm.execute('CREATE TABLE recordings ('
-            'id TEXT PRIMARY KEY, '
-            'length INTEGER, '
-            'number INTEGER, '
-            'title TEXT)')
+        self.cm.execute("""CREATE TABLE recordings (
+    id TEXT PRIMARY KEY,
+    length INTEGER,
+    number INTEGER,
+    title TEXT)""")
 
-        self.cm.execute('CREATE TABLE medium_recordings ('
-            'recording TEXT, '
-            'position INTEGER, '
-            'medium TEXT, '
-            'FOREIGN KEY(medium) REFERENCES media(id) '
-            'ON DELETE CASCADE ON UPDATE CASCADE, '
-            'FOREIGN KEY (recording) REFERENCES recordings(id) '
-            'ON DELETE CASCADE ON UPDATE CASCADE)')
+        self.cm.execute("""CREATE TABLE medium_recordings (
+    recording TEXT,
+    position INTEGER,
+    medium TEXT,
+    FOREIGN KEY(medium) REFERENCES media(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (recording) REFERENCES recordings(id)
+    ON DELETE CASCADE ON UPDATE CASCADE)""")
 
-        self.cm.execute('CREATE TABLE trackwords('
-            'trackword TEXT, recording TEXT, '
-            'FOREIGN KEY(recording) REFERENCES recordings(id) '
-            'ON DELETE CASCADE ON UPDATE CASCADE)')
+        self.cm.execute("""CREATE TABLE trackwords(
+    trackword TEXT, recording TEXT,
+    FOREIGN KEY(recording) REFERENCES recordings(id)
+    ON DELETE CASCADE ON UPDATE CASCADE)""")
 
-        self.cm.execute('CREATE TABLE discids ('
-            'id TEXT, '
-            'sectors INTEGER, '
-            'medium TEXT, '
-            'FOREIGN KEY(medium) REFERENCES media(id) '
-            'ON DELETE CASCADE ON UPDATE CASCADE)')
+        self.cm.execute("""CREATE TABLE discids (
+    id TEXT,
+    sectors INTEGER,
+    medium TEXT,
+    FOREIGN KEY(medium) REFERENCES media(id)
+    ON DELETE CASCADE ON UPDATE CASCADE)""")
 
         # Indexes for speed (it's all about performance...)
         self.cm.execute('create index word_index on words (word)')
         self.cm.execute('create index trackword_index '
             'on trackwords (trackword)')
+        self.cm.execute('create index digital_releases on digital(release)')
 
     class rebuildCacheTables(dialogs.ThreadedTask):
         def __init__(self, catalog):
