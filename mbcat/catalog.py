@@ -364,6 +364,11 @@ class Catalog(object):
             'FOREIGN KEY(release) REFERENCES releases(id) '
             'ON DELETE CASCADE ON UPDATE CASCADE)')
 
+        self.cm.execute("""CREATE TABLE digital_roots (
+    id TEXT,
+    host_id TEXT,
+    root_path TEXT)""")
+
         # Digital copy table
         self.cm.execute('CREATE TABLE digital ('
             'path TEXT primary key, '
@@ -906,6 +911,11 @@ class Catalog(object):
             'update releases set comment=? where id=?',
             (comment, releaseId))
         self.cm.commit()
+
+    def gitDigitalPathRoots(self):
+        return self.cm.executeAndFetch(
+            'select id,root_path from digital_roots',
+            (releaseId,))
 
     def getDigitalPaths(self, releaseId):
         return self.cm.executeAndFetch(
