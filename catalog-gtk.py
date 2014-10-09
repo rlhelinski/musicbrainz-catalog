@@ -8,6 +8,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 import threading
 import gobject
+import glib
 import gtk
 import pango
 import mbcat
@@ -3165,7 +3166,10 @@ class MBCatGtk:
         # create a new window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_title(self.__name__)
-        self.window.set_icon_from_file(self.__icon_file__)
+        try:
+            self.window.set_icon_from_file(self.__icon_file__)
+        except glib.GError:
+            self.window.set_icon_from_file('mb-white-256.png')
         self.window.set_size_request(800, 600)
         self.window.set_position(gtk.WIN_POS_CENTER)
 
