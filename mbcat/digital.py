@@ -179,8 +179,8 @@ class DigitalSearch(dialogs.ThreadedTask):
         self.numer = 0
         self.denom = len(releaseIdList)
         for relId in releaseIdList:
-            for path,fmt in self.catalog.getDigitalPaths(relId):
-                if not os.path.isdir(path):
+            for root,path,fmt in self.catalog.getDigitalPaths(relId):
+                if not os.path.isdir(os.path.join(root, path)):
                     # TODO add query dialog here?
                     self.catalog.deleteDigitalPath(relId, path)
             self.numer += 1
