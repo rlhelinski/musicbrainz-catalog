@@ -686,15 +686,6 @@ class Catalog(object):
 
         return words
 
-    @staticmethod
-    @utils.deprecated
-    def getReleaseTracks(rel):
-        # Format of track (recording) title list
-        # r['medium-list'][0]['track-list'][0]['recording']['title']
-        for medium in rel['medium-list']:
-            for track in medium['track-list']:
-                yield track
-
     def digestTrackWords(self, rel):
         """
         Digest all of the words in the track titles of a release.
