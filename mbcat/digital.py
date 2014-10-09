@@ -169,21 +169,30 @@ class DigitalSearch(dialogs.ThreadedTask):
 
     def run(self):
         self.checkExistingPaths(self.releaseId)
-        self.searchDigitalPaths(self.releaseId)
+        if not self.stopthread.isSet():
+            self.searchDigitalPaths(self.releaseId)
 
     def checkExistingPaths(self, releaseId=''):
         releaseIdList = [releaseId] if releaseId else \
                 self.catalog.getReleaseIds()
 
-        self.status = 'Searching for digital copy paths...'
+        self.status = 'Checking existing path references...'
         self.numer = 0
         self.denom = len(releaseIdList)
         for relId in releaseIdList:
-            for root,path,fmt in self.catalog.getDigitalPaths(relId):
+            for root_id,path,fmt in self.catalog.getDigitalPaths(relId):
+                root = self.prefs.getRootPath(root_id)
                 if not os.path.isdir(os.path.join(root, path)):
+                    _log.info('Deleting release %s path "%s"' % (relId,
+                            os.path.join(root, path)))
                     # TODO add query dialog here?
                     self.catalog.deleteDigitalPath(relId, path)
+                if self.stopthread.isSet():
+                    return
             self.numer += 1
+        self.status = 'Committing changes...'
+        self.numer = 0; self.denom = 0
+        self.catalog.cm.commit()
 
     def searchDigitalPaths(self, releaseId=''):
         """
@@ -203,6 +212,12 @@ class DigitalSearch(dialogs.ThreadedTask):
             _log.info("Searching '%s'"%path)
             for relId in releaseIdList:
                 self.searchForRelease(relId, root_id, path)
+                if self.stopthread.isSet():
+                    return
+
+        self.status = 'Committing changes...'
+        self.numer = 0; self.denom = 0
+        self.catalog.cm.commit()
 
         if releaseId and not self.catalog.getDigitalPaths(releaseId):
             _log.warning('No digital paths found for '+releaseId)

@@ -952,15 +952,19 @@ class Catalog(object):
             (releaseId,))
 
     def addDigitalPath(self, releaseId, format, root_id, path):
+        """
+        This function does not commit its changes.
+        """
         self.cm.execute('insert or replace into digital '
                 '(root, path, release, format) values (?,?,?,?)',
                 (root_id, path, releaseId, format))
-        self.cm.commit()
 
     def deleteDigitalPath(self, releaseId, path):
+        """
+        This function does not commit its changes.
+        """
         self.cm.execute('delete from digital where release=? and path=?',
                 (releaseId, path))
-        self.cm.commit()
 
     def getFirstAdded(self, releaseId):
         return self.cm.executeAndFetchOne(

@@ -112,6 +112,9 @@ class PrefManager:
         self.save()
         return path_id
 
+    def getRootPath(self, root_id):
+        return self.pathRoots[root_id]['path']
+
     def delPathRoot(self, path_id):
         del self.pathRoots[path_id]
         self.save()
