@@ -150,9 +150,16 @@ def guessDigitalFormat(path):
     extension_counter = collections.Counter(
         [extre.match(fileName).group(1) \
                 for fileName in os.listdir(path)])
-    return extension_counter.most_common(1)[0][0]
+    if len(extension_counter):
+        return extension_counter.most_common(1)[0][0]
+    else:
+        _log.warning('Could not determine type for path %s' % path)
+        return '[unknown]'
 
 class DigitalSearch(dialogs.ThreadedTask):
+    """
+    A threaded task that searches for digital copies of one or all releases.
+    """
 
     def __init__(self, catalog, prefs=None, releaseId=''):
         dialogs.ThreadedTask.__init__(self, 0)
@@ -174,6 +181,7 @@ class DigitalSearch(dialogs.ThreadedTask):
         for relId in releaseIdList:
             for path,fmt in self.catalog.getDigitalPaths(relId):
                 if not os.path.isdir(path):
+                    # TODO add query dialog here?
                     self.catalog.deleteDigitalPath(relId, path)
             self.numer += 1
 
@@ -189,23 +197,26 @@ class DigitalSearch(dialogs.ThreadedTask):
         self.numer = 0
         self.denom = len(releaseIdList)*len(self.prefs.pathRoots)
         # TODO need to be more flexible in capitalization and re-order of words
-        for path in self.prefs.pathRoots:
+        for root_id, root_dict in self.prefs.pathRoots.items():
+            path = root_dict['path']
+            self.catalog.addDigitalPathRoot(root_id, path)
             _log.info("Searching '%s'"%path)
             for relId in releaseIdList:
-                self.searchForRelease(relId, path)
+                self.searchForRelease(relId, root_id, path)
 
         if releaseId and not self.catalog.getDigitalPaths(releaseId):
             _log.warning('No digital paths found for '+releaseId)
 
-    def searchForRelease(self, relId, path):
+    def searchForRelease(self, relId, rootPathId, rootPath):
         rel = self.catalog.getRelease(relId)
 
         # Try to guess the sub-directory path
-        for titlePath in self.getDigitalPathVariations(path, rel):
-            if os.path.isdir(titlePath):
+        for titlePath in self.getDigitalPathVariations(rootPath, rel):
+            if os.path.isdir(os.path.join(rootPath, titlePath)):
                 _log.info('Found '+relId+' at '+titlePath)
                 self.catalog.addDigitalPath(relId,
-                        guessDigitalFormat(titlePath),
+                        guessDigitalFormat(os.path.join(rootPath, titlePath)),
+                        rootPathId,
                         titlePath)
             else:
                 _log.debug('Did not find '+relId+' at '+titlePath)
@@ -214,8 +225,8 @@ class DigitalSearch(dialogs.ThreadedTask):
     def getDigitalPathVariations(self, root, release):
         for artistName in getArtistPathVariations(release):
             for prefix in getPathAlNumPrefixes(artistName):
-                artistPath = os.path.join(root, prefix, artistName)
-                if os.path.isdir(artistPath):
+                artistPath = os.path.join(prefix, artistName)
+                if os.path.isdir(os.path.join(root, artistPath)):
                     for titleName in getTitlePathVariations(release):
                         yield os.path.join(artistPath, titleName)
                 else:

@@ -23,7 +23,7 @@ _log = logging.getLogger("mbcat")
 import zlib
 import sqlite3
 import itertools
-from uuid import uuid4
+import uuid
 
 # Have to give an identity for musicbrainzngs
 __version__ = '0.3'
@@ -258,7 +258,7 @@ class Catalog(object):
                 ' or artist=""'\
                 ' or title=""'
 
-    def __init__(self, dbPath=None, cachePath=None):
+    def __init__(self, dbPath=None, cachePath=None, prefs=None):
         """Open or create a new catalog"""
 
         prefPath = os.path.join(os.path.expanduser('~'), '.mbcat')
@@ -269,7 +269,7 @@ class Catalog(object):
         if not os.path.isdir(prefPath):
             os.mkdir(prefPath)
 
-        self.prefs = userprefs.PrefManager()
+        self.prefs = prefs if prefs else userprefs.PrefManager()
 
         _log.info('Using \'%s\' for the catalog database' % self.dbPath)
         _log.info('Using \'%s\' for the file cache path' % self.cachePath)
@@ -363,11 +363,15 @@ class Catalog(object):
     ON DELETE CASCADE ON UPDATE CASCADE)""")
 
         self.cm.execute("""CREATE TABLE digital_roots (
-    id TEXT,
-    host_name TEXT,
-    host_id TEXT,
+    id TEXT PRIMARY KEY)""")
+
+        self.cm.execute("""CREATE TABLE digital_root_locals (
+    root_id TEXT,
     root_path TEXT,
-    PRIMARY KEY (host_id, id))""")
+    host_id INT,
+    host_name TEXT,
+    PRIMARY KEY (root_id, host_id),
+    FOREIGN KEY (root_id) REFERENCES digital_roots(id))""")
 
         # Digital copy table
         self.cm.execute("""CREATE TABLE digital (
@@ -450,8 +454,8 @@ class Catalog(object):
             for tab in self.catalog.derivedTables:
                 if self.stopthread.isSet():
                     return
-                # Note: the added_dates, listened_dates, and purchases tables are
-                # not transient.
+                # Note: the added_dates, listened_dates, and purchases tables
+                # are not transient.
                 self.catalog.cm.execute('drop table if exists '+tab)
                 self.numer += 1
 
@@ -699,7 +703,7 @@ class Catalog(object):
         # uuid4() returns a random UUID. Need to make sure this row is deleted
         # before this row needs to be added again.
         for medium in rel['medium-list']:
-            medium_id = str(uuid4())
+            medium_id = str(uuid.uuid4())
             self.cm.execute('insert into media'
                 '(id,position,format,release) values (?,?,?,?)',
                 (medium_id,
@@ -916,14 +920,25 @@ class Catalog(object):
             (comment, releaseId))
         self.cm.commit()
 
-    def gitDigitalPathRoots(self):
+    def addDigitalPathRoot(self, root_id, root_path):
+        self.cm.execute('insert or ignore into digital_roots (id) values (?)',
+            (root_id,))
+        self.cm.execute('insert or replace into digital_root_locals '
+            '(root_id, root_path, host_id, host_name) values (?,?,?,?)',
+            (root_id, root_path, uuid.getnode(), os.uname()[1]))
+        self.cm.commit()
+
+    def getDigitalPathRoots(self):
         return self.cm.executeAndFetch(
-            'select id,root_path from digital_roots',
-            (releaseId,))
+            'select id,root_path from digital_roots '
+            'inner join digital_root_locals '
+            'on digital_roots.id = digital_root_locals.root_id '
+            'where digital_root_locals.host_id = ?',
+            (os.uname()[1],))
 
     def getDigitalPaths(self, releaseId):
         return self.cm.executeAndFetch(
-            'select path,format from digital where release=?',
+            'select root,path,format from digital where release=?',
             (releaseId,))
 
     def getDigitalFormats(self, releaseId):
@@ -931,10 +946,10 @@ class Catalog(object):
             'select distinct(format) from digital where release=?',
             (releaseId,))
 
-    def addDigitalPath(self, releaseId, format, path):
+    def addDigitalPath(self, releaseId, format, root_id, path):
         self.cm.execute('insert or replace into digital '
-                '(release, format, path) values (?,?,?)',
-                (releaseId, format, path))
+                '(root, path, release, format) values (?,?,?,?)',
+                (root_id, path, releaseId, format))
         self.cm.commit()
 
     def deleteDigitalPath(self, releaseId, path):

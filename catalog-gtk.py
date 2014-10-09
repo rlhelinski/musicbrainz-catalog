@@ -14,12 +14,14 @@ import mbcat
 import mbcat.catalog
 import mbcat.dialogs
 import mbcat.digital
+import mbcat.userprefs
 import musicbrainzngs as mb
 import argparse
 import time
 import datetime
 import webbrowser
 import sqlite3
+import os
 
 # Initialize GTK's threading engine
 gobject.threads_init()
@@ -27,9 +29,14 @@ gobject.threads_init()
 _log = logging.getLogger("mbcat")
 
 class PreferencesDialog(gtk.Window):
-    def __init__(self, prefs=None):
+    def __init__(self, parentWindow, prefs=None):
         self.prefs = prefs if prefs else mbcat.userprefs.PrefManager()
+        self.parentWindow = parentWindow
+        self.checkDigitalPathRoots()
+
         gtk.Window.__init__(self)
+        self.set_transient_for(parentWindow)
+        self.set_destroy_with_parent(True)
         self.set_title('Preferences')
         self.buildWidgets()
         self.show()
@@ -137,9 +144,7 @@ class PreferencesDialog(gtk.Window):
         lbl = gtk.Label('Host Name :')
         mbprefs.attach(lbl, 0, 1, r, r+1)
         entry = gtk.Entry()
-        # TODO the hostname variable in the root namespace is being
-        # cascaded by the caa namespace?
-        entry.set_text(mb.hostname)
+        entry.set_text(self.prefs.getHostName())
         entry.connect('activate', self.on_hostname_activate)
         mbprefs.attach(entry, 1, 2, r, r+1)
 
@@ -147,7 +152,7 @@ class PreferencesDialog(gtk.Window):
         lbl = gtk.Label('Cover Art Archive :')
         mbprefs.attach(lbl, 0, 1, r, r+1)
         entry = gtk.Entry()
-        entry.set_text(mb.caa.hostname)
+        entry.set_text(self.prefs.getCAAHostName())
         entry.connect('activate', self.on_caa_hostname_activate)
         mbprefs.attach(entry, 1, 2, r, r+1)
 
@@ -188,7 +193,9 @@ class PreferencesDialog(gtk.Window):
 
     def get_digpath_selected(self):
         model, it = self.digpathtv.get_selection().get_selected()
-        return model.get_value(it, 0), model.get_value(it, 1)
+        if not it:
+            return (None, None)
+        return (model.get_value(it, 0), model.get_value(it, 1))
 
     def on_digpath_select(self, treeview):
         self.digspecentry.set_sensitive(True)
@@ -205,13 +212,15 @@ class PreferencesDialog(gtk.Window):
         newspec = entry.get_text()
         self.prefs.setDefaultPathSpec(newspec)
 
-    def choose_rootpath(self):
+    def choose_rootpath(self, parent=None):
         dialog = gtk.FileChooserDialog(
             title='Choose path to digital copy',
+            parent=parent if parent else self,
             action=gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
             buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                 gtk.STOCK_OPEN, gtk.RESPONSE_OK))
         dialog.set_default_response(gtk.RESPONSE_OK)
+        # TODO use gtk.FileChooser.set_current_folder and add a named argument
         response = dialog.run()
         if response != gtk.RESPONSE_OK:
             dialog.destroy()
@@ -223,8 +232,8 @@ class PreferencesDialog(gtk.Window):
 
     def on_rootpath_add(self, button):
         path = self.choose_rootpath()
-        self.prefs.addPathRoot(path)
-        self.pathmodel.append((path,))
+        path_id = self.prefs.addPathRoot(path)
+        self.pathmodel.append((path_id,path))
 
     def on_rootpath_del(self, button):
         path_id, path = self.get_digpath_selected()
@@ -251,6 +260,19 @@ class PreferencesDialog(gtk.Window):
     def on_caa_hostname_activate(self, entry):
         newhostname = entry.get_text()
         self.prefs.setCAAHostName(newhostname)
+
+    def checkDigitalPathRoots(self):
+        for root_id, path_dict in self.prefs.pathRoots.items():
+            if not os.path.isdir(path_dict['path']):
+                msg = 'Path root %s : %s not found' % (root_id,
+                        path_dict['path'])
+                _log.error(msg)
+                if ConfirmDialog(self.parentWindow,
+                        msg+'\nWould you like to browse for a new path?',
+                        buttons=gtk.BUTTONS_YES_NO, expect=gtk.RESPONSE_YES):
+                    newpath = self.choose_rootpath(self.parentWindow)
+                    if newpath and os.path.isdir(newpath):
+                        self.prefs.editPathRoot(root_id, newpath)
 
 # Thanks http://stackoverflow.com/a/8907574/3098007
 def TextEntry(parent, message, default='', textVisible=True):
@@ -777,17 +799,18 @@ def IntegerDialog(parent,
     else:
         return None
 
-def ConfirmDialog(parent, message, type=gtk.MESSAGE_QUESTION):
+def ConfirmDialog(parent, message, type=gtk.MESSAGE_QUESTION,
+        buttons=gtk.BUTTONS_OK_CANCEL, expect=gtk.RESPONSE_OK):
     d = gtk.MessageDialog(parent,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
             gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL,
+            buttons,
             message)
-    d.set_default_response(gtk.RESPONSE_OK)
+    d.set_default_response(expect)
 
     r = d.run()
     d.destroy()
-    return (r == gtk.RESPONSE_OK)
+    return (r == expect)
 
 def makeTrackTreeStore(catalog, releaseId):
     trackTreeStore = gtk.TreeStore(str, str, str)
@@ -1551,8 +1574,10 @@ class DigitalPathListDialog(QueryResultsDialog):
     def buildListStore(self, releaseId):
         resultListStore = gtk.ListStore(str, str)
 
-        for path,fmt in self.app.catalog.getDigitalPaths(self.releaseId):
-            resultListStore.append((path, fmt))
+        for root_id,path,fmt in self.app.catalog.getDigitalPaths(
+                self.releaseId):
+            root_path = self.app.prefs.pathRoots[root_id]['path']
+            resultListStore.append((os.path.join(root_path, path), fmt))
         self.tv.set_model(resultListStore)
 
     def buildButtons(self):
@@ -2140,7 +2165,7 @@ class MBCatGtk:
         dialog.destroy()
 
     def menuPreferences(self, widget):
-        PreferencesDialog()
+        PreferencesDialog(self.window, self.prefs)
 
     def menuCatalogVacuum(self, widget):
         self.CatalogTask(self,
@@ -2630,7 +2655,7 @@ class MBCatGtk:
     def readDiscTOC(self, widget):
         def askBrowseSubmission():
             answer = ConfirmDialog(self.window,
-                'Open browser to Submission URL? [y/N]')
+                'Open browser to Submission URL?')
             if answer:
                 _log.info('Opening web browser.')
                 webbrowser.open(disc.submission_url)
@@ -3120,7 +3145,8 @@ class MBCatGtk:
         #button = gtk.Button(stock='mbcat-refresh-metadata')
 
     def __init__(self, dbPath, cachePath):
-        self.catalog = mbcat.catalog.Catalog(dbPath, cachePath)
+        self.prefs = mbcat.userprefs.PrefManager()
+        self.catalog = mbcat.catalog.Catalog(dbPath, cachePath, self.prefs)
         self.filt = ''
 
         # create a new window

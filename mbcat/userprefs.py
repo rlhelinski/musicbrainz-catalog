@@ -74,9 +74,8 @@ class PrefManager:
         # could also load password
         htmlPathTag = etree.SubElement(myxml, 'htmlpub',
                 attrib={'path':self.htmlPubPath})
+        # TODO only write these tags if the settings are not the defaults
         hostnameTag = etree.SubElement(myxml, 'musicbrainz',
-                # TODO the hostname variable in the root namespace is being
-                # cascaded by the caa namespace?
                 attrib={'hostname':musicbrainzngs.musicbrainz.hostname,
                         'caa_hostname':musicbrainzngs.caa.hostname})
 
@@ -106,10 +105,12 @@ class PrefManager:
         self.pathRoots[path_id] = dict(
                 path= new_path,
                 pathspec= path_spec)
+        return path_id
 
     def addPathRoot(self, new_path, path_id=None, path_spec=None):
-        self._addPathRoot(self, new_path, path_id, path_spec)
+        path_id = self._addPathRoot(new_path, path_id, path_spec)
         self.save()
+        return path_id
 
     def delPathRoot(self, path_id):
         del self.pathRoots[path_id]
@@ -126,9 +127,15 @@ class PrefManager:
         self.username = username
         self.save()
 
+    def getHostName(self):
+        return musicbrainzngs.musicbrainz.hostname
+
     def setHostName(self, hostname):
         musicbrainzngs.set_hostname = hostname
         self.save()
+
+    def getCAAHostName(self):
+        return musicbrainzngs.caa.hostname
 
     def setCAAHostName(self, hostname):
         musicbrainzngs.set_caa_hostname = hostname
