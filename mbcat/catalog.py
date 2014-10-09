@@ -13,6 +13,7 @@ from . import userprefs
 from . import utils
 from . import extradata
 from . import dialogs
+from . import processWords
 import shutil
 from datetime import datetime
 from collections import defaultdict
@@ -1204,7 +1205,7 @@ class Catalog(object):
         metaColumns = [
             ('sortstring', self.getSortStringFromRelease(
                 relDict['release'])),
-            ('artist', catalog.getArtistSortPhrase(
+            ('artist', getArtistSortPhrase(
                 relDict['release'])),
             ('title', self.fmtTitle(relDict['release'])),
             ('date', (relDict['release']['date'] \
