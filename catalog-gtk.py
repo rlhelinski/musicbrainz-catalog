@@ -61,7 +61,7 @@ class PreferencesDialog(gtk.Window):
         self.digpathtv.set_size_request(400, 150)
         digpathsw.add(self.digpathtv)
 
-        self.pathmodel = gtk.ListStore(str)
+        self.pathmodel = gtk.ListStore(str, str)
 
         for i, (label, textWidth) in enumerate(
             [('Root Path', 60),
@@ -79,7 +79,7 @@ class PreferencesDialog(gtk.Window):
 
         self.digpathtv.connect('cursor-changed', self.on_digpath_select)
 
-        self.buildDigPathTv()
+        self.buildDigPathTV()
 
         digpathbtns = gtk.HBox()
         digRootFrameVBox.pack_start(digpathbtns, False, False)
@@ -170,50 +170,40 @@ class PreferencesDialog(gtk.Window):
         ####
         self.notebook.show_all()
 
-    def buildDigPathTv(self):
-        for id, path in self.prefs.pathRoots:
-            self.pathmodel.append((id, path))
+    def buildDigPathTV(self):
+        for path_id, path_dict in sorted(self.prefs.pathRoots.items(),
+                    key=lambda x: x[1]):
+            self.pathmodel.append((path_id, path_dict['path']))
         self.digpathtv.set_model(self.pathmodel)
         self.digpathtv.expand_all()
 
     def edited_path_cb(self, cell, path, new_text, user_data):
-        old_text = self.pathmodel[path][0]
+        path_id = self.pathmodel[path][0]
+        old_text = self.pathmodel[path][1]
         if new_text == old_text:
             return
-        self.prefs.editPathRoot(old_text, new_text)
-        self.pathmodel[path][0] = new_text
+        self.prefs.editPathRoot(path_id, new_text)
+        self.pathmodel[path][1] = new_text
         return
 
     def get_digpath_selected(self):
-        self.digspecentry.set_sensitive(True)
         model, it = self.digpathtv.get_selection().get_selected()
-        return model.get_value(it, 0)
+        return model.get_value(it, 0), model.get_value(it, 1)
 
     def on_digpath_select(self, treeview):
-        path = self.get_digpath_selected()
-        pathspec = self.prefs.pathFmts[path]
+        self.digspecentry.set_sensitive(True)
+        path_id, path = self.get_digpath_selected()
+        pathspec = self.prefs.getPathRootSpec(path_id)
         self.digspecentry.set_text(pathspec)
 
     def on_specentry_activate(self, entry):
         newspec = entry.get_text()
-        self.prefs.setPathSpec(self.get_digpath_selected(),
-            newspec)
+        path_id, path = self.get_digpath_selected()
+        self.prefs.setRootPathSpec(path_id, newspec)
 
     def on_defaultPathSpec_activate(self, entry):
         newspec = entry.get_text()
         self.prefs.setDefaultPathSpec(newspec)
-
-    def on_username_activate(self, entry):
-        newusername = entry.get_text()
-        self.prefs.setUserName(newusername)
-
-    def on_hostname_activate(self, entry):
-        newhostname = entry.get_text()
-        self.prefs.setHostName(newhostname)
-
-    def on_caa_hostname_activate(self, entry):
-        newhostname = entry.get_text()
-        self.prefs.setCAAHostName(newhostname)
 
     def choose_rootpath(self):
         dialog = gtk.FileChooserDialog(
@@ -237,19 +227,30 @@ class PreferencesDialog(gtk.Window):
         self.pathmodel.append((path,))
 
     def on_rootpath_del(self, button):
-        path = self.get_digpath_selected()
-        self.prefs.delPathRoot(path)
+        path_id, path = self.get_digpath_selected()
+        self.prefs.delPathRoot(path_id)
         model, it = self.digpathtv.get_selection().get_selected()
         self.pathmodel.remove(it)
 
     def on_rootpath_edit(self, button):
-        path = self.get_digpath_selected()
-        old_text = self.pathmodel[path][0]
+        path_id, old_text = self.get_digpath_selected()
         new_text = self.choose_rootpath()
         if new_text == old_text:
             return
-        self.prefs.editPathRoot(old_text, new_text)
-        self.pathmodel[path][0] = new_text
+        self.prefs.editPathRoot(path_id, new_text)
+        self.pathmodel[path_id][1] = new_text
+
+    def on_username_activate(self, entry):
+        newusername = entry.get_text()
+        self.prefs.setUserName(newusername)
+
+    def on_hostname_activate(self, entry):
+        newhostname = entry.get_text()
+        self.prefs.setHostName(newhostname)
+
+    def on_caa_hostname_activate(self, entry):
+        newhostname = entry.get_text()
+        self.prefs.setCAAHostName(newhostname)
 
 # Thanks http://stackoverflow.com/a/8907574/3098007
 def TextEntry(parent, message, default='', textVisible=True):

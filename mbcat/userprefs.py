@@ -12,10 +12,9 @@ import musicbrainzngs
 class PrefManager:
     def __init__(self):
         self.prefFile = os.path.expanduser(os.path.join('~', '.mbcat', 'userprefs.xml'))
-        self.pathRoots = []
+        self.pathRoots = dict()
         self.username = ''
         self.htmlPubPath = ''
-        self.pathFmts = dict()
         self.defaultPathSpec = defaultPathSpec
 
         if (os.path.isfile(self.prefFile)):
@@ -31,13 +30,13 @@ class PrefManager:
 
         for child in myroot:
             if (child.tag == 'pathroots'):
-                for path in child:
-                    if path.tag != 'path':
-                        raise Exception('Tags under pathroots must be <path> tags.')
-                    self.pathRoots.append(path.text)
-                    self.pathFmts[path.text] = path.attrib['pathspec'] \
-                            if 'pathspec' in path.attrib else \
-                                defaultPathSpec
+                for root in child:
+                    if root.tag != 'root':
+                        raise Exception('Tags under pathroots must be <root> tags.')
+                    self._addPathRoot(
+                            path_id=root.attrib['id'],
+                            new_path=root.attrib['path'],
+                            path_spec=root.attrib['pathspec'])
             elif (child.tag == 'default'):
                 if 'pathspec' in child.attrib:
                     self.defaultPathSpec = child.attrib['pathspec']
@@ -62,11 +61,12 @@ class PrefManager:
         myxml = etree.Element('xml', attrib={'version':'1.0', 'encoding':'UTF-8'})
 
         pathsTag = etree.SubElement(myxml, 'pathroots')
-        for path in self.pathRoots:
-            pathTag = etree.SubElement(pathsTag, 'path')
-            pathTag.text = path
-            pathTag.attrib['pathspec'] = self.pathFmts[path]
-        defaultPathSpec = etree.SubElement(myxml, 'default', 
+        for id, path_dict in self.pathRoots.items():
+            pathTag = etree.SubElement(pathsTag, 'root')
+            pathTag.attrib['id'] = id
+            pathTag.attrib['path'] = path_dict['path']
+            pathTag.attrib['pathspec'] = path_dict['pathspec']
+        defaultPathSpec = etree.SubElement(myxml, 'default',
                 attrib={'pathspec':self.defaultPathSpec})
         accountTag = etree.SubElement(myxml, 'account',
                 attrib={'username':self.username})
@@ -87,32 +87,39 @@ class PrefManager:
                     etree.tostring(myxml)).toprettyxml())
 
         _log.info("Preferences saved to '%s'" % self.prefFile)
-    
-    def editPathRoot(self, old_path, new_path):
-        self.pathRoots[self.pathRoots.index(old_path)] = new_path
-        self.pathFmts[new_path] = self.pathFmts[old_path]
-        del self.pathFmts[old_path]
-        self.save()
 
-    def setPathSpec(self, dig_path, path_spec):
-        self.pathFmts[dig_path] = path_spec
+    def setRootPathSpec(self, path_id, path_spec):
+        self.pathRoots[path_id]['pathspec'] = path_spec
         self.save()
 
     def setDefaultPathSpec(self, path_spec):
         self.defaultPathSpec = path_spec
         self.save()
 
-    def addPathRoot(self, new_path, new_fmt=None):
-        if not new_fmt:
-            new_fmt = self.defaultPathSpec
-        self.pathRoots.append(new_path)
-        self.pathFmts[new_path] = new_fmt
+    def _addPathRoot(self, new_path, path_id=None, path_spec=None):
+        if not path_id:
+            path_id = uuid.uuid4()
+        if not path_spec:
+            path_spec = self.defaultPathSpec
+
+        self.pathRoots[path_id] = dict(
+                path= new_path,
+                pathspec= path_spec)
+
+    def addPathRoot(self, new_path, path_id=None, path_spec=None):
+        self._addPathRoot(self, new_path, path_id, path_spec)
         self.save()
 
-    def delPathRoot(self, path):
-        del self.pathRoots[self.pathRoots.index(path)]
-        del self.pathFmts[path]
+    def delPathRoot(self, path_id):
+        del self.pathRoots[path_id]
         self.save()
+
+    def editPathRoot(self, path_id, new_path):
+        self.pathRoots[path_id]['path'] = new_path
+        self.save()
+
+    def getPathRootSpec(self, path_id):
+        return self.pathRoots[path_id]['pathspec']
 
     def setUserName(self, username):
         self.username = username
