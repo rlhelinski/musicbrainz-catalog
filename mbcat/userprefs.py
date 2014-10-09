@@ -1,6 +1,6 @@
 # defaults
-# TODO scratch that, they should be loaded independently since they are 
-# platform-specific. 
+# TODO scratch that, they should be loaded independently since they are
+# platform-specific.
 import logging
 _log = logging.getLogger("mbcat")
 import os

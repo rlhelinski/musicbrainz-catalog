@@ -364,8 +364,10 @@ class Catalog(object):
 
         self.cm.execute("""CREATE TABLE digital_roots (
     id TEXT,
+    host_name TEXT,
     host_id TEXT,
-    root_path TEXT)""")
+    root_path TEXT,
+    PRIMARY KEY (host_id, id))""")
 
         # Digital copy table
         self.cm.execute("""CREATE TABLE digital (
@@ -374,6 +376,8 @@ class Catalog(object):
     release TEXT,
     format TEXT,
     PRIMARY KEY (root, path),
+    FOREIGN KEY(root) REFERENCES digital_roots(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY(release) REFERENCES releases(id)
     ON DELETE CASCADE ON UPDATE CASCADE)""")
 
