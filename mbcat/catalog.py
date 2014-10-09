@@ -623,6 +623,8 @@ class Catalog(object):
                             #ed.toString())
 
                     self.numer += 1
+                    if self.stopthread.isSet():
+                        return
 
     class loadZip(dialogs.ThreadedTask):
         """Imports the data from a ZIP archive into the database"""
@@ -671,6 +673,9 @@ class Catalog(object):
                             f.write(zf.read(fInfo))
 
                     self.numer += 1
+                    if self.stopthread.isSet():
+                        return
+
                 self.catalog.cm.commit()
 
     @staticmethod
@@ -1346,6 +1351,8 @@ class Catalog(object):
                 _log.info("Refreshing release %s", releaseId)
                 self.catalog.addRelease(releaseId, self.olderThan)
                 self.numer += 1
+                if self.stopthread.isSet():
+                    return
             # NOTE Could delay commit in addRelease and commit once here, but
             # fetching from web is slow, so this extra delay might be
             # acceptable. Also, partial refreshes will be committed as they
@@ -1440,6 +1447,8 @@ class Catalog(object):
 
                     dists.append((dist, leftId, rightId))
                     self.numer += 1
+                    if self.stopthread.isSet():
+                        return
 
             # TODO could sort the list and truncate it in each iteration above
             self.result = sorted(dists, key=lambda sortKey: sortKey[0])
@@ -1482,6 +1491,8 @@ class Catalog(object):
                 self.numer += len(relList)
                 for rel in relList:
                     colRelIds.append(rel['id'])
+                if self.stopthread.isSet():
+                    return
 
             _log.info('Found %d / %d releases in collection.' % (
                     len(colRelIds), len(self.catalog)))
@@ -1499,6 +1510,8 @@ class Catalog(object):
                     self.releasesPerPost):
                 mb.add_releases_to_collection(self.collectionId, relIdChunk)
                 self.numer += 1
+                if self.stopthread.isSet():
+                    return
 
     def makeLabelTrack(self, releaseId, outPath='Audacity Label Track.txt'):
         """
