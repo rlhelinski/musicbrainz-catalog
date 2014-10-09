@@ -146,10 +146,12 @@ def getPathAlNumPrefixes(path):
             (path[0]+'/'+path[0:2]).lower(), # used by Wikimedia
             ])
 
-def guessDigitalFormat(path):
+def guessDigitalFormat(fileNameList):
+    # TODO also use file magic here
     extension_counter = collections.Counter(
-        [extre.match(fileName).group(1) \
-                for fileName in os.listdir(path)])
+        [m.group(1) if m else None for m in
+            [extre.match(fileName) \
+                    for fileName in fileNameList]])
     if len(extension_counter):
         return extension_counter.most_common(1)[0][0]
     else:
@@ -227,10 +229,15 @@ class DigitalSearch(dialogs.ThreadedTask):
 
         # Try to guess the sub-directory path
         for titlePath in self.getDigitalPathVariations(rootPath, rel):
-            if os.path.isdir(os.path.join(rootPath, titlePath)):
-                _log.info('Found '+relId+' at '+titlePath)
+            absTitlePath = os.path.join(rootPath, titlePath)
+            if os.path.isdir(absTitlePath):
+                fileList = os.listdir(absTitlePath)
+                if len(fileList) < self.catalog.getTrackCount(relId):
+                    continue
+                fmt = guessDigitalFormat(fileList)
+                _log.info('Found %s at %s in %s format'%(relId,titlePath,fmt))
                 self.catalog.addDigitalPath(relId,
-                        guessDigitalFormat(os.path.join(rootPath, titlePath)),
+                        fmt,
                         rootPathId,
                         titlePath)
             else:
@@ -239,10 +246,15 @@ class DigitalSearch(dialogs.ThreadedTask):
 
     def getDigitalPathVariations(self, root, release):
         for artistName in getArtistPathVariations(release):
+            titlePathVars = getTitlePathVariations(release)
+            # the release might be under just {Title}
+            for titlePath in titlePathVars:
+                if os.path.isdir(os.path.join(root, titlePath)):
+                    yield titlePath
             for prefix in getPathAlNumPrefixes(artistName):
                 artistPath = os.path.join(prefix, artistName)
                 if os.path.isdir(os.path.join(root, artistPath)):
-                    for titleName in getTitlePathVariations(release):
+                    for titleName in titlePathVars:
                         yield os.path.join(artistPath, titleName)
                 else:
                     _log.debug(artistPath+' does not exist')

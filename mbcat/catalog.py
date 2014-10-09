@@ -1588,6 +1588,14 @@ class Catalog(object):
                         if 'length' in rec else None)))
         return l
 
+    def getTrackCount(self, releaseId):
+        return self.cm.executeAndFetchOne(
+            'select count(medium_recordings.recording) from releases '
+            'inner join media on media.release = releases.id '
+            'inner join medium_recordings on '
+            'medium_recordings.medium = media.id '
+            'where releases.id=?', (releaseId,))[0]
+
     basicColumns = [
         'id',
         'sortstring',
