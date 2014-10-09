@@ -29,8 +29,9 @@ gobject.threads_init()
 _log = logging.getLogger("mbcat")
 
 class PreferencesDialog(gtk.Window):
-    def __init__(self, parentWindow, prefs=None):
+    def __init__(self, parentWindow, prefs=None, catalog=None):
         self.prefs = prefs if prefs else mbcat.userprefs.PrefManager()
+        self.catalog = catalog if catalog else mbcat.catalog.Catalog()
         self.parentWindow = parentWindow
         self.checkDigitalPathRoots()
 
@@ -237,9 +238,18 @@ class PreferencesDialog(gtk.Window):
 
     def on_rootpath_del(self, button):
         path_id, path = self.get_digpath_selected()
-        self.prefs.delPathRoot(path_id)
-        model, it = self.digpathtv.get_selection().get_selected()
-        self.pathmodel.remove(it)
+        if ConfirmDialog(self.parentWindow,
+                'Are you sure you want to delete "%s"?' % path,
+                buttons=gtk.BUTTONS_YES_NO, expect=gtk.RESPONSE_YES,
+                default=gtk.RESPONSE_NO):
+            self.prefs.delPathRoot(path_id)
+            if ConfirmDialog(self.parentWindow,
+                    'Also delete associations with "%s"?' % path,
+                    buttons=gtk.BUTTONS_YES_NO, expect=gtk.RESPONSE_YES,
+                    default=gtk.RESPONSE_YES):
+                self.catalog.deleteDigitalPathRoot(path_id)
+            model, it = self.digpathtv.get_selection().get_selected()
+            self.pathmodel.remove(it)
 
     def on_rootpath_edit(self, button):
         path_id, old_text = self.get_digpath_selected()
@@ -800,13 +810,14 @@ def IntegerDialog(parent,
         return None
 
 def ConfirmDialog(parent, message, type=gtk.MESSAGE_QUESTION,
-        buttons=gtk.BUTTONS_OK_CANCEL, expect=gtk.RESPONSE_OK):
+        buttons=gtk.BUTTONS_OK_CANCEL, expect=gtk.RESPONSE_OK,
+        default=gtk.RESPONSE_OK):
     d = gtk.MessageDialog(parent,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
             gtk.MESSAGE_QUESTION,
             buttons,
             message)
-    d.set_default_response(expect)
+    d.set_default_response(default)
 
     r = d.run()
     d.destroy()

@@ -371,7 +371,8 @@ class Catalog(object):
     host_id INT,
     host_name TEXT,
     PRIMARY KEY (root_id, host_id),
-    FOREIGN KEY (root_id) REFERENCES digital_roots(id))""")
+    FOREIGN KEY (root_id) REFERENCES digital_roots(id)
+        ON DELETE CASCADE ON UPDATE CASCADE)""")
 
         # Digital copy table
         self.cm.execute("""CREATE TABLE digital (
@@ -926,6 +927,10 @@ class Catalog(object):
         self.cm.execute('insert or replace into digital_root_locals '
             '(root_id, root_path, host_id, host_name) values (?,?,?,?)',
             (root_id, root_path, uuid.getnode(), os.uname()[1]))
+        self.cm.commit()
+
+    def deleteDigitalPathRoot(self, root_id):
+        self.cm.execute('delete from digital_roots where id=?', (root_id,))
         self.cm.commit()
 
     def getDigitalPathRoots(self):
