@@ -1631,6 +1631,7 @@ class DigitalPathListDialog(QueryResultsDialog):
         if path:
             fmt = mbcat.digital.guessDigitalFormat(path)
             self.app.catalog.addDigitalPath(self.releaseId, fmt, path)
+            self.app.catalog.cm.commit()
             self.update()
             self.app.updateDetailPane()
 
@@ -1639,6 +1640,7 @@ class DigitalPathListDialog(QueryResultsDialog):
         if selected_path:
             self.app.catalog.deleteDigitalPath(releaseId=self.releaseId,
                     path=selected_path)
+            self.app.catalog.cm.commit()
             self.update()
             self.app.updateDetailPane()
 
