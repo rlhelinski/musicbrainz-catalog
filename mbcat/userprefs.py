@@ -77,7 +77,7 @@ class PrefManager:
         hostnameTag = etree.SubElement(myxml, 'musicbrainz',
                 # TODO the hostname variable in the root namespace is being
                 # cascaded by the caa namespace?
-                attrib={'hostname':musicbrainzngs.hostname,
+                attrib={'hostname':musicbrainzngs.musicbrainz.hostname,
                         'caa_hostname':musicbrainzngs.caa.hostname})
 
         if (not os.path.isdir(os.path.dirname(self.prefFile))):
