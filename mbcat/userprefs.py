@@ -8,6 +8,7 @@ import xml.etree.ElementTree as etree
 import xml.dom.minidom
 from . import defaultPathSpec
 import musicbrainzngs
+import uuid
 
 class PrefManager:
     def __init__(self):
@@ -20,7 +21,7 @@ class PrefManager:
         if (os.path.isfile(self.prefFile)):
             self.load()
         else:
-            self.pathRoots = [os.path.expanduser(os.path.join('~', 'Music'))]
+            self._addPathRoot(os.path.expanduser(os.path.join('~', 'Music')))
             self.htmlPubPath = '.'
             self.save()
 
@@ -98,7 +99,7 @@ class PrefManager:
 
     def _addPathRoot(self, new_path, path_id=None, path_spec=None):
         if not path_id:
-            path_id = uuid.uuid4()
+            path_id = str(uuid.uuid4())
         if not path_spec:
             path_spec = self.defaultPathSpec
 
