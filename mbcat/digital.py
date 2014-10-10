@@ -186,14 +186,14 @@ class DigitalSearch(dialogs.ThreadedTask):
         for relId in releaseIdList:
             for root_id,path,fmt in self.catalog.getDigitalPaths(relId):
                 root = self.prefs.getRootPath(root_id)
-                if not os.path.isdir(os.path.join(root, path)):
+                if root and not os.path.isdir(os.path.join(root, path)):
                     _log.info('Deleting release %s path "%s"' % (relId,
                             os.path.join(root, path)))
                     # TODO add query dialog here?
                     self.catalog.deleteDigitalPath(relId, root_id, path)
                 if self.stopthread.isSet():
                     return
-            self.numer += 1
+                self.numer += 1
         self.status = 'Committing changes...'
         self.numer = 0; self.denom = 0
         self.catalog.cm.commit()
