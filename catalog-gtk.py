@@ -2238,11 +2238,18 @@ class MBCatGtk:
             dialog.destroy()
             return
 
-        self.CatalogTask(self,
-            mbcat.dialogs.ProgressDialog(self.window,
-                mbcat.html.HtmlWriter(self.catalog,
-                        dialog.get_filename()))).start()
+        htmlfilename = dialog.get_filename()
         dialog.destroy()
+        t = mbcat.dialogs.ProgressDialog(self.window,
+            mbcat.html.HtmlWriter(self.catalog,
+                    htmlfilename))
+        t.start()
+        t.join() # TODO this is blocking
+        if ConfirmDialog(self.window,
+                'Open HTML file in browser?',
+                buttons=gtk.BUTTONS_YES_NO, expect=gtk.RESPONSE_YES,
+                default=gtk.RESPONSE_NO):
+            webbrowser.open(htmlfilename)
 
     def menuPreferences(self, widget):
         PreferencesDialog(self.window, self.prefs)
