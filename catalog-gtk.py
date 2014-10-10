@@ -1654,7 +1654,12 @@ class DigitalPathListDialog(QueryResultsDialog):
 
         for root_id,path,fmt in self.app.catalog.getDigitalPaths(
                 self.releaseId):
-            root_path = self.app.prefs.pathRoots[root_id]['path']
+            if not root_id or root_id not in self.app.prefs.pathRoots:
+                _log.error('Bad or missing path root for release %s' % \
+                        self.releaseId)
+                root_path = '[unknown]'
+            else:
+                root_path = self.app.prefs.pathRoots[root_id]['path']
             resultListStore.append((
                     # For the program
                     root_id,
@@ -1706,6 +1711,12 @@ class DigitalPathListDialog(QueryResultsDialog):
         if path:
             # Determine the root path of the path specified by the user
             root_id, rel_path = self.app.prefs.getRootIdForPath(path)
+            if not root_id:
+                ErrorDialog(self.parentWindow,
+                    'The path "%s" was not found in any of the root paths in '
+                    'the user preferences. Please add a root path first.' % \
+                    path)
+                return
 
             fmt = mbcat.digital.guessDigitalFormat(path)
             self.app.catalog.addDigitalPath(
