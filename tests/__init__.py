@@ -26,7 +26,8 @@ test_releases = [
     '14a12f84-c5f3-473b-87f5-9340174ecbc4',
     # The best-selling 12" single of all time
     '4a23623c-b997-3dd2-abe5-b9daa36a0c69',
-    # An example from musicbrainzngs examples
+    # Examples from musicbrainzngs
     '0d432d8b-8865-4ae9-8479-3a197620a37b',
+    '5e3524ca-b4a1-4e51-9ba5-63ea2de8f49b',
     ]
 
