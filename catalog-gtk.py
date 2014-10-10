@@ -29,6 +29,8 @@ gobject.threads_init()
 
 _log = logging.getLogger("mbcat")
 
+default_dialog_size = (500, 300)
+
 class PreferencesDialog(gtk.Window):
     def __init__(self, parentWindow, prefs=None, catalog=None):
         self.prefs = prefs if prefs else mbcat.userprefs.PrefManager()
@@ -67,7 +69,7 @@ class PreferencesDialog(gtk.Window):
 
         self.digpathtv = gtk.TreeView()
         self.digpathtv.set_headers_visible(False)
-        self.digpathtv.set_size_request(400, 150)
+        self.digpathtv.set_size_request(500, 150)
         digpathsw.add(self.digpathtv)
 
         self.pathmodel = gtk.ListStore(str, str)
@@ -478,7 +480,7 @@ def ReleaseSelectDialog(parent,
     d.set_resizable(True)
     sw = gtk.ScrolledWindow()
     sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-    d.set_size_request(400, 300)
+    d.set_size_request(*default_dialog_size)
 
     tv = gtk.TreeView()
     for i, (label, textWidth) in enumerate(
@@ -538,7 +540,7 @@ def TrackSelectDialog(parent,
     d.set_resizable(True)
     sw = gtk.ScrolledWindow()
     sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-    d.set_size_request(400, 300)
+    d.set_size_request(*default_dialog_size)
 
     tv = gtk.TreeView()
     for i, (label, xalign, textWidth) in enumerate(
@@ -938,7 +940,7 @@ class QueryResultsDialog:
         self.window.set_border_width(10)
         self.window.connect('destroy', self.on_destroy)
         self.window.set_title(message)
-        self.window.set_size_request(400, 300)
+        self.window.set_size_request(*default_dialog_size)
 
         self.active_on_row_selected = []
 
@@ -1327,7 +1329,7 @@ def SelectCollectionDialog(parent, result):
     d.set_resizable(True)
     sw = gtk.ScrolledWindow()
     sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-    d.set_size_request(400, 300)
+    d.set_size_request(*default_dialog_size)
     tv = gtk.TreeView()
 
     authorCell = gtk.CellRendererText()
@@ -1759,7 +1761,7 @@ def TextViewEntry(parent, message, default='', editable=True):
             gtk.MESSAGE_QUESTION,
             gtk.BUTTONS_OK_CANCEL if editable else gtk.BUTTONS_CLOSE,
             message)
-    d.set_size_request(400,300)
+    d.set_size_request(*default_dialog_size)
     d.set_resizable(True)
     sw = gtk.ScrolledWindow()
     sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
