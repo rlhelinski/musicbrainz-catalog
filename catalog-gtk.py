@@ -916,19 +916,20 @@ class QueryResultsDialog:
         self.active_on_row_selected = []
 
         vbox = gtk.VBox(False, 10)
-        sw = gtk.ScrolledWindow()
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 
         # Keep reference to catalog for later
         self.app = app
         self.parentWindow = parentWindow
 
-        self.buildWidgets(vbox)
+        self.buildWidgets(vbox, queryResult)
 
         self.window.add(vbox)
         self.window.show_all()
 
-    def buildWidgets(self, vbox):
+    def buildWidgets(self, vbox, queryResult):
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+
         self.buildTreeView()
         self.buildListStore(queryResult)
 
@@ -1237,13 +1238,12 @@ class TrackListDialog(QueryResultsDialog):
             releaseId,
             message='Track List',
         ):
-        self.releaseId = releaseId
         QueryResultsDialog.__init__(self, parentWindow, app,
             releaseId, message)
 
-    def buildWidgets(self, vbox):
+    def buildWidgets(self, vbox, releaseId):
         self.trackListView = TrackListDialogView(self.app.catalog, self)
-        self.trackListView.update(self.releaseId)
+        self.trackListView.update(releaseId)
         self.trackListView.show()
 
         vbox.pack_start(self.trackListView, expand=True, fill=True)
@@ -2563,6 +2563,8 @@ class MBCatGtk:
         # Ask the user to specify a release to which to switch
         newRelId = TextEntry(self.window,
             'Enter release ID to replace %s\n"%s"' % (releaseId, relTitle))
+        if not newRelId:
+            return
         if newRelId in self.catalog:
             ErrorDialog(self.window, 'New release ID already exists')
             return
