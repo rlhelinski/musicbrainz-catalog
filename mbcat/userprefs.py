@@ -115,6 +115,14 @@ class PrefManager:
     def getRootPath(self, root_id):
         return self.pathRoots[root_id]['path']
 
+    def getRootIdForPath(self, abs_path):
+        for root_id, path_dict in self.pathRoots.items():
+            if abs_path.startswith(path_dict['path']):
+                found_root_id = root_id
+                found_rel_path = os.path.relpath(abs_path, path_dict['path'])
+                return found_root_id, found_rel_path
+        return (None, None)
+
     def delPathRoot(self, path_id):
         del self.pathRoots[path_id]
         self.save()

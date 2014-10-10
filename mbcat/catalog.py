@@ -956,12 +956,13 @@ class Catalog(object):
                 '(root, path, release, format) values (?,?,?,?)',
                 (root_id, path, releaseId, format))
 
-    def deleteDigitalPath(self, releaseId, path):
+    def deleteDigitalPath(self, releaseId, root_id, path):
         """
         This function does not commit its changes.
         """
-        self.cm.execute('delete from digital where release=? and path=?',
-                (releaseId, path))
+        self.cm.execute('delete from digital where '
+                'release=? and root=? and path=?',
+                (releaseId, root_id, path))
 
     def getFirstAdded(self, releaseId):
         return self.cm.executeAndFetchOne(

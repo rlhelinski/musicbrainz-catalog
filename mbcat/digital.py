@@ -147,6 +147,8 @@ def getPathAlNumPrefixes(path):
             ])
 
 def guessDigitalFormat(fileNameList):
+    if type(fileNameList) != list:
+        fileNameList = os.listdir(fileNameList)
     # TODO also use file magic here
     extension_counter = collections.Counter(
         [m.group(1) if m else None for m in
@@ -188,7 +190,7 @@ class DigitalSearch(dialogs.ThreadedTask):
                     _log.info('Deleting release %s path "%s"' % (relId,
                             os.path.join(root, path)))
                     # TODO add query dialog here?
-                    self.catalog.deleteDigitalPath(relId, path)
+                    self.catalog.deleteDigitalPath(relId, root_id, path)
                 if self.stopthread.isSet():
                     return
             self.numer += 1

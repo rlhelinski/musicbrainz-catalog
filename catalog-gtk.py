@@ -1561,7 +1561,7 @@ class DigitalPathListDialog(QueryResultsDialog):
                 (self.app.catalog.getReleaseTitle(releaseId), releaseId))
 
     def on_row_select(self, treeview):
-        # When a row is selected, sensitize the Delete Event button
+        # When a row is selected, sensitize the Delete button
         pass
 
     def update(self):
@@ -1579,17 +1579,24 @@ class DigitalPathListDialog(QueryResultsDialog):
             if i == 0:
                 cell.set_property('ellipsize', pango.ELLIPSIZE_END)
             col = gtk.TreeViewColumn(label, cell)
-            col.add_attribute(cell, 'text', i)
+            col.add_attribute(cell, 'text', i+2)
             col.set_resizable(True)
             self.tv.append_column(col)
 
     def buildListStore(self, releaseId):
-        resultListStore = gtk.ListStore(str, str)
+        resultListStore = gtk.ListStore(str, str, str, str)
 
         for root_id,path,fmt in self.app.catalog.getDigitalPaths(
                 self.releaseId):
             root_path = self.app.prefs.pathRoots[root_id]['path']
-            resultListStore.append((os.path.join(root_path, path), fmt))
+            resultListStore.append((
+                    # For the program
+                    root_id,
+                    path,
+                    # For the user
+                    os.path.join(root_path, path),
+                    fmt
+                    ))
         self.tv.set_model(resultListStore)
 
     def buildButtons(self):
@@ -1610,9 +1617,9 @@ class DigitalPathListDialog(QueryResultsDialog):
         return hbox
 
     def get_selection(self):
-        """Return the unique date float for the selected row, if any."""
         model, it = self.tv.get_selection().get_selected()
-        return model.get_value(it, 0) if it else None
+        return (model.get_value(it, 0), model.get_value(it, 1)) \
+                if it else (None, None)
 
     def add_path(self, button):
         dialog = gtk.FileChooserDialog(
@@ -1630,16 +1637,22 @@ class DigitalPathListDialog(QueryResultsDialog):
         dialog.destroy()
 
         if path:
+            # Determine the root path of the path specified by the user
+            root_id, rel_path = self.app.prefs.getRootIdForPath(path)
+
             fmt = mbcat.digital.guessDigitalFormat(path)
-            self.app.catalog.addDigitalPath(self.releaseId, fmt, path)
+            self.app.catalog.addDigitalPath(
+                    self.releaseId, fmt, root_id, rel_path)
             self.app.catalog.cm.commit()
             self.update()
             self.app.updateDetailPane()
 
     def delete_path(self, button):
-        selected_path = self.get_selection()
-        if selected_path:
-            self.app.catalog.deleteDigitalPath(releaseId=self.releaseId,
+        selected_root_id, selected_path = self.get_selection()
+        if selected_root_id:
+            self.app.catalog.deleteDigitalPath(
+                    releaseId=self.releaseId,
+                    root_id=selected_root_id,
                     path=selected_path)
             self.app.catalog.cm.commit()
             self.update()
