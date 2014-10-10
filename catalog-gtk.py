@@ -13,6 +13,7 @@ import gtk
 import pango
 import mbcat
 import mbcat.catalog
+import mbcat.barcode
 import mbcat.dialogs
 import mbcat.digital
 import mbcat.userprefs
@@ -2486,7 +2487,7 @@ class MBCatGtk:
         self.refreshView(widget)
 
     def menuCatalogCheck(self, widget):
-        self.filt = catalog.badReleaseFilter
+        self.filt = self.catalog.badReleaseFilter
         self.refreshView(widget)
 
     def menuFilterQuick(self, widget):
