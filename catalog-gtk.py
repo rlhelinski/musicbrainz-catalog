@@ -2116,6 +2116,7 @@ class MBCatGtk:
         self.updateStatusBar()
 
     def copyAndOpenDatabase(self, filename):
+        import shutil
         # Copy the database to the new location
         shutil.copy(self.catalog.dbPath, filename)
         # Open the new copy
@@ -2138,7 +2139,7 @@ class MBCatGtk:
 
         dialog.set_default_response(gtk.RESPONSE_OK)
 
-        self.addPatternsToDialog(dialog, self.filepatterns)
+        self.addPatternsToDialog(dialog, self.filePatterns)
 
         response = dialog.run()
         if response != gtk.RESPONSE_OK:
@@ -2160,7 +2161,7 @@ class MBCatGtk:
 
         dialog.set_default_response(gtk.RESPONSE_OK)
 
-        self.addPatternsToDialog(dialog, self.filepatterns)
+        self.addPatternsToDialog(dialog, self.filePatterns)
 
         response = dialog.run()
         if response != gtk.RESPONSE_OK:
@@ -2170,7 +2171,7 @@ class MBCatGtk:
         filename = dialog.get_filename()
         dialog.destroy()
 
-        self.openDatabase(filename)
+        self.copyAndOpenDatabase(filename)
 
     def menuCatalogImportZip(self, widget):
         dialog = gtk.FileChooserDialog(
