@@ -2111,7 +2111,10 @@ class MBCatGtk:
         about.set_copyright(self.__copyright__)
         about.set_comments(self.__doc__)
         about.set_website(self.__website__)
-        #about.set_logo(...)
+        try:
+            about.set_logo(gtk.gdk.pixbuf_new_from_file(self.__icon_file__))
+        except glib.GError:
+            about.set_logo(gtk.gdk.pixbuf_new_from_file('mb-white-256.png'))
         about.run()
         about.destroy()
         return
