@@ -1542,8 +1542,8 @@ class ListenHistoryDialog(QueryResultsDialog):
                 (self.app.catalog.getReleaseTitle(releaseId), releaseId))
 
     def on_row_select(self, treeview):
-        # When a row is selected, sensitize the Delete Event button
-        pass
+        # When a row is selected, sensitize the Delete button
+        self.checkInBtn.set_sensitive(True)
 
     def update(self):
         self.buildListStore(self.releaseId)
@@ -1577,6 +1577,7 @@ class ListenHistoryDialog(QueryResultsDialog):
 
         self.checkInBtn = gtk.Button('Delete Date')
         self.checkInBtn.connect('clicked', self.delete_date)
+        self.checkInBtn.set_sensitive(False)
         hbox.pack_end(self.checkInBtn, expand=False, fill=False)
 
         self.checkOutBtn = gtk.Button('Add Date')
@@ -1606,6 +1607,7 @@ class ListenHistoryDialog(QueryResultsDialog):
                     date=selected_date)
             self.update()
             self.app.updateDetailPane()
+            self.checkInBtn.set_sensitive(False)
 
 class DigitalPathListDialog(QueryResultsDialog):
     """Manage digital paths for a release."""
@@ -1626,7 +1628,7 @@ class DigitalPathListDialog(QueryResultsDialog):
 
     def on_row_select(self, treeview):
         # When a row is selected, sensitize the Delete button
-        pass
+        self.checkInBtn.set_sensitive(True)
 
     def update(self):
         self.buildListStore(self.releaseId)
@@ -1672,6 +1674,7 @@ class DigitalPathListDialog(QueryResultsDialog):
 
         self.checkInBtn = gtk.Button('Delete Path')
         self.checkInBtn.connect('clicked', self.delete_path)
+        self.checkInBtn.set_sensitive(False)
         hbox.pack_end(self.checkInBtn, expand=False, fill=False)
 
         self.checkOutBtn = gtk.Button('Add Path')
@@ -1721,6 +1724,7 @@ class DigitalPathListDialog(QueryResultsDialog):
             self.app.catalog.cm.commit()
             self.update()
             self.app.updateDetailPane()
+            self.checkInBtn.set_sensitive(False)
 
 
 class PurchaseHistoryDialog(QueryResultsDialog):
@@ -1741,8 +1745,8 @@ class PurchaseHistoryDialog(QueryResultsDialog):
                 (self.app.catalog.getReleaseTitle(releaseId), releaseId))
 
     def on_row_select(self, treeview):
-        # When a row is selected, sensitize the Delete Event button
-        pass
+        # When a row is selected, sensitize the Delete button
+        self.checkInBtn.set_sensitive(True)
 
     def update(self):
         self.buildListStore(self.releaseId)
@@ -1784,6 +1788,7 @@ class PurchaseHistoryDialog(QueryResultsDialog):
 
         self.checkInBtn = gtk.Button('Delete Event')
         self.checkInBtn.connect('clicked', self.delete_event)
+        self.checkInBtn.set_sensitive(False)
         hbox.pack_end(self.checkInBtn, expand=False, fill=False)
 
         self.checkOutBtn = gtk.Button('Add Event')
@@ -1812,6 +1817,7 @@ class PurchaseHistoryDialog(QueryResultsDialog):
                     date=selected_date)
             self.update()
             self.app.updateDetailPane()
+            self.checkInBtn.set_sensitive(False)
 
 def TextViewEntry(parent, message, default='', editable=True):
     """
