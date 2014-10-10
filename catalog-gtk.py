@@ -13,6 +13,7 @@ import gtk
 import pango
 import mbcat
 import mbcat.catalog
+import mbcat.barcode
 import mbcat.dialogs
 import mbcat.digital
 import mbcat.userprefs
@@ -407,6 +408,7 @@ def PurchaseInfoEntry(parent,
     """
     # TODO this should have hour, minute and second added to be consistent with
     # other date entries
+    # ELSE could drop multiple purchases when deleting
     d = gtk.MessageDialog(parent,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
             gtk.MESSAGE_QUESTION,
@@ -755,7 +757,7 @@ def buildRatingComboBox(default=None):
     combobox.append_text('3')
     combobox.append_text('4')
     combobox.append_text('5')
-    combobox.set_active(default if default is not None else 0)
+    combobox.set_active(int(default) if default and default != 'None' else 0)
     combobox.show()
     return combobox
 
@@ -916,19 +918,20 @@ class QueryResultsDialog:
         self.active_on_row_selected = []
 
         vbox = gtk.VBox(False, 10)
-        sw = gtk.ScrolledWindow()
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 
         # Keep reference to catalog for later
         self.app = app
         self.parentWindow = parentWindow
 
-        self.buildWidgets(vbox)
+        self.buildWidgets(vbox, queryResult)
 
         self.window.add(vbox)
         self.window.show_all()
 
-    def buildWidgets(self, vbox):
+    def buildWidgets(self, vbox, queryResult):
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+
         self.buildTreeView()
         self.buildListStore(queryResult)
 
@@ -1237,13 +1240,12 @@ class TrackListDialog(QueryResultsDialog):
             releaseId,
             message='Track List',
         ):
-        self.releaseId = releaseId
         QueryResultsDialog.__init__(self, parentWindow, app,
             releaseId, message)
 
-    def buildWidgets(self, vbox):
+    def buildWidgets(self, vbox, releaseId):
         self.trackListView = TrackListDialogView(self.app.catalog, self)
-        self.trackListView.update(self.releaseId)
+        self.trackListView.update(releaseId)
         self.trackListView.show()
 
         vbox.pack_start(self.trackListView, expand=True, fill=True)
@@ -1541,8 +1543,8 @@ class ListenHistoryDialog(QueryResultsDialog):
                 (self.app.catalog.getReleaseTitle(releaseId), releaseId))
 
     def on_row_select(self, treeview):
-        # When a row is selected, sensitize the Delete Event button
-        pass
+        # When a row is selected, sensitize the Delete button
+        self.checkInBtn.set_sensitive(True)
 
     def update(self):
         self.buildListStore(self.releaseId)
@@ -1576,6 +1578,7 @@ class ListenHistoryDialog(QueryResultsDialog):
 
         self.checkInBtn = gtk.Button('Delete Date')
         self.checkInBtn.connect('clicked', self.delete_date)
+        self.checkInBtn.set_sensitive(False)
         hbox.pack_end(self.checkInBtn, expand=False, fill=False)
 
         self.checkOutBtn = gtk.Button('Add Date')
@@ -1605,6 +1608,7 @@ class ListenHistoryDialog(QueryResultsDialog):
                     date=selected_date)
             self.update()
             self.app.updateDetailPane()
+            self.checkInBtn.set_sensitive(False)
 
 class DigitalPathListDialog(QueryResultsDialog):
     """Manage digital paths for a release."""
@@ -1625,7 +1629,7 @@ class DigitalPathListDialog(QueryResultsDialog):
 
     def on_row_select(self, treeview):
         # When a row is selected, sensitize the Delete button
-        pass
+        self.checkInBtn.set_sensitive(True)
 
     def update(self):
         self.buildListStore(self.releaseId)
@@ -1651,7 +1655,12 @@ class DigitalPathListDialog(QueryResultsDialog):
 
         for root_id,path,fmt in self.app.catalog.getDigitalPaths(
                 self.releaseId):
-            root_path = self.app.prefs.pathRoots[root_id]['path']
+            if not root_id or root_id not in self.app.prefs.pathRoots:
+                _log.error('Bad or missing path root for release %s' % \
+                        self.releaseId)
+                root_path = '[unknown]'
+            else:
+                root_path = self.app.prefs.pathRoots[root_id]['path']
             resultListStore.append((
                     # For the program
                     root_id,
@@ -1671,6 +1680,7 @@ class DigitalPathListDialog(QueryResultsDialog):
 
         self.checkInBtn = gtk.Button('Delete Path')
         self.checkInBtn.connect('clicked', self.delete_path)
+        self.checkInBtn.set_sensitive(False)
         hbox.pack_end(self.checkInBtn, expand=False, fill=False)
 
         self.checkOutBtn = gtk.Button('Add Path')
@@ -1702,6 +1712,12 @@ class DigitalPathListDialog(QueryResultsDialog):
         if path:
             # Determine the root path of the path specified by the user
             root_id, rel_path = self.app.prefs.getRootIdForPath(path)
+            if not root_id:
+                ErrorDialog(self.parentWindow,
+                    'The path "%s" was not found in any of the root paths in '
+                    'the user preferences. Please add a root path first.' % \
+                    path)
+                return
 
             fmt = mbcat.digital.guessDigitalFormat(path)
             self.app.catalog.addDigitalPath(
@@ -1720,6 +1736,7 @@ class DigitalPathListDialog(QueryResultsDialog):
             self.app.catalog.cm.commit()
             self.update()
             self.app.updateDetailPane()
+            self.checkInBtn.set_sensitive(False)
 
 
 class PurchaseHistoryDialog(QueryResultsDialog):
@@ -1740,8 +1757,8 @@ class PurchaseHistoryDialog(QueryResultsDialog):
                 (self.app.catalog.getReleaseTitle(releaseId), releaseId))
 
     def on_row_select(self, treeview):
-        # When a row is selected, sensitize the Delete Event button
-        pass
+        # When a row is selected, sensitize the Delete button
+        self.checkInBtn.set_sensitive(True)
 
     def update(self):
         self.buildListStore(self.releaseId)
@@ -1783,6 +1800,7 @@ class PurchaseHistoryDialog(QueryResultsDialog):
 
         self.checkInBtn = gtk.Button('Delete Event')
         self.checkInBtn.connect('clicked', self.delete_event)
+        self.checkInBtn.set_sensitive(False)
         hbox.pack_end(self.checkInBtn, expand=False, fill=False)
 
         self.checkOutBtn = gtk.Button('Add Event')
@@ -1811,6 +1829,7 @@ class PurchaseHistoryDialog(QueryResultsDialog):
                     date=selected_date)
             self.update()
             self.app.updateDetailPane()
+            self.checkInBtn.set_sensitive(False)
 
 def TextViewEntry(parent, message, default='', editable=True):
     """
@@ -2092,7 +2111,10 @@ class MBCatGtk:
         about.set_copyright(self.__copyright__)
         about.set_comments(self.__doc__)
         about.set_website(self.__website__)
-        #about.set_logo(...)
+        try:
+            about.set_logo(gtk.gdk.pixbuf_new_from_file(self.__icon_file__))
+        except glib.GError:
+            about.set_logo(gtk.gdk.pixbuf_new_from_file('mb-white-256.png'))
         about.run()
         about.destroy()
         return
@@ -2116,6 +2138,7 @@ class MBCatGtk:
         self.updateStatusBar()
 
     def copyAndOpenDatabase(self, filename):
+        import shutil
         # Copy the database to the new location
         shutil.copy(self.catalog.dbPath, filename)
         # Open the new copy
@@ -2138,7 +2161,7 @@ class MBCatGtk:
 
         dialog.set_default_response(gtk.RESPONSE_OK)
 
-        self.addPatternsToDialog(dialog, self.filepatterns)
+        self.addPatternsToDialog(dialog, self.filePatterns)
 
         response = dialog.run()
         if response != gtk.RESPONSE_OK:
@@ -2160,7 +2183,7 @@ class MBCatGtk:
 
         dialog.set_default_response(gtk.RESPONSE_OK)
 
-        self.addPatternsToDialog(dialog, self.filepatterns)
+        self.addPatternsToDialog(dialog, self.filePatterns)
 
         response = dialog.run()
         if response != gtk.RESPONSE_OK:
@@ -2170,7 +2193,7 @@ class MBCatGtk:
         filename = dialog.get_filename()
         dialog.destroy()
 
-        self.openDatabase(filename)
+        self.copyAndOpenDatabase(filename)
 
     def menuCatalogImportZip(self, widget):
         dialog = gtk.FileChooserDialog(
@@ -2237,11 +2260,18 @@ class MBCatGtk:
             dialog.destroy()
             return
 
-        self.CatalogTask(self,
-            mbcat.dialogs.ProgressDialog(self.window,
-                mbcat.html.HtmlWriter(self.catalog,
-                        dialog.get_filename()))).start()
+        htmlfilename = dialog.get_filename()
         dialog.destroy()
+        t = mbcat.dialogs.ProgressDialog(self.window,
+            mbcat.html.HtmlWriter(self.catalog,
+                    htmlfilename))
+        t.start()
+        t.join() # TODO this is blocking
+        if ConfirmDialog(self.window,
+                'Open HTML file in browser?',
+                buttons=gtk.BUTTONS_YES_NO, expect=gtk.RESPONSE_YES,
+                default=gtk.RESPONSE_NO):
+            webbrowser.open(htmlfilename)
 
     def menuPreferences(self, widget):
         PreferencesDialog(self.window, self.prefs)
@@ -2460,7 +2490,7 @@ class MBCatGtk:
         self.refreshView(widget)
 
     def menuCatalogCheck(self, widget):
-        self.filt = catalog.badReleaseFilter
+        self.filt = self.catalog.badReleaseFilter
         self.refreshView(widget)
 
     def menuFilterQuick(self, widget):
@@ -2532,10 +2562,9 @@ class MBCatGtk:
             return
 
         relTitle = self.catalog.getRelease(releaseId)['title']
-        response = ConfirmDialog(self.window,
+        if not ConfirmDialog(self.window,
             'Are you sure you wish to delete "%s"\nwith ID %s?' % \
-                (relTitle, releaseId))
-        if not response:
+                (relTitle, releaseId)):
             return
 
         self.catalog.deleteRelease(releaseId)
@@ -2556,6 +2585,8 @@ class MBCatGtk:
         # Ask the user to specify a release to which to switch
         newRelId = TextEntry(self.window,
             'Enter release ID to replace %s\n"%s"' % (releaseId, relTitle))
+        if not newRelId:
+            return
         if newRelId in self.catalog:
             ErrorDialog(self.window, 'New release ID already exists')
             return
@@ -2708,8 +2739,7 @@ class MBCatGtk:
         """Synchronize with a musicbrainz collection (currently only pushes releases)."""
         if not self.catalog.prefs.username:
             username = TextEntry(self.window, 'Enter username:')
-            self.catalog.prefs.username = username
-            self.catalog.prefs.save()
+            self.catalog.prefs.setUserName(username)
         else:
             username = self.catalog.prefs.username
 
