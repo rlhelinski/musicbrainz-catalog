@@ -10,6 +10,8 @@ import os
 import sys
 _log = logging.getLogger("mbcat")
 
+from tests import test_releases
+
 c = mbcat.catalog.Catalog(dbPath='test.db')
 
 ds = mbcat.digital.DigitalSearch(c)
