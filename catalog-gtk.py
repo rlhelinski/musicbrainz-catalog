@@ -826,35 +826,6 @@ def ConfirmDialog(parent, message, type=gtk.MESSAGE_QUESTION,
     d.destroy()
     return (r == expect)
 
-def makeTrackTreeStore(catalog, releaseId):
-    trackTreeStore = gtk.TreeStore(str, str, str)
-    # TODO this should be a Catalog method
-    for mediumId,position,format in catalog.cm.executeAndFetch(
-            'select id,position,format from media '
-            'where release=? order by position',
-            (releaseId,)):
-        parent = trackTreeStore.append(None,
-            ('',
-            format+' '+str(position),
-            mbcat.catalog.recLengthAsString(
-                catalog.getMediumLen(mediumId)
-                )))
-        for recId,recLength,recPosition,title in catalog.cm.executeAndFetch(
-                'select recordings.id, recordings.length, '
-                'medium_recordings.position, recordings.title '
-                'from recordings '
-                'inner join medium_recordings on '
-                'medium_recordings.recording=recordings.id '
-                'inner join media on medium_recordings.medium=media.id '
-                'where media.id=? order by medium_recordings.position',
-                (mediumId,)):
-            trackTreeStore.append(parent,
-                (recId,
-                title,
-                mbcat.catalog.recLengthAsString(recLength)
-                ))
-    return trackTreeStore
-
 class QueryTask(mbcat.dialogs.ThreadedCall):
     def __init__(self, window, app, result_viewer, fun, *args, **kwargs):
         mbcat.dialogs.ThreadedCall.__init__(self, fun, *args, **kwargs)
@@ -952,6 +923,12 @@ class QueryResultsDialog:
         self.app = app
         self.parentWindow = parentWindow
 
+        self.buildWidgets(vbox)
+
+        self.window.add(vbox)
+        self.window.show_all()
+
+    def buildWidgets(self, vbox):
         self.buildTreeView()
         self.buildListStore(queryResult)
 
@@ -965,9 +942,6 @@ class QueryResultsDialog:
         vbox.pack_end(hbox, expand=False, fill=False)
 
         self.buildRowInfoWidgets(vbox)
-
-        self.window.add(vbox)
-        self.window.show_all()
 
     def buildTreeView(self):
         self.tv = gtk.TreeView()
@@ -1166,19 +1140,24 @@ class DiscQueryResultsDialog(QueryResultsDialog):
     def submit_disc(self, widget):
         webbrowser.open(self.submission_url)
 
-class TrackListDialog(QueryResultsDialog):
-    """
-    Display a dialog with a list of tracks for a release.
-    Example:
-    """
-    def __init__(self, parentWindow, app, releaseId, message='Track List'):
-        QueryResultsDialog.__init__(self, parentWindow, app,
-            releaseId, message)
+class TrackListView(gtk.ScrolledWindow):
+    titleColWidth = 32
+    def __init__(self, catalog):
+        self.catalog = catalog
+        gtk.ScrolledWindow.__init__(self)
+        self.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+
+        self.buildTreeView()
+
+        self.tv.connect('cursor-changed', self.on_row_select)
+        self.tv.connect('row-activated', self.on_row_activate)
+        self.tv.show()
+        self.add(self.tv)
 
     def buildTreeView(self):
         self.tv = gtk.TreeView()
         for i, (label, xalign, textWidth) in enumerate(
-            [('Title', 0, 40),
+            [('Title', 0, self.titleColWidth),
             ('Length', 1.0, 2),
             ]):
             cell = gtk.CellRendererText()
@@ -1190,10 +1169,89 @@ class TrackListDialog(QueryResultsDialog):
             col.set_resizable(True)
             self.tv.append_column(col)
 
-    def buildListStore(self, queryResult):
-        trackTreeStore = makeTrackTreeStore(self.app.catalog, queryResult)
+    def makeTreeStore(self, releaseId):
+        trackTreeStore = gtk.TreeStore(str, str, str)
+        # TODO this should be a Catalog method
+        for mediumId,position,format in self.catalog.cm.executeAndFetch(
+                'select id,position,format from media '
+                'where release=? order by position',
+                (releaseId,)):
+            parent = trackTreeStore.append(None,
+                ('',
+                format+' '+str(position),
+                mbcat.catalog.recLengthAsString(
+                    self.catalog.getMediumLen(mediumId)
+                    )))
+            for recId,recLength,recPosition,title in self.catalog.cm.executeAndFetch(
+                    'select recordings.id, recordings.length, '
+                    'medium_recordings.position, recordings.title '
+                    'from recordings '
+                    'inner join medium_recordings on '
+                    'medium_recordings.recording=recordings.id '
+                    'inner join media on medium_recordings.medium=media.id '
+                    'where media.id=? order by medium_recordings.position',
+                    (mediumId,)):
+                trackTreeStore.append(parent,
+                    (recId,
+                    title,
+                    mbcat.catalog.recLengthAsString(recLength)
+                    ))
+        return trackTreeStore
+
+    def update(self, releaseId):
+        trackTreeStore = self.makeTreeStore(releaseId)
         self.tv.set_model(trackTreeStore)
         self.tv.expand_all()
+
+    def get_selection(self):
+        model, it = self.tv.get_selection().get_selected()
+        return model.get_value(it, 0) if it else None
+
+    def on_row_select(self, treeview):
+        """Override this method when you inherit this class."""
+        pass
+
+    def on_row_activate(self, treeview, path, column):
+        # TODO not sure what this should do
+        relId = self.get_selection()
+        if relId:
+            webbrowser.open(mbcat.catalog.Catalog.recordingUrl + relId)
+
+class TrackListDialogView(TrackListView):
+    titleColWidth = 50
+    def __init__(self, catalog, dialog):
+        TrackListView.__init__(self, catalog)
+        self.dialog = dialog
+
+    def on_row_select(self, treeview):
+        self.dialog.on_row_select(treeview)
+
+class TrackListDialog(QueryResultsDialog):
+    """
+    Display a dialog with a list of tracks for a release.
+    Example:
+    """
+    def __init__(self,
+            parentWindow,
+            app,
+            releaseId,
+            message='Track List',
+        ):
+        self.releaseId = releaseId
+        QueryResultsDialog.__init__(self, parentWindow, app,
+            releaseId, message)
+
+    def buildWidgets(self, vbox):
+        self.trackListView = TrackListDialogView(self.app.catalog, self)
+        self.trackListView.update(self.releaseId)
+        self.trackListView.show()
+
+        vbox.pack_start(self.trackListView, expand=True, fill=True)
+
+        hbox = self.buildButtons()
+        vbox.pack_end(hbox, expand=False, fill=False)
+
+        self.buildRowInfoWidgets(vbox)
 
     def buildButtons(self):
         # Buttons
@@ -1213,9 +1271,12 @@ class TrackListDialog(QueryResultsDialog):
         recordingId = self.get_selection()
         webbrowser.open(mbcat.catalog.Catalog.recordingUrl + recordingId)
 
+    def get_selection(self):
+        return self.trackListView.get_selection()
+
     def on_row_select(self, treeview):
-        model, iter = self.tv.get_selection().get_selected()
-        if len(model.get_path(iter)) > 1:
+        model, iter = self.trackListView.tv.get_selection().get_selected()
+        if iter and len(model.get_path(iter)) > 1:
             # if a recording is selected
             QueryResultsDialog.on_row_select(self, treeview)
             self.row_widgets_set_sensitive(True)
@@ -1797,28 +1858,16 @@ class DetailPane(gtk.HBox):
         self.coverart.set_size_request(self.imgpx, self.imgpx)
         self.pack_start(self.coverart, expand=False, fill=False)
 
-        self.sw = gtk.ScrolledWindow()
-        self.sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.trackList = TrackListView(self.catalog)
+        self.trackList.show()
+        self.pack_start(self.trackList)
 
-        self.tv = gtk.TreeView()
-        for i, (label, xalign, textWidth) in enumerate(
-            [('Title', 0, 32),
-            ('Length', 1.0, 2),
-            ]):
-            cell = gtk.CellRendererText()
-            cell.set_property('xalign', xalign)
-            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
-            cell.set_property('width-chars', textWidth)
-            col = gtk.TreeViewColumn(label, cell)
-            col.add_attribute(cell, 'text', i+1)
-            col.set_resizable(True)
-            self.tv.append_column(col)
+        self.buildInfoTable()
 
-        self.tv.show()
-        self.sw.add(self.tv)
-        self.sw.show()
-        self.pack_start(self.sw)
+        self.pack_start(self.lt, expand=False, fill=False)
+        self.lt.show()
 
+    def buildInfoTable(self):
         self.lt = gtk.Table(2, 4, homogeneous=False)
         self.lt.set_border_width(5)
 
@@ -1905,8 +1954,10 @@ class DetailPane(gtk.HBox):
         self.lt.set_col_spacing(0, 5)
         self.lt.show_all()
 
-        self.pack_start(self.lt, expand=False, fill=False)
-        self.lt.show()
+    def on_track_row_activate(self, treeview, path, column):
+        relId = self.get_selection()
+        if relId:
+            webbrowser.open(mbcat.catalog.Catalog.recordingUrl + relId)
 
     def copyReleaseId(self, button):
         self.clipboard.set_text(self.releaseId)
@@ -1943,9 +1994,7 @@ class DetailPane(gtk.HBox):
             pass
         self.coverart.show()
 
-        trackTreeStore = makeTrackTreeStore(self.catalog, releaseId)
-        self.tv.set_model(trackTreeStore)
-        self.tv.expand_all()
+        self.trackList.update(releaseId)
 
         self.releaseIdLbl.set_label(releaseId)
 
@@ -2282,9 +2331,10 @@ class MBCatGtk:
     def on_row_select(self, treeview):
         self.menu_release_items_set_sensitive(True)
         model, it = treeview.get_selection().get_selected()
-        relId = model.get_value(it, 0)
-        self.updateDetailPane()
-        _log.info('Release '+relId+' selected')
+        if it:
+            relId = model.get_value(it, 0)
+            self.updateDetailPane()
+            _log.info('Release '+relId+' selected')
 
     def on_unselect_all(self, treeview):
         self.menu_release_items_set_sensitive(False)
