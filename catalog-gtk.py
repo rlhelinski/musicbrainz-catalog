@@ -1820,6 +1820,7 @@ class DetailPane(gtk.HBox):
         self.pack_start(self.sw)
 
         self.lt = gtk.Table(2, 4, homogeneous=False)
+        self.lt.set_border_width(5)
 
         r = 0
         self.releaseIdLbl = gtk.Label()
@@ -1900,8 +1901,8 @@ class DetailPane(gtk.HBox):
         self.lt.attach(self.checkOutLbl, 1, 2, r, r+1)
         r += 1
 
-        self.lt.set_row_spacings(10)
-        self.lt.set_col_spacing(0, 10)
+        self.lt.set_row_spacings(5)
+        self.lt.set_col_spacing(0, 5)
         self.lt.show_all()
 
         self.pack_start(self.lt, expand=False, fill=False)
