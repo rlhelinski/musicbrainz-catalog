@@ -113,6 +113,9 @@ class PrefManager:
         return path_id
 
     def getRootPath(self, root_id):
+        if root_id not in self.pathRoots:
+            _log.error('Root ID %s not in user preferences file' % root_id)
+            return None
         return self.pathRoots[root_id]['path']
 
     def getRootIdForPath(self, abs_path):
