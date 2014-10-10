@@ -2739,8 +2739,7 @@ class MBCatGtk:
         """Synchronize with a musicbrainz collection (currently only pushes releases)."""
         if not self.catalog.prefs.username:
             username = TextEntry(self.window, 'Enter username:')
-            self.catalog.prefs.username = username
-            self.catalog.prefs.save()
+            self.catalog.prefs.setUserName(username)
         else:
             username = self.catalog.prefs.username
 
