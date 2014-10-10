@@ -407,6 +407,7 @@ def PurchaseInfoEntry(parent,
     """
     # TODO this should have hour, minute and second added to be consistent with
     # other date entries
+    # ELSE could drop multiple purchases when deleting
     d = gtk.MessageDialog(parent,
             gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
             gtk.MESSAGE_QUESTION,
@@ -755,7 +756,7 @@ def buildRatingComboBox(default=None):
     combobox.append_text('3')
     combobox.append_text('4')
     combobox.append_text('5')
-    combobox.set_active(default if default is not None else 0)
+    combobox.set_active(int(default) if default and default != 'None' else 0)
     combobox.show()
     return combobox
 
