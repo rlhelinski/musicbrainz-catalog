@@ -3078,6 +3078,9 @@ class MBCatGtk:
         menuitem.set_submenu(menu)
         mb.append(menuitem)
 
+        accelgroup = gtk.AccelGroup()
+        self.window.add_accel_group(accelgroup)
+
         ## Formats
         # TODO this should be dynamically generated after loading or changing
         # the database
@@ -3085,11 +3088,14 @@ class MBCatGtk:
 
         self.actiongroup.add_actions([('Formats', None, '_Formats')])
 
-        self.actiongroup.add_radio_actions([
-            (name, None, label, None, None, i) \
-            for i, [name, label] in enumerate(zip(self.formatNames, \
-                self.formatLabels))
+        self.actiongroup.add_radio_actions(
+            [
+                (name, None, label, None, None, i) \
+                for i, [name, label] in enumerate(zip(self.formatNames, \
+                        self.formatLabels))
             ], 0, self.selectFormat)
+        for action in self.actiongroup.list_actions():
+            action.set_accel_group(accelgroup)
 
         submenuitem = self.actiongroup.get_action('Formats').create_menu_item()
         menu.append(submenuitem)
