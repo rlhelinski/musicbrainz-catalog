@@ -942,6 +942,7 @@ class QueryResultsDialog:
         vbox.pack_start(sw, expand=True, fill=True)
 
         hbox = self.buildButtons()
+        self.row_widgets_set_sensitive(False)
         vbox.pack_end(hbox, expand=False, fill=False)
 
         self.buildRowInfoWidgets(vbox)
@@ -1367,6 +1368,8 @@ class ReleaseDistanceDialog(QueryResultsDialog):
 
     def on_row_select(self, treeview):
         model, it = self.tv.get_selection().get_selected()
+        if not it:
+            return
         leftId = model.get_value(it, 0)
         rightId = model.get_value(it, 1)
 
