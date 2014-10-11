@@ -237,7 +237,10 @@ class DigitalSearch(dialogs.ThreadedTask):
                 if len(fileList) < self.catalog.getTrackCount(relId):
                     continue
                 fmt = guessDigitalFormat(fileList)
-                _log.info('Found %s at %s in %s format'%(relId,titlePath,fmt))
+                _log.info(
+                        'Found release %s in "%s" under "%s" in %s format'\
+                        %(relId, rootPath, titlePath, fmt)
+                        )
                 self.catalog.addDigitalPath(relId,
                         fmt,
                         rootPathId,
