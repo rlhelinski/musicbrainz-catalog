@@ -2883,7 +2883,7 @@ class MBCatGtk:
         menu.append(submenuitem)
 
         ## Similar
-        submenuitem = gtk.MenuItem('Similar')
+        submenuitem = gtk.ImageMenuItem('mbcat-find-similar')
         submenuitem.connect('activate', self.menuCatalogGetSimilar)
         menu.append(submenuitem)
 
@@ -3238,6 +3238,7 @@ class MBCatGtk:
                 ('mbcat-discid', '_Disc Lookup', 0, 0, None),
                 ('mbcat-indexdigital', '_Index Digital Copies', 0, 0, None),
                 ('mbcat-edit-path', '_Choose Path', 0, 0, None),
+                ('mbcat-find-similar', 'Find _Similar', 0, 0, None),
                 ]
 
         # We're too lazy to make our own icons,
@@ -3253,6 +3254,7 @@ class MBCatGtk:
                  ('mbcat-discid', gtk.STOCK_CDROM),
                  ('mbcat-indexdigital', gtk.STOCK_HARDDISK),
                  ('mbcat-edit-path', gtk.STOCK_OPEN),
+                 ('mbcat-find-similar', gtk.STOCK_FIND),
                 ]
 
         gtk.stock_add(items)
