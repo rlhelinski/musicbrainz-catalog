@@ -163,6 +163,14 @@ class ConnectionManager(threading.Thread):
         self.isReady.wait() # wait for the connection to be ready
         self.queueCmd(self.curs.execute, *argv, **kwargs)
 
+    def executescript(self, *argv, **kwargs):
+        """
+        A convenience function that queues a script to be executed on the
+        cursor and expects no results. Result is discarded.
+        """
+        self.isReady.wait() # wait for the connection to be ready
+        self.queueCmd(self.curs.executescript, *argv, **kwargs)
+
     def executeAndFetch(self, *argv):
         """
         A convenience function that queues a command to be executed, waits for
@@ -296,185 +304,37 @@ class Catalog(object):
         """Create the SQL tables for the catalog. Database is assumed empty."""
 
         # TODO maybe store the metadata dict from musicbrainz instead of the XML?
-        self.cm.execute("""CREATE TABLE releases(
-    id TEXT PRIMARY KEY,
-    meta BLOB,
-    sortstring TEXT,
-    artist TEXT,
-    title TEXT,
-    date TEXT,
-    country TEXT,
-    label TEXT,
-    catno TEXT,
-    barcode TEXT,
-    asin TEXT,
-    format TEXT,
-    sortformat TEXT,
-    metatime FLOAT,
-    count INT DEFAULT 1,
-    comment TEXT,
-    rating INT DEFAULT 0)""")
+        with open(os.path.join(os.path.dirname(__file__), 'catalog-schema.sql')) as f:
+            self.cm.executescript(f.read())
 
-        # Indexes for speed (it's all about performance...)
-        self.cm.execute('create unique index release_id on releases(id)')
-        for col in ['sortstring', 'catno', 'barcode', 'asin']:
-            self.cm.execute('create index release_'+col+\
-                ' on releases('+col+')')
-
-        self._createMetaTables()
-
-        self._createCacheTables()
+        self._createDerivedTables()
 
         self.cm.commit()
 
-    def _createMetaTables(self):
-        """Add the user (meta) data tables to the database.
+    def _createDerivedTables(self):
+        """Drop and re-create the release-derived tables to the database.
         This method does not commit its changes."""
+        # the SQL file below drops the tables and indexes before creating them
 
-        self.cm.execute("""CREATE TABLE added_dates(
-    date FLOAT,
-    release TEXT)""")
+        with open(os.path.join(os.path.dirname(__file__), 'catalog-derived-schema.sql')) as f:
+            self.cm.executescript(f.read())
 
-        self.cm.execute("""CREATE TABLE listened_dates(
-    date FLOAT,
-    release TEXT,
-    FOREIGN KEY(release) REFERENCES releases(id)
-    ON UPDATE CASCADE ON DELETE CASCADE)""")
-
-        self.cm.execute("""CREATE TABLE purchases (
-    date FLOAT,
-    price FLOAT,
-    vendor TEXT,
-    release TEXT,
-    FOREIGN KEY(release) REFERENCES releases(id)
-    ON DELETE CASCADE ON UPDATE CASCADE)""")
-
-        # checkout, checkin (lent out, returned) tables
-        self.cm.execute("""CREATE TABLE checkout_events (
-    borrower TEXT,
-    date FLOAT,
-    release TEXT,
-    FOREIGN KEY(release) REFERENCES releases(id)
-    ON DELETE CASCADE ON UPDATE CASCADE)""")
-
-        self.cm.execute("""CREATE TABLE checkin_events (
-    date FLOAT,
-    release TEXT,
-    FOREIGN KEY(release) REFERENCES releases(id)
-    ON DELETE CASCADE ON UPDATE CASCADE)""")
-
-        self.cm.execute("""CREATE TABLE digital_roots (
-    id TEXT PRIMARY KEY)""")
-
-        self.cm.execute("""CREATE TABLE digital_root_locals (
-    root_id TEXT,
-    root_path TEXT,
-    host_id INT,
-    host_name TEXT,
-    PRIMARY KEY (root_id, host_id),
-    FOREIGN KEY (root_id) REFERENCES digital_roots(id)
-        ON DELETE CASCADE ON UPDATE CASCADE)""")
-
-        # Digital copy table
-        self.cm.execute("""CREATE TABLE digital (
-    root TEXT,
-    path TEXT,
-    release TEXT,
-    format TEXT,
-    PRIMARY KEY (root, path),
-    FOREIGN KEY(root) REFERENCES digital_roots(id)
-    ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY(release) REFERENCES releases(id)
-    ON DELETE CASCADE ON UPDATE CASCADE)""")
-
-    def _createCacheTables(self):
-        """Add the release-derived tables to the database.
-        This method does not commit its changes."""
-        # tables that map specific things to a list of releases
-
-        self.cm.execute("""CREATE TABLE words(
-    word TEXT, release TEXT,
-    FOREIGN KEY(release) REFERENCES releases(id)
-    ON DELETE CASCADE ON UPDATE CASCADE)""")
-
-        self.cm.execute("""CREATE TABLE media (
-    id TEXT PRIMARY KEY,
-    position INTEGER,
-    format TEXT,
-    release TEXT,
-    FOREIGN KEY(release) REFERENCES releases(id)
-    ON DELETE CASCADE ON UPDATE CASCADE)""")
-
-        self.cm.execute("""CREATE TABLE recordings (
-    id TEXT PRIMARY KEY,
-    length INTEGER,
-    number INTEGER,
-    title TEXT)""")
-
-        self.cm.execute("""CREATE TABLE medium_recordings (
-    recording TEXT,
-    position INTEGER,
-    medium TEXT,
-    FOREIGN KEY(medium) REFERENCES media(id)
-    ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (recording) REFERENCES recordings(id)
-    ON DELETE CASCADE ON UPDATE CASCADE)""")
-
-        self.cm.execute("""CREATE TABLE trackwords(
-    trackword TEXT, recording TEXT,
-    FOREIGN KEY(recording) REFERENCES recordings(id)
-    ON DELETE CASCADE ON UPDATE CASCADE)""")
-
-        self.cm.execute("""CREATE TABLE discids (
-    id TEXT,
-    sectors INTEGER,
-    medium TEXT,
-    FOREIGN KEY(medium) REFERENCES media(id)
-    ON DELETE CASCADE ON UPDATE CASCADE)""")
-
-        # Indexes for speed (it's all about performance...)
-        self.cm.execute('create index word_index on words (word)')
-        self.cm.execute('create index trackword_index '
-            'on trackwords (trackword)')
-        self.cm.execute('create index digital_releases on digital(release)')
-
-    class rebuildCacheTables(dialogs.ThreadedTask):
+    class rebuildDerivedTables(dialogs.ThreadedTask):
         def __init__(self, catalog):
             self.catalog = catalog
             dialogs.ThreadedTask.__init__(self, 0)
 
         def run(self):
-            self.rebuildCacheTables()
-
-        def rebuildCacheTables(self):
-            """Drop the derived tables in the database and rebuild them"""
-            self.status = 'Dropping tables...'
+            self.status = 'Dropping and re-creating derived tables...'
             self.numer = 0
-            self.denom = len(self.catalog.derivedTables) + \
-                len(self.catalog.indexes)
-
-            for tab in self.catalog.derivedTables:
-                if self.stopthread.isSet():
-                    return
-                # Note: the added_dates, listened_dates, and purchases tables
-                # are not transient.
-                self.catalog.cm.execute('drop table if exists '+tab)
-                self.numer += 1
-
-            for index in self.catalog.indexes:
-                if self.stopthread.isSet():
-                    return
-                self.catalog.cm.execute('drop index if exists '+index)
-                self.numer += 1
-
-            self.catalog._createCacheTables()
-
+            self.denom = 0
+            self.catalog._createDerivedTables()
             # Rebuild
-            g = self.updateCacheTables()
+            g = self.updateDerivedTables()
 
-        def updateCacheTables(self):
-            """Use the releases table to populate the derived (cache) tables"""
-            self.status = 'Rebuilding tables...'
+        def updateDerivedTables(self):
+            """Use the releases table to populate the derived tables"""
+            self.status = 'Rebuilding derived tables...'
             self.numer = 0
             self.denom = len(self.catalog)
             for releaseId in self.catalog.getReleaseIds():
@@ -484,7 +344,7 @@ class Catalog(object):
                 self.catalog.digestReleaseXml(releaseId, metaXml, rebuild=True)
                 self.numer += 1
 
-            self.denom = 0
+            self.numer = 0; self.denom = 0
             self.status = 'Committing changes...'
             self.catalog.cm.commit()
 

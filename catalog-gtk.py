@@ -2335,7 +2335,7 @@ class MBCatGtk:
     def menuCatalogRebuild(self, widget):
         self.CatalogTask(self,
             mbcat.dialogs.ProgressDialog(self.window,
-                self.catalog.rebuildCacheTables(self.catalog))).start()
+                self.catalog.rebuildDerivedTables(self.catalog))).start()
 
     def menuCatalogGetSimilar(self, widget):
         # Check to make sure we can import Levenshtein module
@@ -3223,7 +3223,7 @@ class MBCatGtk:
         ####
         items = [('mbcat-refresh-metadata', '_Refresh Metadata', 0, 0, None),
                 ('mbcat-vacuum', '_Vacuum', 0, 0, None),
-                ('mbcat-rebuild', 'Re_build Indexes', 0, 0, None),
+                ('mbcat-rebuild', 'Re_build Derived Tables', 0, 0, None),
                 ('mbcat-delete', '_Delete', 0, 0, None),
                 ('mbcat-switch', '_Switch', 0, 0, None),
                 ('mbcat-switch', '_Switch', 0, 0, None),
