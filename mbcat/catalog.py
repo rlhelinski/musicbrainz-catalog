@@ -213,6 +213,9 @@ class ConnectionManager(threading.Thread):
         return self.getResult(e)
 
 class Catalog(object):
+    """
+    This class manages the SQL database and image cache.
+    """
 
     mbUrl = 'http://'+mb.hostname+'/'
     artistUrl = mbUrl+'artist/'

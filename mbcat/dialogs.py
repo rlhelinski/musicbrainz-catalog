@@ -178,7 +178,7 @@ class ThreadedCall(threading.Thread):
 
     def stop(self):
         """We can't actually interrupt the call because of Python's threading
-        limitations, but we provide this function to keep API consistent."""
+        limitations, but we provide this function to keep the API consistent."""
         pass
 
 # TODO move this to another module so that importing gtk is not necessary for
@@ -222,7 +222,7 @@ class MutexTask(ThreadedTask):
     one_running = threading.Event()
 
     def __init__(self, *args):
-        super(MutexTask, self).__init__(*args)
+        ThreadedTask.__init__(self, *args)
 
         if self.one_running.isSet():
             raise Exception('one at a time, please')
