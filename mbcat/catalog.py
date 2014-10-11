@@ -306,8 +306,9 @@ class Catalog(object):
     def _createTables(self):
         """Create the SQL tables for the catalog. Database is assumed empty."""
 
-        # TODO maybe store the metadata dict from musicbrainz instead of the XML?
-        with open(os.path.join(os.path.dirname(__file__), 'catalog-schema.sql')) as f:
+        # TODO maybe store metadata dict from musicbrainz instead of the XML?
+        with open(os.path.join(os.path.dirname(__file__),
+                'catalog-schema.sql')) as f:
             self.cm.executescript(f.read())
 
         self._createDerivedTables()
@@ -319,7 +320,8 @@ class Catalog(object):
         This method does not commit its changes."""
         # the SQL file below drops the tables and indexes before creating them
 
-        with open(os.path.join(os.path.dirname(__file__), 'catalog-derived-schema.sql')) as f:
+        with open(os.path.join(os.path.dirname(__file__),
+                'catalog-derived-schema.sql')) as f:
             self.cm.executescript(f.read())
 
     class rebuildDerivedTables(dialogs.ThreadedTask):
@@ -467,7 +469,8 @@ class Catalog(object):
 
             self.numer=0
             self.denom=len(self.catalog)
-            with zipfile.ZipFile(self.zipName, 'w', zipfile.ZIP_DEFLATED) as zf:
+            with zipfile.ZipFile(self.zipName, 'w',
+                    zipfile.ZIP_DEFLATED) as zf:
                 for releaseId in self.catalog.getReleaseIds():
                     zipReleasePath = self.catalog.zipReleaseRoot+'/'+releaseId
                     zf.writestr(zipReleasePath+'/'+'metadata.xml',
@@ -523,7 +526,8 @@ class Catalog(object):
                         continue
 
                     if fileName == 'metadata.xml':
-                        self.catalog.digestReleaseXml(releaseId, zf.read(fInfo))
+                        self.catalog.digestReleaseXml(releaseId,
+                            zf.read(fInfo))
 
                     #if fileName == 'extra.xml':
                         #ed = extradata.ExtraData(releaseId)
@@ -848,7 +852,8 @@ class Catalog(object):
             try:
                 date = float(date)
             except ValueError as e:
-                raise ValueError('Date object should be a floating-point number')
+                raise ValueError('Date object should be a '
+                        'floating-point number')
 
         self.cm.execute('insert into added_dates (date, release) '
             'values (?,?)', (date, releaseId))
@@ -951,7 +956,8 @@ class Catalog(object):
     def deleteListenDate(self, releaseId, date):
         if not isinstance(date, float):
             raise ValueError ('Wrong type for date argument')
-        self.cm.execute('delete from listened_dates where release=? and date=?',
+        self.cm.execute('delete from listened_dates '
+                'where release=? and date=?',
                 (releaseId, date))
         self.cm.commit()
 
