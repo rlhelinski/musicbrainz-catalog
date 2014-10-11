@@ -1177,8 +1177,8 @@ class Catalog(object):
             _log.info("Release %s is already in catalog." % releaseId)
         metaTime = self.getMetaTime(releaseId)
         if metaTime > (time.time() - olderThan):
-            _log.info("Skipping fetch of metadata for %s because it is recent",
-                    releaseId)
+            _log.info("Skipping fetch of metadata for %s because it is more "
+                    "recent than %d seconds." % (releaseId, olderThan))
             return 0
 
         metaXml = self.fetchReleaseMetaXml(releaseId)
