@@ -1286,6 +1286,11 @@ class TrackListDialog(QueryResultsDialog):
             # a medium is selected
             self.row_widgets_set_sensitive(False)
 
+def startReleaseDistanceDialog(*args, **kwargs):
+    """For use with gobject.idle_add"""
+    ReleaseDistanceDialog(*args, **kwargs)
+    return False
+
 class ReleaseDistanceDialog(QueryResultsDialog):
     row_contains = 'Comparison'
     def __init__(self, parentWindow, app, queryResult,
@@ -2312,7 +2317,7 @@ class MBCatGtk:
         def run(self):
             self.task.start()
             self.task.join()
-            self.app.refreshView()
+            gobject.idle_add(self.app.refreshView)
 
     class CheckTask(threading.Thread):
         def __init__(self, window, app, result_viewer, task):
@@ -2324,7 +2329,8 @@ class MBCatGtk:
         def run(self):
             self.task.start()
             self.task.join()
-            self.result_viewer(self.window, self.app, self.task.task.result)
+            gobject.idle_add(self.result_viewer, self.window,
+                    self.app, self.task.task.result)
 
     def menuCatalogRebuild(self, widget):
         self.CatalogTask(self,
@@ -2340,7 +2346,7 @@ class MBCatGtk:
             ErrorDialog(self.window, 'Error importing: '+str(e))
         # TODO could implement a simple dialog here that asks for the limit on
         # the distance of neighbors to compare and the number of results to keep
-        self.CheckTask(self.window, self, ReleaseDistanceDialog,
+        self.CheckTask(self.window, self, startReleaseDistanceDialog,
             mbcat.dialogs.ProgressDialog(self.window,
                 self.catalog.checkLevenshteinDistances(self.catalog, 2))).start()
 
@@ -2428,6 +2434,7 @@ class MBCatGtk:
                 self.setSelectedRow(newRow)
             else:
                 self.setSelectedRow(selRow)
+        return False # for use with gobject.idle_add
 
     def viewXml(self, widget=None):
         import xml.dom.minidom
