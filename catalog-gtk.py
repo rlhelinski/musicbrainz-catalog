@@ -2274,11 +2274,13 @@ class MBCatGtk:
             mbcat.html.HtmlWriter(self.catalog,
                     htmlfilename))
         t.start()
-        t.join() # TODO this is blocking
+        t.join() # TODO this is blocking, but using it because the next
+        # line manipulates GTK
         if ConfirmDialog(self.window,
                 'Open HTML file in browser?',
                 buttons=gtk.BUTTONS_YES_NO, expect=gtk.RESPONSE_YES,
                 default=gtk.RESPONSE_NO):
+            _log.info('Opening browser to "%s"' % htmlfilename)
             webbrowser.open(htmlfilename)
 
     def menuPreferences(self, widget):
