@@ -25,6 +25,7 @@ import zlib
 import sqlite3
 import itertools
 import uuid
+import socket
 
 # Have to give an identity for musicbrainzngs
 __version__ = '0.3'
@@ -794,7 +795,7 @@ class Catalog(object):
             (root_id,))
         self.cm.execute('insert or replace into digital_root_locals '
             '(root_id, root_path, host_id, host_name) values (?,?,?,?)',
-            (root_id, root_path, uuid.getnode(), os.uname()[1]))
+            (root_id, root_path, uuid.getnode(), socket.gethostname()))
         self.cm.commit()
 
     def deleteDigitalPathRoot(self, root_id):
@@ -807,7 +808,7 @@ class Catalog(object):
             'inner join digital_root_locals '
             'on digital_roots.id = digital_root_locals.root_id '
             'where digital_root_locals.host_id = ?',
-            (os.uname()[1],))
+            (socket.gethostname(),))
 
     def getDigitalPaths(self, releaseId):
         return self.cm.executeAndFetch(
