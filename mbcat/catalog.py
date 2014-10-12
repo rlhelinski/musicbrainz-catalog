@@ -274,15 +274,19 @@ class Catalog(object):
         """Open or create a new catalog"""
 
         prefPath = os.path.join(os.path.expanduser('~'), '.mbcat')
-        self.dbPath = dbPath if dbPath else os.path.join(prefPath, 'mbcat.db')
-        self.cachePath = cachePath if cachePath else \
-                os.path.join(prefPath, 'cache')
 
         if not os.path.isdir(prefPath):
             os.mkdir(prefPath)
 
         self.prefs = prefs if prefs else userprefs.PrefManager()
 
+        self.open(dbPath if dbPath else os.path.join(prefPath, 'mbcat.db'),
+                cachePath if cachePath else \
+                os.path.join(prefPath, 'cache'))
+
+    def open(self, dbPath, cachePath):
+        self.dbPath = dbPath
+        self.cachePath = cachePath
         _log.info('Using \'%s\' for the catalog database' % self.dbPath)
         _log.info('Using \'%s\' for the file cache path' % self.cachePath)
 

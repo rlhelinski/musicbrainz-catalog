@@ -33,9 +33,9 @@ _log = logging.getLogger("mbcat")
 default_dialog_size = (500, 300)
 
 class PreferencesDialog(gtk.Window):
-    def __init__(self, parentWindow, prefs=None, catalog=None):
-        self.prefs = prefs if prefs else mbcat.userprefs.PrefManager()
-        self.catalog = catalog if catalog else mbcat.catalog.Catalog()
+    def __init__(self, parentWindow, prefs, catalog):
+        self.prefs = prefs
+        self.catalog = catalog
         self.parentWindow = parentWindow
         self.checkDigitalPathRoots()
 
@@ -2129,7 +2129,7 @@ class MBCatGtk:
 
     def openDatabase(self, filename=None):
         if filename:
-            self.catalog = mbcat.catalog.Catalog(
+            self.catalog.open(
                 dbPath=filename,
                 cachePath=self.catalog.cachePath)
         try:
@@ -2284,7 +2284,7 @@ class MBCatGtk:
             webbrowser.open(htmlfilename)
 
     def menuPreferences(self, widget):
-        PreferencesDialog(self.window, self.prefs)
+        PreferencesDialog(self.window, self.prefs, self.catalog)
 
     def menuCatalogVacuum(self, widget):
         self.CatalogTask(self,
