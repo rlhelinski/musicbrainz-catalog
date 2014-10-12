@@ -16,7 +16,11 @@ def encodeDate(date):
     return time.strftime('%s', time.strptime(date, dateFmtStr))
 
 def encodeDateTime(dt):
-    return dt.strftime('%s')
+    # This is a workaround because '%s' does not exist for
+    # datetime.strftime on the Windows platform.
+    epoch = datetime.datetime.utcfromtimestamp(0)
+    delta = dt - epoch
+    return delta.total_seconds()
 
 def decodeDateTime(dts):
     return datetime.datetime.fromtimestamp(dts)
