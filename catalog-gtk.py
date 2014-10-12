@@ -844,7 +844,8 @@ class QueryTask(mbcat.dialogs.ThreadedCall):
         if not self.result:
             ErrorDialog(self.window, 'No results found for "%s"' % str(kwargs))
         else:
-            self.result_viewer(self.window, self.app, self.result)
+            gobject.idle_add(startResultViewer, self.result_viewer,
+                    self.window, self.app, self.result)
             # TODO can implement this with a killParent flag to __init__
             #if type(self.app) == BarcodeQueryDialog:
                 #self.window.destroy()
@@ -1287,9 +1288,9 @@ class TrackListDialog(QueryResultsDialog):
             # a medium is selected
             self.row_widgets_set_sensitive(False)
 
-def startReleaseDistanceDialog(*args, **kwargs):
+def startResultViewer(viewer, *args, **kwargs):
     """For use with gobject.idle_add"""
-    ReleaseDistanceDialog(*args, **kwargs)
+    viewer(*args, **kwargs)
     return False
 
 class ReleaseDistanceDialog(QueryResultsDialog):
@@ -2334,8 +2335,8 @@ class MBCatGtk:
         def run(self):
             self.task.start()
             self.task.join()
-            gobject.idle_add(self.result_viewer, self.window,
-                    self.app, self.task.task.result)
+            gobject.idle_add(startResultViewer, self.result_viewer,
+                    self.window, self.app, self.task.task.result)
 
     def menuCatalogRebuild(self, widget):
         self.CatalogTask(self,
@@ -2351,7 +2352,7 @@ class MBCatGtk:
             ErrorDialog(self.window, 'Error importing: '+str(e))
         # TODO could implement a simple dialog here that asks for the limit on
         # the distance of neighbors to compare and the number of results to keep
-        self.CheckTask(self.window, self, startReleaseDistanceDialog,
+        self.CheckTask(self.window, self, ReleaseDistanceDialog,
             mbcat.dialogs.ProgressDialog(self.window,
                 self.catalog.checkLevenshteinDistances(self.catalog, 2))).start()
 
