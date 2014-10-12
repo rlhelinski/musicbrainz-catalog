@@ -2251,8 +2251,9 @@ class MBCatGtk:
     def menuCatalogExportHtml(self, widget):
         try:
             import mbcat.html
-        except ImportError:
+        except ImportError as e:
             ErrorDialog(self.window, 'Error importing: '+str(e))
+            return
 
         dialog = gtk.FileChooserDialog(
             title='Export to HTML file',
@@ -2350,6 +2351,7 @@ class MBCatGtk:
             import Levenshtein
         except ImportError as e:
             ErrorDialog(self.window, 'Error importing: '+str(e))
+            return
         # TODO could implement a simple dialog here that asks for the limit on
         # the distance of neighbors to compare and the number of results to keep
         self.CheckTask(self.window, self, ReleaseDistanceDialog,
