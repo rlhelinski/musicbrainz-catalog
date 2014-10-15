@@ -27,7 +27,11 @@ class HtmlWriter(dialogs.ThreadedTask):
         Write HTML representing the catalog to a file
         """
 
-        self.numer = 0; self.denom=len(self.catalog)
+        self.numer = 0
+        #self.denom=len(self.catalog)
+        # There's no way to update the progress during Jinja2's template
+        # rendering, so just set the denominator to zero to cause pulsing.
+        self.denom = 0
 
         def fmt(s):
             return s.encode('ascii', 'xmlcharrefreplace').decode()

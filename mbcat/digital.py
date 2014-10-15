@@ -191,9 +191,9 @@ class DigitalSearch(dialogs.ThreadedTask):
                             os.path.join(root, path)))
                     # TODO add query dialog here?
                     self.catalog.deleteDigitalPath(relId, root_id, path)
+                self.numer += 1
                 if self.stopthread.isSet():
                     return
-                self.numer += 1
         self.status = 'Committing changes...'
         self.numer = 0; self.denom = 0
         self.catalog.cm.commit()
