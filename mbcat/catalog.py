@@ -281,7 +281,8 @@ class Catalog(object):
 
         self.prefs = prefs if prefs else userprefs.PrefManager()
 
-        self.open(dbPath if dbPath else os.path.join(prefPath, 'mbcat.db'),
+        self.open(dbPath if dbPath else os.path.join(prefPath,
+                                                     'mbcat.sqlite3'),
                 cachePath if cachePath else \
                 os.path.join(prefPath, 'cache'))
 
