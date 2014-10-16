@@ -2057,7 +2057,7 @@ class MBCatGtk:
     """
     __name__ = 'MusicBrainz Catalog GTK GUI'
     __version__ = mbcat.catalog.__version__
-    __copyright__ = 'Ryan Helinski'
+    __copyright__ = '(c) Ryan Helinski'
     __website__ = 'https://github.com/rlhelinski/musicbrainz-catalog'
     __icon_file__ = 'mb-white.svg'
 
@@ -2113,6 +2113,9 @@ class MBCatGtk:
         print ("destroy signal occurred")
         gtk.main_quit()
 
+    def url_hook_func(self, ignore1, url, ignore2):
+        webbrowser.open(url, new=2)
+
     def openAboutWindow(self, widget):
         about = gtk.AboutDialog()
         about.set_program_name(self.__name__)
@@ -2120,6 +2123,7 @@ class MBCatGtk:
         about.set_copyright(self.__copyright__)
         about.set_comments(self.__doc__)
         about.set_website(self.__website__)
+        gtk.about_dialog_set_url_hook(self.url_hook_func, data=None)
         try:
             about.set_logo(gtk.gdk.pixbuf_new_from_file(self.__icon_file__))
         except glib.GError:
