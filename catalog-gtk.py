@@ -2070,7 +2070,6 @@ class MBCatGtk:
     formatLabels = ['_All', '_Digital', '_CD', '_7" Vinyl', '_12" Vinyl',
         '_Unknown']
 
-    maxAge = 60
     searchResultsLimit = 100
 
     # Default extensions.
@@ -2623,7 +2622,7 @@ class MBCatGtk:
 
     def getCoverArt(self, widget):
         releaseId = self.getSelection()
-        self.catalog.getCoverArt(releaseId)
+        self.catalog.getCoverArt(releaseId, maxage=0)
         # refresh the detail pane if it is active
         self.updateDetailPane()
 
@@ -2631,7 +2630,7 @@ class MBCatGtk:
         row = self.getSelectedRow()
         releaseId = self.getSelection()
         try:
-            self.catalog.addRelease(releaseId, olderThan=self.maxAge)
+            self.catalog.addRelease(releaseId, olderThan=0)
         except mb.NetworkError as e:
             ErrorDialog(self.window, 'Network error, failed to refresh')
         else:
