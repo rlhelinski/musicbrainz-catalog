@@ -862,8 +862,7 @@ class DiscQueryTask(QueryTask):
         try:
             mbcat.dialogs.ThreadedCall.run(self)
         except mb.ResponseError as e:
-            ErrorDialog(self.window, 'MusicBrainz response error: '+str(e))
-            self.askBrowseSubmission()
+            self.result = e
         else:
             if self.result.get("disc"):
                 _log.info('Showing query results for disc ID "%s"'\
@@ -873,26 +872,6 @@ class DiscQueryTask(QueryTask):
                 # TODO can implement this with a killParent flag to __init__
                 #if type(self.app) == BarcodeQueryDialog:
                     #self.window.destroy()
-            elif self.result.get("cdstub"):
-                # TODO this should be a dialog?
-                for label, key in [
-                        ('CD Stub', 'id'),
-                        ('Artist', 'artist'),
-                        ('Title', 'title'),
-                        ('Barcode', 'barcode')]:
-                    if key in self.result['cdstub']:
-                        _log.info('%10s: %s\n' %
-                                     (label, self.result['cdstub'][key]))
-                self.askBrowseSubmission('There was only a CD stub. '
-                    'Open browser to Submission URL?')
-
-                return
-
-    def askBrowseSubmission(self, msg='Open browser to Submission URL?'):
-        answer = ConfirmDialog(self.window, msg)
-        if answer:
-            _log.info('Opening web browser to submission URL.')
-            webbrowser.open(self.submission_url)
 
 class QueryResultsDialog:
     """
@@ -2780,14 +2759,13 @@ class MBCatGtk:
                 self.catalog.syncCollection(self.catalog,
                     collectionId))).start()
 
-    def readDiscTOC(self, widget):
-        def askBrowseSubmission():
-            answer = ConfirmDialog(self.window,
-                'Open browser to Submission URL?')
-            if answer:
-                _log.info('Opening web browser.')
-                webbrowser.open(disc.submission_url)
+    def askBrowseSubmission(self, url, msg='Open browser to Submission URL?'):
+        answer = ConfirmDialog(self.window, msg)
+        if answer:
+            _log.info('Opening web browser to submission URL.')
+            webbrowser.open(url)
 
+    def readDiscTOC(self, widget):
         try:
             import discid
         except ImportError as e:
@@ -2805,11 +2783,32 @@ class MBCatGtk:
         _log.info("Disc submission URL: %s" % disc.submission_url)
 
         _log.info("Querying MusicBrainz for DiscID '%s'..." % disc.id)
-        mbcat.dialogs.PulseDialog(self.window,
+        d = mbcat.dialogs.PulseDialog(self.window,
             DiscQueryTask(self.window, self,
                 DiscQueryResultsDialog, disc.submission_url,
                 mb.get_releases_by_discid,
-                disc.id, includes=['artists'])).start()
+                disc.id, includes=['artists']))
+        d.start()
+        d.join()
+
+        print (d.task.result)
+        if type(d.task.result) == mb.ResponseError:
+            ErrorDialog(self.window, 'MusicBrainz response error: '+\
+                    str(d.task.result))
+            self.askBrowseSubmission(d.task.submission_url)
+        elif d.task.result.get('cdstub'):
+            # TODO this should be a dialog?
+            for label, key in [
+                    ('CD Stub', 'id'),
+                    ('Artist', 'artist'),
+                    ('Title', 'title'),
+                    ('Barcode', 'barcode')]:
+                if key in self.result['cdstub']:
+                    _log.info('%10s: %s\n' %
+                                 (label, self.result['cdstub'][key]))
+            self.askBrowseSubmission(d.submission_url,
+                    'There was only a CD stub. '
+                    'Open browser to Submission URL?')
 
     def createMenuBar(self, widget):
         # Menu bar
