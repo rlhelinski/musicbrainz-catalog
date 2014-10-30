@@ -203,8 +203,10 @@ class PreferencesDialog(gtk.Window):
         return (model.get_value(it, 0), model.get_value(it, 1))
 
     def on_digpath_select(self, treeview):
-        self.digspecentry.set_sensitive(True)
         path_id, path = self.get_digpath_selected()
+        if not path_id:
+            return
+        self.digspecentry.set_sensitive(True)
         pathspec = self.prefs.getPathRootSpec(path_id)
         self.digspecentry.set_text(pathspec)
 
@@ -838,10 +840,12 @@ class QueryTask(mbcat.dialogs.ThreadedCall):
         try:
             mbcat.dialogs.ThreadedCall.run(self)
         except mb.ResponseError as e:
+            # TODO this manipulates GTK from another thread (BAD)
             ErrorDialog(self.window, 'MusicBrainz response error: '+str(e))
             # TODO in case of get_releases_by_discid, call askBrowseSubmission()
 
         if not self.result:
+            # TODO this manipulates GTK from another thread (BAD)
             ErrorDialog(self.window, 'No results found for "%s"' % str(kwargs))
         else:
             gobject.idle_add(startResultViewer, self.result_viewer,
@@ -2036,7 +2040,7 @@ class MBCatGtk:
     """
     __name__ = 'MusicBrainz Catalog GTK GUI'
     __version__ = mbcat.catalog.__version__
-    __copyright__ = '(c) Ryan Helinski'
+    __copyright__ = 'Ryan Helinski'
     __website__ = 'https://github.com/rlhelinski/musicbrainz-catalog'
     __icon_file__ = 'mb-white.svg'
 

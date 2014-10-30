@@ -28,7 +28,6 @@ class HtmlWriter(dialogs.ThreadedTask):
         """
 
         self.numer = 0
-        #self.denom=len(self.catalog)
         # There's no way to update the progress during Jinja2's template
         # rendering, so just set the denominator to zero to cause pulsing.
         self.denom = 0

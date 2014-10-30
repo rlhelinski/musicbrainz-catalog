@@ -176,7 +176,7 @@ class Shell:
     def promptDate(self, prompt='Enter a date'):
         response = self.s.nextLine(
             prompt+' (' + mbcat.dateFmtUsr + \
-            ') [blank for none, "now" for current time]: ')
+            ') ["now" for current time, empty to cancel]: ')
         if response:
             return float(mbcat.encodeDate(response)) \
                 if response.lower() != 'now' else time.time()
@@ -346,7 +346,10 @@ class Shell:
 
     def PrintCheckOutEvents(self, releaseId):
         """List the check out and in events."""
-        for event in self.c.getCheckOutHistory(releaseId):
+        history = self.c.getCheckOutHistory(releaseId)
+        if not history:
+            self.s.write('No checkout events for %s' % (releaseId,))
+        for event in history:
             if len(event) == 2:
                 self.s.write('Checked out on: '+mbcat.decodeDate(event[0])+\
                         ' by: '+event[1]+'.\n')
