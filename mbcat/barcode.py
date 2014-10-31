@@ -11,6 +11,13 @@ class UPC(object):
         return s % 10
 
     @staticmethod
+    def check_upc_a(code):
+        """Check the format of a potential UPC code"""
+        return (len(code) == 12) and \
+            code.isdigit() and \
+            (UPC.checksum_upc_a(code) == int(code[11]))
+
+    @staticmethod
     def checksum_upc_a(code):
         """Implementation of the algorithm described in:
 http://en.wikipedia.org/wiki/Universal_Product_Code#Check_digits

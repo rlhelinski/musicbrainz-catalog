@@ -3,15 +3,13 @@ from collections import defaultdict
 import os, time, sys
 import xml.etree.ElementTree as ET
 import mbcat.utils
+import mbcat
 import logging
 _log = logging.getLogger("mbcat")
 try:
     from StringIO import StringIO
 except ImportError as e:
     from io import StringIO
-
-dateFmtStr = '%m/%d/%Y'
-dateFmtUsr = 'MM/DD/YYYY'
 
 class PurchaseEvent:
 
@@ -23,7 +21,7 @@ class PurchaseEvent:
 
     def getDate(self):
         try:
-            return time.strftime(dateFmtStr, time.localtime(self._date))
+            return time.strftime(mbcat.dateFmtStr, time.localtime(self._date))
         except TypeError:
             return ''
         except AttributeError:
@@ -31,7 +29,7 @@ class PurchaseEvent:
 
     def setDate(self, date):
         try:
-            self._date = time.strptime(date, dateFmtStr)
+            self._date = time.strptime(date, mbcat.dateFmtStr)
         except ValueError as e:
             _log.warning(e)
 
@@ -59,10 +57,10 @@ class CheckInEvent:
         self._date = date
 
     def getDate(self):
-        return time.strftime(dateFmtStr, time.localtime(self._date))
+        return time.strftime(mbcat.dateFmtStr, time.localtime(self._date))
 
     def setDate(self, date):
-        self._date = time.strptime(date, dateFmtStr)
+        self._date = time.strptime(date, mbcat.dateFmtStr)
 
     date = property(getDate, setDate, doc='purchase date')
 
