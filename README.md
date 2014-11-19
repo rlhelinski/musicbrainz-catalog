@@ -1,21 +1,22 @@
-The "master" branch should always be the latest and greatest revision.
 
-What is it?
+MusicBrainz Catalog
 ===================
 
-musicbrainz-catalog is a Python application for cataloging your music
+`musicbrainz-catalog` is a Python application for cataloging your music
 collection and cross-referencing with the
-[MusicBrainz.org](http://musicbrainz.org) online database. This approach helps
-provide the information about the releases you own given just a
+[MusicBrainz.org](http://musicbrainz.org) online database. Both
+[GTK](http://www.gtk.org/) and text-mode interfaces are available. Using
+MusicBrainz helps provide the information about the releases you own based on a
 [CD TOC](http://musicbrainz.org/doc/Disc%20ID) or a
 [barcode](http://en.wikipedia.org/wiki/Universal_Product_Code), for example.
-The caveat is that if the information about a release in the MusicBrainz.org
-online database is missing or incorrect, that you fix it for everyone's
-benefit. However, with over 1,293,000 releases (as of 2014-06-12), you should
-expect to not have to enter this information about your release 90% of the
-time. Life is good.
+The catch is that if the information about a release in the MusicBrainz.org
+online database is missing or incorrect, that you fix it for everyone's benefit.
+However, with over 1,293,000 releases (as of 2014-06-12), you should expect to
+not have to enter this information about your release most of the time.
 
-This application will help you perform the following tasks:
+![Screenshot](doc/mbcat-screenshot.png "Screenshot of GTK interface on Mac OSX")
+
+This application can help you perform the following tasks:
 
 * Check if you have a particular [release](https://musicbrainz.org/doc/Release)
   or [track](https://musicbrainz.org/doc/Recording) in your collection
@@ -40,8 +41,8 @@ This application will help you perform the following tasks:
     * Comments
     * Count (how many you have on-hand)
 
-Getting Started
-===============
+Installation
+============
 
 You'll need the following software to get started:
 
@@ -49,19 +50,20 @@ You'll need the following software to get started:
 * [musicbrainzngs](https://github.com/rlhelinski/python-musicbrainzngs),
 * [python-discid](https://github.com/JonnyJD/python-discid) (optional; requires
 [libdiscid](http://musicbrainz.org/doc/libdiscid)),
-* and the musicbrainz-catalog source code.
+* and the `musicbrainz-catalog` source code.
 
 On Ubuntu Linux, get the pre-requisites with the following command:
-```
+```bash
 sudo apt-get install python python-musicbrainzngs libdiscid0 python-libdiscid
 ```
 
 Once you have the pre-requisites, we recommend cloning the source code using
 Git so that you can stay up to date with development. To copy the source code
 with Git so that you can easily upgrade later, use the command:
-```
+```bash
 git clone https://github.com/rlhelinski/musicbrainz-catalog.git
 ```
+The "master" branch should always be the latest and greatest revision.
 
 To get a ZIP file of the latest version instead of using Git, use the following
 link:
@@ -69,7 +71,7 @@ https://github.com/rlhelinski/musicbrainz-catalog/archive/master.zip
 
 The 'catalog-cli.py' script is the text-mode interface to the catalog. Start it
 with
-```
+```bash
 python catalog-cli.py
 ```
 
