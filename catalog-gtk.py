@@ -2042,8 +2042,8 @@ class MBCatGtk:
     __version__ = mbcat.catalog.__version__
     __copyright__ = 'Ryan Helinski'
     __website__ = 'https://github.com/rlhelinski/musicbrainz-catalog'
-    __icon_file__ = 'art/mb-white.svg'
-    __png_icon_file__ = 'art/mb-white-256.png'
+    __icon_file__ = 'art/MusicBrainzCatalogLogo-white.svg'
+    __png_icon_file__ = 'art/MusicBrainzCatalogLogo-white-256.png'
 
     columnNames = ['Artist', 'Release Title', 'Date', 'Country', 'Label',
         'Catalog #', 'Barcode', 'ASIN', 'Format']
