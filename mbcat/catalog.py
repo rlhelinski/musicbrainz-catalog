@@ -461,6 +461,48 @@ class Catalog(object):
                 (count, releaseId))
         self.cm.commit()
 
+    def merge(self, source):
+        """Merge metadata from another catalog into this one."""
+        if type(source) != Catalog:
+            raise TypeError()
+        #for row in self.cm.executeAndFetch('select * from releases;'):
+            #self.cm.execute('insert or ignore into releases values (')
+        # Pull in any missing or old releases
+        for relId in source.getReleaseIds():
+            if not relId in self or \
+                    self.getMetaTime(relId) < source.getMetaTime(relId):
+                self.digestReleaseXml(relId, source.getReleaseXml(relId))
+            # Pull in any missing 'added dates'
+            for (date,) in source.getAddedDates(relId):
+                # add the date to this catalog if it does not exist
+                if date not in self.getAddedDates(relId):
+                    self.addAddedDate(relId, date)
+            # Pull in listen dates
+            for date in source.getListenDates(relId):
+                if date not in self.getListenDates(relId):
+                    self.addListenDate(relId, date)
+            # Pull in purchases
+            for tm,pr,vn in source.getPurchases(relId):
+                if (tm,pr,vn) not in self.getPurchases(relId):
+                    self.addPurchase(relId, tm, pr, vn)
+            # Pull in check out events
+            for date, borrower in source.getCheckOutEvents(relId):
+                if (date,borrower) not in self.getCheckOutEvents(relId):
+                    self.addCheckOutEvent(relId, borrower, date)
+            # Pull in check in events
+            for (date,) in source.getCheckInEvents(relId):
+                if (date,) not in self.getCheckInEvents(relId):
+                    self.addCheckInEvent(relId, date)
+            # Pull in digital root locals
+            for root_id, root_path in source.getDigitalPathRoots():
+                if (root_id,root_path) not in self.getDigitalPathRoots():
+                    self.addDigitalPathRoot(relId, root_id, root_path)
+            # Pull in digital paths
+            for format, root_id, path in source.getDigitalPaths(relId):
+                if (format,root_id,path) not in self.getDigitalPaths(relId):
+                    self.addDigitalPath(relId, format, root_id, path)
+        self.cm.commit()
+
     defaultZipPath='catalog.zip'
     class saveZip(dialogs.ThreadedTask):
         """Exports the database as a ZIP archive"""
@@ -848,9 +890,9 @@ class Catalog(object):
             (releaseId,))[0]
 
     def getAddedDates(self, releaseId):
-        return self.cm.executeAndFetchOne(
+        return self.cm.executeAndFetch(
             'select date from added_dates where release=?',
-            (releaseId,))[0]
+            (releaseId,))
 
     def addAddedDate(self, releaseId, date):
         # input error checking
@@ -872,6 +914,10 @@ class Catalog(object):
             (releaseId,))
 
     def getCheckInEvents(self, releaseId):
+        """
+        This function returns a list of tuples intentionally to be consistent
+        with Catalog.getCheckOutEvents().
+        """
         # TODO should use sqlite3.Row as the conn.row_factory for these fetches
         return self.cm.executeAndFetch(
             'select date from checkin_events where release=?',
