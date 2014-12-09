@@ -2235,6 +2235,32 @@ class MBCatGtk:
                         dialog.get_filename()))).start()
         dialog.destroy()
 
+    def menuCatalogImportDB(self, widget):
+        dialog = gtk.FileChooserDialog(
+            title='Import from sqlite3 database file',
+            action=gtk.FILE_CHOOSER_ACTION_SAVE,
+            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+
+        dialog.set_default_response(gtk.RESPONSE_OK)
+
+        self.addPatternsToDialog(dialog, self.filePatterns)
+
+        response = dialog.run()
+        if response != gtk.RESPONSE_OK:
+            dialog.destroy()
+            return
+
+        source = mbcat.catalog.Catalog(dbPath=dialog.get_filename())
+        dialog.destroy()
+
+        self.CatalogTask(self,
+            mbcat.dialogs.PulseDialog(
+                self.window,
+                mbcat.dialogs.ThreadedCall(
+                    self.catalog.merge,
+                    source))).start()
+
     def menuCatalogExportHtml(self, widget):
         try:
             import mbcat.html
@@ -2846,6 +2872,10 @@ class MBCatGtk:
         submenuitem = gtk.MenuItem('_Import')
         submenu = gtk.Menu()
         submenuitem.set_submenu(submenu)
+
+        subsubmenuitem = gtk.MenuItem('_Database')
+        subsubmenuitem.connect('activate', self.menuCatalogImportDB)
+        submenu.append(subsubmenuitem)
 
         subsubmenuitem = gtk.MenuItem('_Zip')
         subsubmenuitem.connect('activate', self.menuCatalogImportZip)
