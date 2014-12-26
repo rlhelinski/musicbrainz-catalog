@@ -933,8 +933,12 @@ class QueryResultsDialog:
 
     def buildTreeView(self):
         self.tv = gtk.TreeView()
-        for i, (label, textWidth) in enumerate(
-            [('Artist', 20),
+        cell = gtk.CellRendererPixbuf()
+        col = gtk.TreeViewColumn('Have', cell)
+        col.add_attribute(cell, 'stock-id', 1)
+        self.tv.append_column(col)
+        for i, (label, textWidth) in enumerate([
+            ('Artist', 20),
             ('Title', 30),
             ('Format', 10),
             ('Label', 20),
@@ -947,17 +951,18 @@ class QueryResultsDialog:
             cell.set_property('ellipsize', pango.ELLIPSIZE_END)
             cell.set_property('width-chars', textWidth)
             col = gtk.TreeViewColumn(label, cell)
-            col.add_attribute(cell, 'text', i+1)
+            col.add_attribute(cell, 'text', i+2)
             col.set_resizable(True)
             self.tv.append_column(col)
         self.tv.set_search_column(1) # search by Artist
 
     def buildListStore(self, queryResult):
         # make the list store
-        resultListStore = gtk.ListStore(str, str, str, str, str, str, str, str)
+        resultListStore = gtk.ListStore(str, str, str, str, str, str, str, str, str)
         for release in queryResult['release-list']:
             resultListStore.append((
                 release['id'],
+                gtk.STOCK_APPLY if release['id'] in self.app.catalog else '',
                 mbcat.catalog.formatQueryArtist(release),
                 release['title'],
                 mbcat.catalog.formatQueryMedia(release),
