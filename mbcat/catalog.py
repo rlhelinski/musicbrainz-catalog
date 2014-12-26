@@ -743,6 +743,14 @@ class Catalog(object):
         return self.cm.executeAndFetchOne('select length from recordings '
             'where id=?', (recordingId,))[0]
 
+    def getRecordingRating(self, recordingId):
+        return self.cm.executeAndFetchOne('select rating from recordings '
+            'where id=?', (recordingId,))[0]
+
+    def setRecordingRating(self, recordingId, rating):
+        return self.cm.execute('update recordings set rating=? '
+            'where id=?', (rating, recordingId))
+
     @staticmethod
     def getSortStringFromRelease(release):
         return ' - '.join ( [ \

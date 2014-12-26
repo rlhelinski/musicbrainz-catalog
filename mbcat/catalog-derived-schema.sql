@@ -15,13 +15,6 @@ CREATE TABLE media (
     FOREIGN KEY(release) REFERENCES releases(id)
     ON DELETE CASCADE ON UPDATE CASCADE);
 
-DROP TABLE IF EXISTS recordings;
-CREATE TABLE recordings (
-    id TEXT PRIMARY KEY,
-    length INTEGER,
-    number INTEGER,
-    title TEXT);
-
 DROP TABLE IF EXISTS medium_recordings;
 CREATE TABLE medium_recordings (
     recording TEXT,

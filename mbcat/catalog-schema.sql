@@ -74,6 +74,13 @@ CREATE TABLE digital (
     FOREIGN KEY(release) REFERENCES releases(id)
     ON DELETE CASCADE ON UPDATE CASCADE);
 
+CREATE TABLE recordings (
+    id TEXT PRIMARY KEY,
+    length INTEGER,
+    number INTEGER,
+    title TEXT,
+    rating INT DEFAULT 0);
+
 -- Indexes for speed (it's all about performance...)
 CREATE UNIQUE INDEX release_id ON releases(id);
 CREATE INDEX release_sortstring ON releases(sortstring);
