@@ -131,10 +131,11 @@ def getArtistPathVariations(release):
 
 def getTitlePathVariations(release):
     s = set()
-    s.add(release['title'])
-    if 'disambiguation' in release:
-        s.add(release['disambiguation'])
-        s.add(release['title']+' ('+release['disambiguation']+')')
+    for prefix in ['', '%s - ' % (release['date'])]:
+        s.add(prefix+release['title'])
+        if 'disambiguation' in release:
+            s.add(prefix+release['disambiguation'])
+            s.add(prefix+release['title']+' ('+release['disambiguation']+')')
     return s
 
 def getPathAlNumPrefixes(path):
