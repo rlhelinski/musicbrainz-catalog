@@ -2647,6 +2647,11 @@ class MBCatGtk:
             self.makeListStore()
             self.setSelectedRow(row)
 
+    def browseRelease(self, widget):
+        releaseId = self.getSelection()
+        # copied from QueryResultsDialog.browse_release
+        webbrowser.open(mbcat.catalog.Catalog.releaseUrl + releaseId)
+
     def showTrackList(self, widget):
         releaseId = self.getSelection()
         TrackListDialog(self.window, self, releaseId)
@@ -3030,6 +3035,12 @@ class MBCatGtk:
         menu.append(submenuitem)
         self.menu_release_items.append(submenuitem)
 
+        ## Browse to Release URL
+        submenuitem = gtk.ImageMenuItem('mbcat-browse-release')
+        submenuitem.connect('activate', self.browseRelease)
+        menu.append(submenuitem)
+        self.menu_release_items.append(submenuitem)
+
         ## Index Digital Copies
         submenuitem = gtk.ImageMenuItem('mbcat-indexdigital')
         submenuitem.connect('activate', self.menuReleaseIndexDigital)
@@ -3272,7 +3283,9 @@ class MBCatGtk:
 
     def registerNewStock(self, window):
         ####
-        items = [('mbcat-refresh-metadata', '_Refresh Metadata', 0, 0, None),
+        items = [
+                ('mbcat-refresh-metadata', '_Refresh Metadata', 0, 0, None),
+                ('mbcat-browse-release', '_Browse to Release', 0, 0, None),
                 ('mbcat-vacuum', '_Vacuum', 0, 0, None),
                 ('mbcat-rebuild', 'Re_build Derived Tables', 0, 0, None),
                 ('mbcat-delete', '_Delete', 0, 0, None),
@@ -3289,18 +3302,20 @@ class MBCatGtk:
 
         # We're too lazy to make our own icons,
         # so we use regular stock icons.
-        aliases = [('mbcat-refresh-metadata', gtk.STOCK_REFRESH),
-                 ('mbcat-vacuum', gtk.STOCK_CLEAR),
-                 ('mbcat-rebuild', gtk.STOCK_EXECUTE),
-                 ('mbcat-delete', gtk.STOCK_DELETE),
-                 ('mbcat-switch', gtk.STOCK_CONVERT),
-                 ('mbcat-coverart', gtk.STOCK_REFRESH),
-                 ('mbcat-tracklist', gtk.STOCK_INDEX),
-                 ('mbcat-comment', gtk.STOCK_EDIT),
-                 ('mbcat-discid', gtk.STOCK_CDROM),
-                 ('mbcat-indexdigital', gtk.STOCK_HARDDISK),
-                 ('mbcat-edit-path', gtk.STOCK_OPEN),
-                 ('mbcat-find-similar', gtk.STOCK_FIND),
+        aliases = [
+                ('mbcat-refresh-metadata', gtk.STOCK_REFRESH),
+                ('mbcat-browse-release', gtk.STOCK_REFRESH),
+                ('mbcat-vacuum', gtk.STOCK_CLEAR),
+                ('mbcat-rebuild', gtk.STOCK_EXECUTE),
+                ('mbcat-delete', gtk.STOCK_DELETE),
+                ('mbcat-switch', gtk.STOCK_CONVERT),
+                ('mbcat-coverart', gtk.STOCK_REFRESH),
+                ('mbcat-tracklist', gtk.STOCK_INDEX),
+                ('mbcat-comment', gtk.STOCK_EDIT),
+                ('mbcat-discid', gtk.STOCK_CDROM),
+                ('mbcat-indexdigital', gtk.STOCK_HARDDISK),
+                ('mbcat-edit-path', gtk.STOCK_OPEN),
+                ('mbcat-find-similar', gtk.STOCK_FIND),
                 ]
 
         gtk.stock_add(items)
