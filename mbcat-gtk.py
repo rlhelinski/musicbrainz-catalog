@@ -2717,6 +2717,17 @@ class MBCatGtk:
     def purchaseInfo(self, widget):
         PurchaseHistoryDialog(self.window, self, self.getSelection())
 
+    def submitReleaseGroupRating(self, releaseGroupId, rating):
+        # TODO cache password and check for that here
+        if not self.webserviceAuth():
+            return
+
+        print (str(rating))
+        nr = 0 if rating == 'None' else (int(rating)*20)
+        _log.info('Submitting release group %s rating %d' % (releaseGroupId,
+                nr))
+        mb.submit_ratings(release_group_ratings={releaseGroupId: nr})
+
     def rateRelease(self, widget):
         releaseId = self.getSelection()
         if not releaseId:
@@ -2726,6 +2737,9 @@ class MBCatGtk:
         if not nr:
             return
         self.catalog.setRating(releaseId, nr)
+        # Also rate on musicbrainz.org if we are signed in
+        self.submitReleaseGroupRating(
+                self.catalog.getReleaseGroup(releaseId), nr)
 
     def searchBarcode(self, widget):
         BarcodeSearchDialog(self.window, self)
@@ -2773,8 +2787,7 @@ class MBCatGtk:
                 mb.search_releases,
                 catno=entry, limit=self.searchResultsLimit)).start()
 
-    def webserviceSyncCollection(self, widget):
-        """Synchronize with a musicbrainz collection (currently only pushes releases)."""
+    def webserviceAuth(self):
         if not self.catalog.prefs.username:
             username = TextEntry(self.window, 'Enter username:')
             self.catalog.prefs.setUserName(username)
@@ -2791,6 +2804,12 @@ class MBCatGtk:
         # Call musicbrainzngs.auth() before making any API calls that
         # require authentication.
         mb.auth(username, password)
+        return True
+
+    def webserviceSyncCollection(self, widget):
+        """Synchronize with a musicbrainz collection (currently only pushes releases)."""
+        if not self.webserviceAuth():
+            return
 
         result = mb.get_collections()
         collectionId = SelectCollectionDialog(self.window, result)

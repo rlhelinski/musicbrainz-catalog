@@ -1595,6 +1595,13 @@ class Catalog(object):
             (releaseId,))
         return cols[0] if cols else None
 
+    def getReleaseGroup(self, releaseId):
+        # TODO this is a hack. We should include 'release-groups' when getting
+        # the metadata in the first place. Should also add a column to the
+        # releases table to store this field.
+        r = mb.get_release_by_id(releaseId, includes=['release-groups'])
+        return r['release']['release-group']['id']
+
     def getMediumLen(self, mediumId):
         return self.cm.executeAndFetchOne(
             'select sum(recordings.length) from medium_recordings '
