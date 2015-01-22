@@ -447,8 +447,8 @@ class Catalog(object):
     def __contains__(self, releaseId):
         count = self.cm.executeAndFetchOne(
                 'select count(id) from releases where id=?',
-                (releaseId,)) [0]
-        return count > 0
+                (releaseId,))
+        return count and count[0] > 0
 
     def getCopyCount(self, releaseId):
         if releaseId not in self:
