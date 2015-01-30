@@ -468,40 +468,64 @@ class Catalog(object):
         #for row in self.cm.executeAndFetch('select * from releases;'):
             #self.cm.execute('insert or ignore into releases values (')
         # Pull in any missing or old releases
+        _log.info('Importing %d releases' % len(source))
+        # Pull in digital root locals
+        for root_id, root_path in source.getDigitalPathRoots():
+            if (root_id,root_path) not in self.getDigitalPathRoots():
+                self.addDigitalPathRoot(root_id, root_path)
+                _log.debug('Imported digital root path %s' % (root_path))
+
         for relId in source.getReleaseIds():
             if not relId in self or \
                     self.getMetaTime(relId) < source.getMetaTime(relId):
                 self.digestReleaseXml(relId, source.getReleaseXml(relId))
+                _log.info('Imported release %s' % relId)
+            else:
+                _log.debug('Release %s exists' % relId)
+
             # Pull in any missing 'added dates'
             for date in source.getAddedDates(relId):
                 # add the date to this catalog if it does not exist
                 if date not in self.getAddedDates(relId):
                     self.addAddedDate(relId, date)
+                    _log.info('Imported added date %s for %s' % (str(date), relId))
+
             # Pull in listen dates
             for date in source.getListenDates(relId):
                 if date not in self.getListenDates(relId):
                     self.addListenDate(relId, date)
+                    _log.info('Imported listen date %s for %s' % (str(date), relId))
+
             # Pull in purchases
             for tm,pr,vn in source.getPurchases(relId):
                 if (tm,pr,vn) not in self.getPurchases(relId):
                     self.addPurchase(relId, tm, pr, vn)
+                    _log.info('Imported purchase on %s for %s' % (str(tm), relId))
+
             # Pull in check out events
             for date, borrower in source.getCheckOutEvents(relId):
                 if (date,borrower) not in self.getCheckOutEvents(relId):
                     self.addCheckOutEvent(relId, borrower, date)
+                    _log.debug('Imported check out event on %s for %s' % \
+                            (str(date), relId))
+
             # Pull in check in events
             for (date,) in source.getCheckInEvents(relId):
                 if (date,) not in self.getCheckInEvents(relId):
                     self.addCheckInEvent(relId, date)
-            # Pull in digital root locals
-            for root_id, root_path in source.getDigitalPathRoots():
-                if (root_id,root_path) not in self.getDigitalPathRoots():
-                    self.addDigitalPathRoot(relId, root_id, root_path)
+                    _log.debug('Imported check in event on %s for %s' % \
+                            (str(date), relId))
+
             # Pull in digital paths
             for format, root_id, path in source.getDigitalPaths(relId):
                 if (format,root_id,path) not in self.getDigitalPaths(relId):
                     self.addDigitalPath(relId, format, root_id, path)
+                    _log.debug('Imported digital path %s for %s' % \
+                            (path, relId))
+
+        _log.debug('Committing changes')
         self.cm.commit()
+        _log.info('Done importing')
 
     defaultZipPath='catalog.zip'
     class saveZip(dialogs.ThreadedTask):
