@@ -473,7 +473,7 @@ class Catalog(object):
                     self.getMetaTime(relId) < source.getMetaTime(relId):
                 self.digestReleaseXml(relId, source.getReleaseXml(relId))
             # Pull in any missing 'added dates'
-            for (date,) in source.getAddedDates(relId):
+            for date in source.getAddedDates(relId):
                 # add the date to this catalog if it does not exist
                 if date not in self.getAddedDates(relId):
                     self.addAddedDate(relId, date)
@@ -898,7 +898,7 @@ class Catalog(object):
             (releaseId,))[0]
 
     def getAddedDates(self, releaseId):
-        return self.cm.executeAndFetch(
+        return self.cm.executeAndChain(
             'select date from added_dates where release=?',
             (releaseId,))
 
