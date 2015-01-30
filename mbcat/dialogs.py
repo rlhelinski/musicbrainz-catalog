@@ -5,6 +5,14 @@ import random, time
 import gobject
 import gtk
 
+def format_time(seconds):
+    """Formats time as the string "MM:SS.mm"."""
+    td = datetime.timedelta(seconds=round(seconds,2))
+    return '{:02}:{:02}.{:02}'.format(
+            td.seconds % 3600 // 60,
+            td.seconds % 60,
+            td.microseconds // 10000)
+
 class ProgressDialog(threading.Thread):
     """This does something that takes a while and keeps track of its own
     progress"""
@@ -53,7 +61,7 @@ class ProgressDialog(threading.Thread):
             seconds_elapsed = time.time() - tstart
             if self.task.denom == 0:
                 text = '{} - '.format(self.task.numer)+\
-                    self.format_time(seconds_elapsed)+' Elapsed'
+                    format_time(seconds_elapsed)+' Elapsed'
                 gobject.idle_add(self.progressbar.pulse)
             else:
                 fract = float(self.task.numer)/self.task.denom
@@ -66,21 +74,12 @@ class ProgressDialog(threading.Thread):
 
         self.quit()
 
-    @staticmethod
-    def format_time(seconds):
-        """Formats time as the string "MM:SS.mm"."""
-        td = datetime.timedelta(seconds=round(seconds,2))
-        return '{:02}:{:02}.{:02}'.format(
-                td.seconds % 3600 // 60,
-                td.seconds % 60,
-                td.microseconds // 10000)
-
     def ETA(self, fract, seconds_elapsed):
         if fract == 0 or fract == 0.0:
             return '--:--.--'
         else:
             eta = seconds_elapsed / fract - seconds_elapsed
-            return self.format_time(eta)
+            return format_time(eta)
 
     def quit(self):
         gobject.idle_add(self.pbarwindow.destroy)
@@ -152,7 +151,7 @@ class PulseDialog(ProgressDialog):
         while self.task.isAlive():
             gobject.idle_add(self.progressbar.pulse)
             gobject.idle_add(self.progressbar.set_text,
-                '%0.3f Elapsed' % (time.time() - tstart))
+                '%s Elapsed' % format_time(time.time() - tstart))
             time.sleep(0.1)
         self.quit()
 
