@@ -907,7 +907,9 @@ class QueryResultsDialog:
         self.app = app
         self.parentWindow = parentWindow
 
-        self.buildWidgets(vbox, queryResult)
+        # Keep reference to queryResult
+        self.queryResult = queryResult
+        self.buildWidgets(vbox, self.queryResult)
 
         self.window.add(vbox)
         self.window.show_all()
@@ -1002,7 +1004,14 @@ class QueryResultsDialog:
         return model.get_value(it, 0) if it else None
 
     def add_release(self, widget, data=None):
-        self.app._addRelease(self.get_selection(), self.window)
+        # function for use with idle_add() to mark this release as part of the
+        # catalog
+        def doneFun(ref):
+            ref.buildListStore(ref.queryResult)
+            return False
+
+        self.app._addRelease(self.get_selection(), self.window, doneFun, self)
+        # TODO error check necessary?
 
     def on_row_activate(self, treeview, path, column):
         # TODO not sure what this should do
@@ -2551,12 +2560,15 @@ class MBCatGtk:
             self.filt = expr
             self.refreshView(widget)
 
-    def _addRelease(self, releaseId, parentWindow):
+    def _addRelease(self, releaseId, parentWindow, doneFun=None,
+            doneFunArg=None):
         class AddReleaseTask(mbcat.dialogs.ThreadedCall):
-            def __init__(self, app, c, fun, *args):
+            def __init__(self, app, c, fun, doneFun, doneFunArg, *args):
                 mbcat.dialogs.ThreadedCall.__init__(self, fun, *args)
                 self.app = app
                 self.c = c
+                self.doneFun = doneFun
+                self.doneFunArg = doneFunArg
 
             def run(self):
                 try:
@@ -2569,14 +2581,20 @@ class MBCatGtk:
                     return
                 self.app.makeListStore()
                 self.app.setSelectedRow(self.app.getReleaseRow(releaseId))
+                if self.doneFun:
+                    self.doneFun(self.doneFunArg)
 
         if releaseId in self.catalog:
             ErrorDialog(parentWindow, 'Release already exists')
             return
 
         mbcat.dialogs.PulseDialog(parentWindow,
-            AddReleaseTask(self, self.catalog,
-                self.catalog.addRelease, releaseId)).start()
+            AddReleaseTask(self,
+                self.catalog,
+                self.catalog.addRelease,
+                doneFun,
+                doneFunArg,
+                releaseId)).start()
 
     def addRelease(self, widget):
         entry = TextEntry(self.window, 'Enter Release ID')
