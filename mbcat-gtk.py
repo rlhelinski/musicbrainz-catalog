@@ -2774,6 +2774,12 @@ class MBCatGtk:
             return
         self.setSelectedRow(self.getReleaseRow(releaseId))
 
+    def searchReleaseID(self, widget):
+        releaseId = TextEntry(self.window, 'Enter Release ID')
+        if not releaseId or releaseId not in self.catalog:
+            return
+        self.setSelectedRow(self.getReleaseRow(releaseId))
+
     def webserviceReleaseGroup(self, widget):
         entry = TextEntry(self.window, 'Enter release group search terms:')
         if not entry:
@@ -3163,6 +3169,11 @@ class MBCatGtk:
         ## Track
         submenuitem = gtk.MenuItem('Track')
         submenuitem.connect('activate', self.searchTrack)
+        menu.append(submenuitem)
+
+        ## Release ID
+        submenuitem = gtk.MenuItem('Release ID')
+        submenuitem.connect('activate', self.searchReleaseID)
         menu.append(submenuitem)
 
         # Filter
