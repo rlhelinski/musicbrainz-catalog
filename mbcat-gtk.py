@@ -634,6 +634,11 @@ class BarcodeSearchDialog:
         self.window.connect('destroy', self.on_destroy)
         self.window.set_title(title)
 
+        key, mod = gtk.accelerator_parse('Escape')
+        accel = gtk.AccelGroup()
+        accel.connect_group(key, mod, 0, lambda w,x,y,z: self.window.destroy())
+        self.window.add_accel_group(accel)
+
         vbox = gtk.VBox(False, 10)
 
         prompt = gtk.Label(message)
@@ -898,6 +903,11 @@ class QueryResultsDialog:
         self.window.connect('destroy', self.on_destroy)
         self.window.set_title(message)
         self.window.set_size_request(*default_dialog_size)
+
+        key, mod = gtk.accelerator_parse('Escape')
+        accel = gtk.AccelGroup()
+        accel.connect_group(key, mod, 0, lambda w,x,y,z: self.window.destroy())
+        self.window.add_accel_group(accel)
 
         self.active_on_row_selected = []
 
