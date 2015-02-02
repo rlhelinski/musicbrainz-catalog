@@ -2527,9 +2527,9 @@ class MBCatGtk:
         if text != 'All':
             fmt = mbcat.formats.getFormatObj(text).name()
             #print ('Filtering formats: '+text+', '+fmt)
-            self.filt = 'sortformat="'+fmt+'"'
+            self.filtFmt = 'sortformat="'+fmt+'"'
         else:
-            self.filt = ''
+            self.filtFmt = ''
         self.makeListStore()
         self.updateStatusBar()
 
@@ -3306,7 +3306,8 @@ class MBCatGtk:
     def makeListStore(self, ):
         self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str, str, str)
 
-        for row in self.catalog.getBasicTable(self.filt):
+        filtStr = ' and '.join(filter(None, [self.filtFmt, self.filt]))
+        for row in self.catalog.getBasicTable(filtStr):
             self.releaseList.append(row)
         # Need to add 1 here to get to sort string because of UUID at beginning
         self.releaseList.set_sort_column_id(1, gtk.SORT_ASCENDING)
@@ -3397,6 +3398,7 @@ class MBCatGtk:
         self.prefs = mbcat.userprefs.PrefManager()
         self.catalog = mbcat.catalog.Catalog(dbPath, cachePath, self.prefs)
         self.filt = ''
+        self.filtFmt = ''
 
         # create a new window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
