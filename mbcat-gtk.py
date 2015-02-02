@@ -2529,6 +2529,7 @@ class MBCatGtk:
 
     def menuClearFilters(self, widget=None):
         self.filt = ''
+        self.actiongroup.get_action('All').set_active(True)
         self.refreshView(widget)
 
     def menuCatalogCheck(self, widget):
