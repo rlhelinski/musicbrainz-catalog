@@ -2898,10 +2898,10 @@ class MBCatGtk:
                     ('Artist', 'artist'),
                     ('Title', 'title'),
                     ('Barcode', 'barcode')]:
-                if key in self.result['cdstub']:
+                if key in d.task.result['cdstub']:
                     _log.info('%10s: %s\n' %
-                                 (label, self.result['cdstub'][key]))
-            self.askBrowseSubmission(d.submission_url,
+                                 (label, d.task.result['cdstub'][key]))
+            self.askBrowseSubmission(d.task.submission_url,
                     'There was only a CD stub. '
                     'Open browser to Submission URL?')
 
