@@ -617,6 +617,12 @@ class Catalog(object):
 
                 self.catalog.cm.commit()
 
+    def getMediumDiscIds(self, mediumId):
+        discIds = self.cm.executeAndFetch(
+            'select id from discids where medium=?', (mediumId,))
+        return discIds
+
+
     @staticmethod
     def getReleaseWords(rel):
         words = set()
@@ -1512,10 +1518,12 @@ class Catalog(object):
         _log.info('Saved Audacity tags XML for '+releaseId+' to \'%s\'' % \
                 outPath)
 
+# TODO this should be moved to shell?
     def writeTrackList(self, stream, releaseId):
         """Write ASCII tracklist for releaseId to 'stream'. """
         stream.write('\n')
         _log.info('Printing tracklist for \'%s\'' % releaseId)
+# TODO this should be a function
         for mediumId,position,format in self.cm.executeAndFetch(
                 'select id,position,format from media '
                 'where release=? order by position',
@@ -1524,6 +1532,7 @@ class Catalog(object):
                     recLengthAsString(
                         self.getMediumLen(mediumId)
                     )))
+# TODO this should be a function
             for recId,recLength,recPosition,title in self.cm.executeAndFetch(
                     'select recordings.id, recordings.length, '
                     'medium_recordings.position, recordings.title '
