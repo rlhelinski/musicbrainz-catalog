@@ -5,10 +5,6 @@ from __future__ import unicode_literals
 import logging
 logging.basicConfig(level=logging.INFO)
 from mbcat.catalog import *
-from mbcat.extradata import *
-from mbcat.barcode import UPC
-import os
-import sys
 from mbcat.shell import *
 import argparse
 
