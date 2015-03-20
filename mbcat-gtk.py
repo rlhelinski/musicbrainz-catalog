@@ -634,6 +634,11 @@ class BarcodeSearchDialog:
         self.window.connect('destroy', self.on_destroy)
         self.window.set_title(title)
 
+        key, mod = gtk.accelerator_parse('Escape')
+        accel = gtk.AccelGroup()
+        accel.connect_group(key, mod, 0, lambda w,x,y,z: self.window.destroy())
+        self.window.add_accel_group(accel)
+
         vbox = gtk.VBox(False, 10)
 
         prompt = gtk.Label(message)
@@ -898,6 +903,11 @@ class QueryResultsDialog:
         self.window.connect('destroy', self.on_destroy)
         self.window.set_title(message)
         self.window.set_size_request(*default_dialog_size)
+
+        key, mod = gtk.accelerator_parse('Escape')
+        accel = gtk.AccelGroup()
+        accel.connect_group(key, mod, 0, lambda w,x,y,z: self.window.destroy())
+        self.window.add_accel_group(accel)
 
         self.active_on_row_selected = []
 
@@ -2517,9 +2527,9 @@ class MBCatGtk:
         if text != 'All':
             fmt = mbcat.formats.getFormatObj(text).name()
             #print ('Filtering formats: '+text+', '+fmt)
-            self.filt = 'sortformat="'+fmt+'"'
+            self.filtFmt = 'sortformat="'+fmt+'"'
         else:
-            self.filt = ''
+            self.filtFmt = ''
         self.makeListStore()
         self.updateStatusBar()
 
@@ -2529,6 +2539,7 @@ class MBCatGtk:
 
     def menuClearFilters(self, widget=None):
         self.filt = ''
+        self.actiongroup.get_action('All').set_active(True)
         self.refreshView(widget)
 
     def menuCatalogCheck(self, widget):
@@ -2774,6 +2785,12 @@ class MBCatGtk:
             return
         self.setSelectedRow(self.getReleaseRow(releaseId))
 
+    def searchReleaseID(self, widget):
+        releaseId = TextEntry(self.window, 'Enter Release ID')
+        if not releaseId or releaseId not in self.catalog:
+            return
+        self.setSelectedRow(self.getReleaseRow(releaseId))
+
     def webserviceReleaseGroup(self, widget):
         entry = TextEntry(self.window, 'Enter release group search terms:')
         if not entry:
@@ -2881,10 +2898,10 @@ class MBCatGtk:
                     ('Artist', 'artist'),
                     ('Title', 'title'),
                     ('Barcode', 'barcode')]:
-                if key in self.result['cdstub']:
+                if key in d.task.result['cdstub']:
                     _log.info('%10s: %s\n' %
-                                 (label, self.result['cdstub'][key]))
-            self.askBrowseSubmission(d.submission_url,
+                                 (label, d.task.result['cdstub'][key]))
+            self.askBrowseSubmission(d.task.submission_url,
                     'There was only a CD stub. '
                     'Open browser to Submission URL?')
 
@@ -3165,6 +3182,11 @@ class MBCatGtk:
         submenuitem.connect('activate', self.searchTrack)
         menu.append(submenuitem)
 
+        ## Release ID
+        submenuitem = gtk.MenuItem('Release ID')
+        submenuitem.connect('activate', self.searchReleaseID)
+        menu.append(submenuitem)
+
         # Filter
         menu = gtk.Menu()
         menuitem = gtk.MenuItem("Filter")
@@ -3284,7 +3306,8 @@ class MBCatGtk:
     def makeListStore(self, ):
         self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str, str, str)
 
-        for row in self.catalog.getBasicTable(self.filt):
+        filtStr = ' and '.join(filter(None, [self.filtFmt, self.filt]))
+        for row in self.catalog.getBasicTable(filtStr):
             self.releaseList.append(row)
         # Need to add 1 here to get to sort string because of UUID at beginning
         self.releaseList.set_sort_column_id(1, gtk.SORT_ASCENDING)
@@ -3375,6 +3398,7 @@ class MBCatGtk:
         self.prefs = mbcat.userprefs.PrefManager()
         self.catalog = mbcat.catalog.Catalog(dbPath, cachePath, self.prefs)
         self.filt = ''
+        self.filtFmt = ''
 
         # create a new window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
