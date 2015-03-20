@@ -524,11 +524,12 @@ class Shell:
                          '\n')
 
     def printDiscQueryResults(self, results):
-        oneInCatalog = False
+        oneInCatalog = []
         for i, rel in enumerate(results['disc']['release-list']):
             self.s.write("\nResult : %d\n" % i)
             inCatalog = rel['id'] in self.c
-            oneInCatalog |= inCatalog
+            if inCatalog:
+                oneInCatalog.append(rel['id'])
             self.s.write("Release  : %s%s\n" % (rel['id'],
                                                 ' (in catalog)' if inCatalog else ''))
             self.s.write("Artist   : %s\n" % rel['artist-credit-phrase'])
@@ -649,7 +650,7 @@ class Shell:
         t.start()
         t.join()
 
-    def ReadDiscTOC(self):
+    def ReadDiscTOC(self, spec_device=None):
         """Read table of contents from a CD-ROM, search for a release, and add
 to the catalog"""
         def askBrowseSubmission():
@@ -662,8 +663,9 @@ to the catalog"""
         except ImportError as e:
             raise Exception('Could not import discid')
         default_device = discid.get_default_device()
-        spec_device = self.s.nextLine('Device to read [empty for \'%s\']: ' %
-                                      default_device)
+        if not spec_device:
+            spec_device = self.s.nextLine('Device to read [empty for \'%s\']: ' %
+                                          default_device)
         if not spec_device:
             spec_device = default_device
 
@@ -715,6 +717,7 @@ to the catalog"""
                 result['disc']['release-list'][choice]['id'])
 
             self.c.addRelease(releaseId)
+            return releaseId
 
         if len(result['disc']['release-list']) == 0:
             raise Exception("There were no matches for disc ID: %s" % disc.id)
@@ -723,7 +726,9 @@ to the catalog"""
                          ('It is already in the catalog. ' if oneInCatalog else '') +
                          '\n')
             if not oneInCatalog:
-                addResultToCatalog(0)
+                return addResultToCatalog(0)
+            else:
+                return oneInCatalog[0]
         else:
             self.s.write("There were %d matches.\n" %
                          len(result['disc']['release-list']))
@@ -734,7 +739,7 @@ to the catalog"""
             choice = int(choice)
             if choice < 0 or choice >= len(result['disc']['release-list']):
                 raise Exception('Input was out of range')
-            addResultToCatalog(choice)
+            return addResultToCatalog(choice)
 
     def Quit(self):
         """quit (or press enter)"""
