@@ -111,7 +111,7 @@ def getFormatFromUri(uriStr, escape=True):
 def getReleaseIdFromInput(releaseId):
     """Extracts a release ID from a string or a URL"""
     if releaseId.startswith('http'):
-        return mbcat.utils.extractUuid(releaseId, 'release')
+        return extractUuid(releaseId, 'release')
     else:
         return releaseId
 
