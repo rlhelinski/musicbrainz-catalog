@@ -646,7 +646,7 @@ class Shell:
     def RebuildCache(self):
         """Rebuild cache database tables (used for searching)"""
         t = mbcat.dialogs.TextProgress(
-            self.c.rebuildCacheTables(self.c))
+            self.c.rebuildDerivedTables(self.c))
         t.start()
         t.join()
 
