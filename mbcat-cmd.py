@@ -30,6 +30,16 @@ class MBCatCmd(cmd.Cmd):
         else:
             return answer and answer.lower().startswith('y')
 
+    def prompt_date(self, prompt='Enter a date'):
+        response = raw_input(
+            prompt+' (' + mbcat.dateFmtUsr + \
+            ') ["now" for current time, empty to cancel]: ')
+        if response:
+            return float(mbcat.encodeDate(response)) \
+                if response.lower() != 'now' else time.time()
+        else:
+            return None
+
     def emptyline(self):
         """Do nothing on an empty line"""
         pass
@@ -199,6 +209,7 @@ class MBCatCmd(cmd.Cmd):
         """Substitute one release ID for another."""
         releaseId = self._search_release()
         oldReleaseTitle = self.c.getReleaseTitle(releaseId)
+        # TODO make more consistent use of getReleaseIdFromInput()
         newReleaseId = mbcat.utils.getReleaseIdFromInput(
                 raw_input("Enter new release ID: "))
         self.c.renameRelease(releaseId, newReleaseId)
@@ -215,6 +226,173 @@ class MBCatCmd(cmd.Cmd):
                 "Enter search terms or release ID to delete: ")
         if self.confirm('Delete release?', default=False):
             self.c.deleteRelease(releaseId)
+
+    def release_refresh(self):
+        """Refresh XML metadata from MusicBrainz."""
+        releaseId = self._search_release(
+            "Enter search terms or release ID [empty for all]: ")
+
+        maxAge = raw_input(
+            "Enter maximum cache age in minutes "
+            "[leave empty for one minute]: ")
+        maxAge = int(maxAge) * 60 if maxAge else 60
+
+        if not releaseId:
+            t = mbcat.dialogs.TextProgress(
+                self.c.refreshAllMetaData(self.c, maxAge))
+            t.start()
+            t.join()
+        elif releaseId not in self.c:
+            print("Release not found\n")
+            return
+        else:
+            self.c.addRelease(releaseId, olderThan=maxAge)
+
+    def PrintCheckOutEvents(self, releaseId):
+        """List the check out and in events."""
+        history = self.c.getCheckOutHistory(releaseId)
+        if not history:
+            print('No checkout events for %s' % (releaseId,))
+        for event in history:
+            if len(event) == 2:
+                print('Checked out on: '+mbcat.decodeDate(event[0])+\
+                        ' by: '+event[1]+'.\n')
+            elif len(event) == 1:
+                print('Checked in on: '+mbcat.decodeDate(event[0])+\
+                        '.\n')
+
+    def release_check_out(self):
+        """Check out a release."""
+        releaseId = self._search_release()
+
+        self.PrintCheckOutEvents(releaseId)
+
+        if self.c.getCheckOutStatus(releaseId):
+            raise ValueError('Release is already checked out. Check in first.')
+
+        borrower = raw_input("Borrower (leave empty to return): ")
+        if not borrower:
+            raise ValueError('No borrower specified.')
+
+        date = self.prompt_date("Lend date")
+        if date:
+            self.c.addCheckOutEvent(releaseId, borrower, date)
+
+    def release_check_in(self):
+        """Check in a release."""
+        releaseId = self._search_release()
+
+        self.PrintCheckOutEvents(releaseId)
+
+        if not self.c.getCheckOutStatus(releaseId):
+            raise ValueError('Release is not checked out. Check out first.')
+
+        date = self.prompt_date("Return date")
+        if date:
+            self.c.addCheckInEvent(releaseId, date)
+
+    def release_copycount(self):
+        """Check and set the on-hand copy count for a release"""
+
+        releaseId = self._search_release("Enter search terms or release ID: ")
+        if not releaseId:
+            raise ValueError('no release specified')
+        print('Current copy count: %d\n' %
+                     self.c.getCopyCount(releaseId))
+        newCount = raw_input('New copy count [empty for no change]: ')
+        if newCount:
+            try:
+                self.c.setCopyCount(releaseId, int(newCount))
+            except ValueError as e:
+                raise ValueError('copy count must be an integer')
+
+    def release_tracklist(self):
+        """Print a list of track titles and times."""
+        # TODO function below should be part of this class, not Catalog
+        self.c.writeTrackList(sys.stdout, self._search_release())
+
+    def release_coverart(self):
+        """Refresh cover art from coverart.org or Amazon.com."""
+        try:
+            releaseId = self._search_release(
+                "Enter search terms or release ID [empty for all]: ")
+        except ValueError as e:
+            # TODO this function needs to be rewritten like refreshAllMetaData
+            self.c.refreshAllCoverArt()
+        else:
+            self.c.getCoverArt(releaseId)
+
+    def release_add_purchase(self):
+        """Add a purchase date."""
+        releaseId = self._search_release()
+
+        purchases = self.c.getPurchases(releaseId)
+        hdrFmtStr = '%-10s %-7s %-20s\n'
+        rowFmtStr = '%-10s %7s %-20s\n'
+        if purchases:
+            print(''.join([
+                    hdrFmtStr % ('Date', 'Price', 'Vendor')]))
+            for date,price,vendor in purchases:
+                print(rowFmtStr % (mbcat.decodeDate(date),price,vendor))
+        dateStr = raw_input(
+                'Enter purchase date ('+mbcat.dateFmtUsr+'): ')
+        if not dateStr:
+            raise ValueError('Empty date string.')
+        vendorStr = raw_input('Vendor: ')
+        if not vendorStr:
+            raise ValueError('Empty vendor string.')
+        priceStr = raw_input('Price: ')
+        if not vendorStr:
+            raise ValueError('Empty price string.')
+
+        self.c.addPurchase(releaseId,
+                float(mbcat.encodeDate(dateStr)),
+                float(priceStr),
+                vendorStr)
+
+    def release_add_listen(self):
+        """Add a listen date."""
+        releaseId = self._search_release()
+
+        listenDates = self.c.getListenDates(releaseId)
+        for listenDate in listenDates:
+            print(str(mbcat.decodeDateTime(listenDate))+'\n')
+        date = self.promptDate('Enter listen date')
+        if date:
+            self.c.addListenDate(releaseId, date)
+
+    # TODO also need a delete comment function
+    def release_add_comment(self):
+        """Edit comments."""
+        releaseId = self._search_release()
+        comment = self.c.getComment(releaseId)
+        tfd, tfn = tempfile.mkstemp()
+        tf = os.fdopen(tfd, 'w')
+        if comment:
+            tf.write(comment)
+        tf.close()
+
+        os.system('editor %s' % tfn)
+
+        with open(tfn, 'r') as f:
+            self.c.setComment(releaseId, f.read())
+
+        os.unlink(tfn)
+
+    def release_set_rating(self):
+        """Add a rating."""
+        releaseId = self._search_release()
+        currentRating = self.c.getRating(releaseId)
+        if currentRating is not None and currentRating != 'None':
+            print('Current rating: %d/5\n' % currentRating)
+        else:
+            print('No rating set\n')
+        nr = raw_input('New rating [leave empty for no change]: ')
+        if not nr:
+            raise ValueError('Empty string.')
+        if not nr.isdigit() or (int(nr) < 0) or (int(nr) > 5):
+            raise ValueError('Rating must be an integer between 0 and 5')
+        self.c.setRating(releaseId, nr)
 
     def do_EOF(self, line):
         print ('')
@@ -234,16 +412,16 @@ class MBCatCmd(cmd.Cmd):
                 'add': release_add,
                 'switch': release_switch,
                 'delete': release_delete,
-                #'refresh': release_refresh,
-                #'checkout': release_check_out,
-                #'checkin': release_check_in,
-                #'count': release_copycount,
-                #'tracklist': release_tracklist,
-                #'coverart': release_coverart,
-                #'purchase': release_add_purchase,
-                #'listen': release_add_listen,
-                #'comment': release_add_comment,
-                #'rate': release_set_rating,
+                'refresh': release_refresh,
+                'checkout': release_check_out,
+                'checkin': release_check_in,
+                'count': release_copycount,
+                'tracklist': release_tracklist,
+                'coverart': release_coverart,
+                'purchase': release_add_purchase,
+                'listen': release_add_listen,
+                'comment': release_add_comment,
+                'rate': release_set_rating,
                 },
             }
 
