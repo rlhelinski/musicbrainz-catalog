@@ -11,7 +11,7 @@ import argparse
 
 import readline # should be imported before 'cmd'
 import cmd
-import sys
+import sys # TODO should not need this
 
 class MBCatCmd(cmd.Cmd):
     """An interactive shell for MBCat"""
@@ -21,6 +21,9 @@ class MBCatCmd(cmd.Cmd):
     def __init__(self, catalog):
         cmd.Cmd.__init__(self)
         self.c = catalog
+        self.history_file_path = os.path.expanduser('~/.mbcat/history')
+        if (os.path.isfile(self.history_file_path)):
+            readline.read_history_file(self.history_file_path)
 
     def confirm(self, prompt, default=False):
         options = '[Y/n]' if default else '[y/N]'
@@ -395,6 +398,8 @@ class MBCatCmd(cmd.Cmd):
         self.c.setRating(releaseId, nr)
 
     def do_EOF(self, line):
+        # readline.set_history_length(length)
+        readline.write_history_file(self.history_file_path)
         print ('')
         return True
 
