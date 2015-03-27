@@ -9,12 +9,9 @@ from mbcat.catalog import *
 from mbcat.shell import *
 import argparse
 
+import readline # should be imported before 'cmd'
 import cmd
 import sys
-
-def promptLine(prompt):
-    sys.stdout.write(prompt)
-    return sys.stdin.readline().strip()
 
 class MBCatCmd(cmd.Cmd):
     """An interactive shell for MBCat"""
@@ -25,12 +22,27 @@ class MBCatCmd(cmd.Cmd):
         cmd.Cmd.__init__(self)
         self.c = catalog
 
+    def confirm(self, prompt, default=False):
+        options = '[Y/n]' if default else '[y/N]'
+        answer = raw_input(prompt+' '+options+' ')
+        if default is True:
+            return not answer or answer.lower().startswith('y')
+        else:
+            return answer and answer.lower().startswith('y')
+
+    def emptyline(self):
+        """Do nothing on an empty line"""
+        pass
+
     def cmd_do(self, cmd, subcmd):
         if not subcmd or subcmd not in self.cmds[cmd]:
             self.show_subcmds(cmd)
             return
         print ('Got subcmd: ' + subcmd)
-        self.cmds[cmd][subcmd](self)
+        try:
+            self.cmds[cmd][subcmd](self)
+        except ValueError as e:
+            print ('Command failed: '+str(e))
 
     def cmd_complete(self, cmd, text, line, begidx, endidx):
         if not text:
@@ -78,17 +90,61 @@ class MBCatCmd(cmd.Cmd):
         print("Running checks...\n")
         self.printReleaseList(self.c.checkReleases())
 
+    def formatReleaseInfo(self, releaseId):
+        return ' '.join( [
+                releaseId, ':', \
+                self.c.getReleaseArtist(releaseId), '-', \
+                self.c.getReleaseDate(releaseId), '-', \
+                self.c.getReleaseTitle(releaseId), \
+                #'('+release['disambiguation']+')' if 'disambiguation' in \
+                    #release else '', \
+                '['+str(self.c.getReleaseFormat(releaseId))+']', \
+            ] )
+
+    def _search_release(self, prompt="Enter search terms (or release ID): "):
+        """Search for a release and return release ID."""
+        while(True):
+            input = raw_input(prompt)
+            if input:
+                if len(mbcat.utils.getReleaseIdFromInput(input)) == 36:
+                    releaseId = mbcat.utils.getReleaseIdFromInput(input)
+                    print("Release %s selected.\n" % \
+                            self.formatReleaseInfo(releaseId))
+                    return releaseId
+                matches = list(self.c._search(input))
+                if len(matches) > 1:
+                    print("%d matches found:\n" % len(matches))
+                    for i, match in enumerate(matches):
+                        print(str(i) + " " + self.formatReleaseInfo(match))
+                    while (True):
+                        try:
+                            index = int(raw_input("Select a match: "))
+                            return matches[index]
+                        except ValueError as e:
+                            print(str(e) + " try again\n")
+                        except IndexError as e:
+                            print(str(e) + " try again\n")
+
+                elif len(matches) == 1:
+                    print("Release %s selected.\n" % \
+                            self.formatReleaseInfo(matches[0]))
+                    return matches[0]
+                else:
+                    raise ValueError("No matches for \"%s\"." % input)
+            else:
+                raise ValueError('No release specified.')
+
     def search_release(self):
         """Search for a release and display its neighbors in the sorting scheme.
         Useful for sorting physical media."""
-        releaseId = self.Search()
+        releaseId = self._search_release()
         (index, neighborhood) = self.c.getSortNeighbors(
             releaseId, matchFormat=True)
         self.printReleaseList(neighborhood, highlightId=releaseId)
 
     def search_barcode(self):
         """Search for a release by barcode"""
-        barCodeEntered = promptLine("Enter barcode: ")
+        barCodeEntered = raw_input("Enter barcode: ")
         barCodes = UPC(barCodeEntered).variations()
         found = False
 
@@ -120,7 +176,7 @@ class MBCatCmd(cmd.Cmd):
 
     def release_add(self):
         """Add a release."""
-        usr_input = promptLine("Enter release ID: ")
+        usr_input = raw_input("Enter release ID: ")
         releaseId = mbcat.utils.getReleaseIdFromInput(usr_input)
         if not releaseId:
             print("No input")
@@ -139,6 +195,27 @@ class MBCatCmd(cmd.Cmd):
 
         self.c.getCoverArt(releaseId)
 
+    def release_switch(self):
+        """Substitute one release ID for another."""
+        releaseId = self._search_release()
+        oldReleaseTitle = self.c.getReleaseTitle(releaseId)
+        newReleaseId = mbcat.utils.getReleaseIdFromInput(
+                raw_input("Enter new release ID: "))
+        self.c.renameRelease(releaseId, newReleaseId)
+        newReleaseTitle = self.c.getReleaseTitle(newReleaseId)
+        if oldReleaseTitle != newReleaseTitle:
+            print("Replaced '%s' with '%s'\n" %
+                         (oldReleaseTitle, newReleaseTitle))
+        else:
+            print("Replaced '%s'\n" % (oldReleaseTitle))
+
+    def release_delete(self):
+        """Delete a release."""
+        releaseId = self._search_release(
+                "Enter search terms or release ID to delete: ")
+        if self.confirm('Delete release?', default=False):
+            self.c.deleteRelease(releaseId)
+
     def do_EOF(self, line):
         print ('')
         return True
@@ -155,8 +232,8 @@ class MBCatCmd(cmd.Cmd):
                 },
             'release' : {
                 'add': release_add,
-                #'switch': release_switch,
-                #'delete': release_delete,
+                'switch': release_switch,
+                'delete': release_delete,
                 #'refresh': release_refresh,
                 #'checkout': release_check_out,
                 #'checkin': release_check_in,
