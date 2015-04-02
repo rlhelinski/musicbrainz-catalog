@@ -12,6 +12,7 @@ import argparse
 import readline # should be imported before 'cmd'
 import cmd
 import sys # TODO should not need this
+import webbrowser
 
 class MBCatCmd(cmd.Cmd):
     """An interactive shell for MBCat"""
@@ -55,6 +56,8 @@ class MBCatCmd(cmd.Cmd):
         try:
             self.cmds[cmd][subcmd](self)
         except ValueError as e:
+            print ('Command failed: '+str(e))
+        except EOFError as e:
             print ('Command failed: '+str(e))
 
     def cmd_complete(self, cmd, text, line, begidx, endidx):
@@ -116,6 +119,9 @@ class MBCatCmd(cmd.Cmd):
 
     def _search_release(self, prompt="Enter search terms (or release ID): "):
         """Search for a release and return release ID."""
+        # TODO could use readline.get_completer() and
+        # readline.set_completer(fun) here in order to temporarily substitute a
+        # custom completer for releases
         while(True):
             input = raw_input(prompt)
             if input:
@@ -397,6 +403,293 @@ class MBCatCmd(cmd.Cmd):
             raise ValueError('Rating must be an integer between 0 and 5')
         self.c.setRating(releaseId, nr)
 
+    def release_browse(self):
+        """Open a web browser for a musicbrainz release page"""
+        releaseId = self._search_release("Enter search terms or release ID: ")
+        if not releaseId:
+            raise ValueError('no release specified')
+
+        webbrowser.open(self.c.releaseUrl + releaseId)
+
+    def do_audacity(self, subcmd):
+        """Audacity commands"""
+        self.cmd_do('audacity', subcmd)
+
+    def complete_audacity(self, text, line, begidx, endidx):
+        return self.cmd_complete('audacity', text, line, begidx, endidx)
+
+    def help_audacity(self):
+        self.show_subcmds('audacity')
+
+    def audacity_labeltrack(self):
+        """Create label track file for Audacity; useful when transferring vinyl."""
+        self.c.makeLabelTrack(self._search_release())
+
+    def audacity_metatags(self):
+        """Create metadata tags for Audacity."""
+        self.c.writeMetaTags(self._search_release())
+
+    def do_digital(self, subcmd):
+        """Digital path commands"""
+        self.cmd_do('digital', subcmd)
+
+    def complete_digital(self, text, line, begidx, endidx):
+        return self.cmd_complete('digital', text, line, begidx, endidx)
+
+    def help_digital(self):
+        self.show_subcmds('digital')
+
+    def digital_path_add(self):
+        """Add a path to a digital copy of a release."""
+        releaseId = self._search_release()
+
+        path = raw_input("Enter path to add: ")
+        if path.startswith("'") and path.endswith("'"):
+            path = path[1:-1]
+        if not os.path.isdir(path):
+            raise ValueError('Path is not an existing directory')
+        fmt = mbcat.digital.guessDigitalFormat(path)
+        self.c.addDigitalPath(releaseId, fmt, path)
+
+    def digital_search(self):
+        """Search for digital copies of releases."""
+        try:
+            releaseId = self._search_release(
+                "Enter search terms or release ID [enter for all]: ")
+        except ValueError as e:
+            releaseId = ''
+
+        t = mbcat.dialogs.TextProgress(
+                mbcat.digital.DigitalSearch(
+                    self.c, releaseId=releaseId))
+        t.start()
+        t.join()
+
+    def do_webservice(self, subcmd):
+        """Web service commands"""
+        self.cmd_do('webservice', subcmd)
+
+    def complete_webservice(self, text, line, begidx, endidx):
+        return self.cmd_complete('webservice', text, line, begidx, endidx)
+
+    def complete_webservice_release(self, text, line, begidx, endidx):
+        # TODO not done here
+        return self.cmd_complete('release', text, line, begidx, endidx)
+
+
+    def help_webservice(self):
+        self.show_subcmds('webservice')
+
+    def MBReleaseBarcode(self):
+        """Search for release on musicbrainz by barcode"""
+        barcode = raw_input('Enter barcode: ')
+        results = musicbrainzngs.search_releases(barcode=barcode,
+                                                 limit=self.searchResultsLimit)
+
+        if results:
+            self.printQueryResults(results)
+
+    def MBReleaseCatno(self):
+        """Search for release on musicbrainz by catalog number"""
+        catno = raw_input('Enter catalog number: ')
+        if ' ' in catno:
+            _log.warning('Removing whitespaces from string (workaround)')
+            catno = catno.replace(' ', '')
+        results = musicbrainzngs.search_releases(catno=catno,
+                limit=self.searchResultsLimit)
+
+        if results:
+            self.printQueryResults(results)
+
+    def MBReleaseTitle(self):
+        """Search for release on musicbrainz by title"""
+        title = raw_input('Enter title: ')
+        results = musicbrainzngs.search_releases(release=title,
+                                                 limit=self.searchResultsLimit)
+
+        if results:
+            self.printQueryResults(results)
+
+    def MBReleaseGroup(self):
+        """Search for releases on musicbrainz by group ID"""
+        rgid = raw_input('Enter release group ID: ')
+        results = musicbrainzngs.search_releases(rgid=rgid,
+                limit=self.searchResultsLimit)
+
+        if results:
+            self.printQueryResults(results)
+
+    def MBRelGroupTitle(self):
+        """Search for release groups on musicbrainz by title"""
+
+        title = raw_input('Enter title: ')
+        results = musicbrainzngs.search_release_groups(
+                releasegroup=title,
+                limit=self.searchResultsLimit)
+
+        if results:
+            self.printGroupQueryResults(results)
+
+    def SyncCollection(self):
+        """Synchronize with a musicbrainz collection (currently only pushes releases)."""
+        if not self.c.prefs.username:
+            username = raw_input('Enter username: ')
+            self.c.prefs.username = username
+            self.c.prefs.save()
+        else:
+            username = self.c.prefs.username
+
+        # Input the password.
+        import getpass
+        password = getpass.getpass("Password for '%s': " % username)
+
+        # Call musicbrainzngs.auth() before making any API calls that
+        # require authentication.
+        mb.auth(username, password)
+
+        result = mb.get_collections()
+        for i, collection in enumerate(result['collection-list']):
+            print('%d: "%s" by %s (%s)\n' % (i, collection['name'],
+                        collection['editor'], collection['id']))
+
+        col_i = int(raw_input('Enter collection index: '))
+        colId = result['collection-list'][col_i]['id']
+
+        t = mbcat.dialogs.TextProgress(
+            self.c.syncCollection(self.c, colId))
+        t.start()
+        t.join()
+
+    @staticmethod
+    def askBrowseSubmission():
+        if self.confirm('Open browser to Submission URL?', default=False):
+            _log.info('Opening web browser.')
+            webbrowser.open(disc.submission_url)
+
+    def addResultToCatalog(self, result, choice):
+        if choice in self.c:
+            if not self.confirm('Release already exists. Add again?',
+                    default=False):
+                return
+        else:
+            if not self.confirm('Add release?', default=False):
+                return
+
+        print("Adding '%s' to the catalog.\n" %
+                     result['disc']['release-list'][choice]['title'])
+
+        releaseId = mbcat.utils.extractUuid(
+            result['disc']['release-list'][choice]['id'])
+
+        self.c.addRelease(releaseId)
+        return releaseId
+
+    def printDiscQueryResults(self, results):
+        oneInCatalog = []
+        for i, rel in enumerate(results['disc']['release-list']):
+            print("Result : %d" % i)
+            inCatalog = rel['id'] in self.c
+            if inCatalog:
+                oneInCatalog.append(rel['id'])
+            print("Release  : %s%s" % (rel['id'],
+                                                ' (in catalog)' if inCatalog else ''))
+            print("Artist   : %s" % rel['artist-credit-phrase'])
+            print("Title    : %s" % (rel['title']))
+            print("Date    : %s" %
+                         (rel['date'] if 'date' in rel else ''))
+            print("Country    : %s" %
+                         (rel['country'] if 'country' in rel else ''))
+            if 'barcode' in rel:
+                print("Barcode    : %s" % rel['barcode'])
+            if 'label-info-list' in rel:
+                for label_info in rel['label-info-list']:
+                    for label, field in [
+                            ("Label:", rel['label']['name']),
+                            ("Catalog #:", rel['catalog-number']),
+                            ("Barcode :", rel['barcode'])]:
+                        if field:
+                            print(label + ' ' + field + ',\t')
+                        else:
+                            print(label + '\t,\t')
+            print('')
+        return oneInCatalog
+
+    def _do_disc(self, spec_device=None):
+        """Read table of contents from a CD-ROM, search for a release, and
+        optionally add to the catalog"""
+
+        try:
+            import discid
+        except ImportError as e:
+            raise Exception('Could not import discid')
+        default_device = discid.get_default_device()
+        if not spec_device:
+            spec_device = raw_input('Device to read [empty for \'%s\']: ' %
+                                          default_device)
+        if not spec_device:
+            spec_device = default_device
+
+        try:
+            disc = discid.read(spec_device)
+        except discid.DiscError as e:
+            raise Exception("DiscID calculation failed: " + str(e))
+        print('DiscID: %s' % disc.id)
+        print('Submisson URL: %s' % disc.submission_url)
+
+        try:
+            print("Querying MusicBrainz...")
+            result = mb.get_releases_by_discid(disc.id,
+                                               includes=["artists"])
+            print('OK')
+        except mb.ResponseError:
+            _log.warning('Disc not found or bad MusicBrainz response.')
+            askBrowseSubmission()
+
+        else:
+            if result.get("disc"):
+                oneInCatalog = self.printDiscQueryResults(result)
+            elif result.get("cdstub"):
+                for label, key in [
+                        ('CD Stub', 'id'),
+                        ('Artist', 'artist'),
+                        ('Title', 'title'),
+                        ('Barcode', 'barcode')]:
+                    if key in result['cdstub']:
+                        print('%10s: %s' %
+                                     (label, result['cdstub'][key]))
+                askBrowseSubmission()
+
+                raise Exception('There was only a CD stub.')
+
+        if len(result['disc']['release-list']) == 0:
+            raise Exception("There were no matches for disc ID: %s" % disc.id)
+        elif len(result['disc']['release-list']) == 1:
+            print("There was one match. " +
+                         ('It is already in the catalog. ' if oneInCatalog else ''))
+            if not oneInCatalog:
+                return addResultToCatalog(0)
+            else:
+                return oneInCatalog[0]
+        else:
+            print("There were %d matches." %
+                         len(result['disc']['release-list']))
+            choice = raw_input(
+                'Choose one result to add (empty for none): ')
+            if not choice.isdigit():
+                raise Exception('Input was not a number')
+            choice = int(choice)
+            if choice < 0 or choice >= len(result['disc']['release-list']):
+                raise Exception('Input was out of range')
+            return self.addResultToCatalog(result, choice)
+
+    def do_disc(self, line):
+        """Read table of contents from a CD-ROM, search for a release, and
+        optionally add to the catalog"""
+        try:
+            self._do_disc()
+        except Exception as e:
+            print (e)
+
     def do_EOF(self, line):
         # readline.set_history_length(length)
         readline.write_history_file(self.history_file_path)
@@ -427,13 +720,41 @@ class MBCatCmd(cmd.Cmd):
                 'listen': release_add_listen,
                 'comment': release_add_comment,
                 'rate': release_set_rating,
+                'browse': release_browse,
+                },
+            'audacity' : {
+                'labeltrack': audacity_labeltrack,
+                'metatags': audacity_metatags,
+                },
+            'digital' : {
+                'path': digital_path_add,
+                'search': digital_search,
+                #'list' : digital_list,
+                },
+            'webservice': {
+                'release': {
+                    'barcode': MBReleaseBarcode,
+                    'catno': MBReleaseCatno,
+                    'title': MBReleaseTitle,
+                    'group': MBReleaseGroup,
+                    },
+                'group': {
+                    'title': MBRelGroupTitle,
+                    },
+                'sync': SyncCollection,
                 },
             }
 
+    def _show_subcmds(self, cmd, cmd_d, depth=0):
+        print ('    '*depth + '%s sub-commands:' % cmd)
+        for subcmd, subcmd_d in cmd_d.items():
+            if (type(subcmd_d) == dict):
+                self._show_subcmds(subcmd, subcmd_d, depth+1)
+            elif callable(subcmd_d):
+                print ('    '*(depth+1) + '%s: %s' % (subcmd, subcmd_d.__doc__))
+
     def show_subcmds(self, cmd):
-        print ('Subcommands:')
-        for subcmd, func in self.cmds[cmd].items():
-            print ('\t%s: %s' % (subcmd, func.__doc__))
+        self._show_subcmds(cmd, self.cmds[cmd])
 
     def printReleaseList(self, neighborhood, highlightId=None):
         for relId, sortStr in neighborhood:
