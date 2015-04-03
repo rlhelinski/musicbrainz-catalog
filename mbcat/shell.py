@@ -4,178 +4,41 @@ from mbcat.barcode import UPC
 import mbcat
 import mbcat.digital
 import os
+# TODO should not need this after fixing Catalog.writeTrackList()
 import sys
-from mbcat.inputsplitter import InputSplitter
 import musicbrainzngs
 import webbrowser
-import itertools
 _log = logging.getLogger("mbcat")
 import tempfile
-import traceback
 
+import readline  # should be imported before 'cmd'
+import cmd
 
-class Shell:
-    """An interactive shell that prompts the user for inputs and renders output for the catalog."""
+class MBCatCmd(cmd.Cmd):
+    """An interactive shell for MBCat"""
 
-    def __init__(self, stdin=sys.stdin, stdout=sys.stdout, catalog=None):
-        self.c = catalog if catalog != None else Catalog()
-        self.c.report()
-        self.s = InputSplitter(stdin=stdin, stdout=stdout)
+    prompt = 'mbcat: '
+
+    searchResultsLimit = 20
+
+    def __init__(self, catalog):
+        cmd.Cmd.__init__(self)
+        self.c = catalog
+        self.history_file_path = os.path.expanduser('~/.mbcat/history')
+        if (os.path.isfile(self.history_file_path)):
+            readline.read_history_file(self.history_file_path)
 
     def confirm(self, prompt, default=False):
         options = '[Y/n]' if default else '[y/N]'
-        answer = self.s.nextLine(prompt+' '+options+' ')
+        answer = raw_input(prompt+' '+options+' ')
         if default is True:
             return not answer or answer.lower().startswith('y')
         else:
             return answer and answer.lower().startswith('y')
 
-    def printReleaseList(self, neighborhood, highlightId=None):
-        for relId, sortStr in neighborhood:
-            self.s.write(
-                ('\033[92m' if relId == highlightId else "")+\
-                relId+\
-                ' '+\
-                sortStr+\
-                ' '+\
-                ("[" + self.c.getReleaseFormat(relId) + "]")+\
-                (' <<<\033[0m' if relId == highlightId else "")+\
-                '\n')
-
-    def SearchSort(self):
-        """Search for a release and display its neighbors in the sorting scheme.
-        Useful for sorting physical media."""
-        releaseId = self.Search()
-        (index, neighborhood) = self.c.getSortNeighbors(
-            releaseId, matchFormat=True)
-        self.printReleaseList(neighborhood, highlightId=releaseId)
-
-    def Search(self, prompt="Enter search terms (or release ID): "):
-        """Search for a release and return release ID."""
-        while(True):
-            input = self.s.nextLine(prompt)
-            if input:
-                if len(mbcat.utils.getReleaseIdFromInput(input)) == 36:
-                    releaseId = mbcat.utils.getReleaseIdFromInput(input)
-                    self.s.write("Release %s selected.\n" % \
-                            self.formatReleaseInfo(releaseId))
-                    return releaseId
-                matches = list(self.c._search(input))
-                if len(matches) > 1:
-                    self.s.write("%d matches found:\n" % len(matches))
-                    for i, match in enumerate(matches):
-                        self.s.write(
-                            str(i) + " " + self.formatReleaseInfo(match) + "\n")
-                    while (True):
-                        try:
-                            index = int(self.s.nextWord("Select a match: "))
-                            return matches[index]
-                        except ValueError as e:
-                            self.s.write(str(e) + " try again\n")
-                        except IndexError as e:
-                            self.s.write(str(e) + " try again\n")
-
-                elif len(matches) == 1:
-                    self.s.write("Release %s selected.\n" % \
-                            self.formatReleaseInfo(matches[0]))
-                    return matches[0]
-                else:
-                    raise ValueError("No matches for \"%s\"." % input)
-            else:
-                raise ValueError('No release specified.')
-
-    def formatReleaseInfo(self, releaseId):
-        return ' '.join( [
-                releaseId, ':', \
-                self.c.getReleaseArtist(releaseId), '-', \
-                self.c.getReleaseDate(releaseId), '-', \
-                self.c.getReleaseTitle(releaseId), \
-                #'('+release['disambiguation']+')' if 'disambiguation' in \
-                    #release else '', \
-                '['+str(self.c.getReleaseFormat(releaseId))+']', \
-            ] )
-
-    def SearchTrack(self, prompt="Enter search terms (or recording ID): "):
-        """Search for a recording and return recording ID."""
-        while(True):
-            input = self.s.nextLine(prompt)
-            if input:
-                if len(mbcat.utils.getReleaseIdFromInput(input)) == 36:
-                    matches = [mbcat.utils.getReleaseIdFromInput(input)]
-                else:
-                    matches = list(self.c._search(input, table='trackwords',
-                        keycolumn='trackword', outcolumn='recording'))
-
-                self.s.write("%d %s found:\n" % (len(matches), 
-                    'matches' if len(matches)>1 else 'match'))
-                for i, match in enumerate(matches):
-                    self.s.write(
-                        str(i) + " " + \
-                        self.c.formatRecordingInfo(match) + "\n")
-                if len(matches) > 1:
-                    while (True):
-                        try:
-                            index = int(self.s.nextWord("Select a match: "))
-                            return matches[index]
-                        except ValueError as e:
-                            self.s.write(str(e) + " try again\n")
-                        except IndexError as e:
-                            self.s.write(str(e) + " try again\n")
-
-                elif len(matches) == 1:
-                    return matches[0]
-                else:
-                    raise ValueError("No matches for \"%s\"." % input)
-            else:
-                raise ValueError('No release specified.')
-
-    def SearchTrackShowReleases(self, 
-        prompt="Enter search terms (or recording ID): "):
-        """Search for a track (recording) by words and show the releases on which it appears."""
-        recordingId = self.SearchTrack(prompt)
-        if not recordingId:
-            return
-
-        releases = self.c.recordingGetReleases(recordingId)
-        if not releases:
-            return
-
-        self.s.write('\nAppears on:\n')
-        for i, releaseId in enumerate(releases):
-            self.s.write(
-                str(i)+' '+self.formatReleaseInfo(releaseId)+'\n')
-
-    def AddPurchaseEvent(self):
-        """Add a purchase date."""
-        releaseId = self.Search()
-
-        purchases = self.c.getPurchases(releaseId)
-        hdrFmtStr = '%-10s %-7s %-20s\n'
-        rowFmtStr = '%-10s %7s %-20s\n'
-        if purchases:
-            self.s.write(''.join([
-                    hdrFmtStr % ('Date', 'Price', 'Vendor')]))
-            for date,price,vendor in purchases:
-                self.s.write(rowFmtStr % (mbcat.decodeDate(date),price,vendor))
-        dateStr = self.s.nextLine(
-                'Enter purchase date ('+mbcat.dateFmtUsr+'): ')
-        if not dateStr:
-            raise ValueError('Empty date string.')
-        vendorStr = self.s.nextLine('Vendor: ')
-        if not vendorStr:
-            raise ValueError('Empty vendor string.')
-        priceStr = self.s.nextLine('Price: ')
-        if not vendorStr:
-            raise ValueError('Empty price string.')
-
-        self.c.addPurchase(releaseId,
-                float(mbcat.encodeDate(dateStr)),
-                float(priceStr),
-                vendorStr)
-
-    def promptDate(self, prompt='Enter a date'):
-        response = self.s.nextLine(
-            prompt+' (' + mbcat.dateFmtUsr + \
+    def prompt_date(self, prompt='Enter a date'):
+        response = raw_input(
+            prompt + ' (' + mbcat.dateFmtUsr +
             ') ["now" for current time, empty to cancel]: ')
         if response:
             return float(mbcat.encodeDate(response)) \
@@ -183,137 +46,136 @@ class Shell:
         else:
             return None
 
-    def AddListenDate(self):
-        """Add a listen date."""
-        releaseId = self.Search()
+    def emptyline(self):
+        """Do nothing on an empty line"""
+        pass
 
-        listenDates = self.c.getListenDates(releaseId)
-        for listenDate in listenDates:
-            self.s.write(str(mbcat.decodeDateTime(listenDate))+'\n')
-        date = self.promptDate('Enter listen date')
-        if date:
-            self.c.addListenDate(releaseId, date)
-
-    # TODO also need a delete comment function
-    def AddComment(self):
-        """Edit comments."""
-        releaseId = self.Search()
-        comment = self.c.getComment(releaseId)
-        tfd, tfn = tempfile.mkstemp()
-        tf = os.fdopen(tfd, 'w')
-        if comment:
-            tf.write(comment)
-        tf.close()
-
-        os.system('editor %s' % tfn)
-
-        with open(tfn, 'r') as f:
-            self.c.setComment(releaseId, f.read())
-
-        os.unlink(tfn)
-
-    def SetRating(self):
-        """Add a rating."""
-        releaseId = self.Search()
-        currentRating = self.c.getRating(releaseId)
-        if currentRating is not None and currentRating != 'None':
-            self.s.write('Current rating: %d/5\n' % currentRating)
-        else:
-            self.s.write('No rating set\n')
-        nr = self.s.nextLine('New rating [leave empty for no change]: ')
-        if not nr:
-            raise ValueError('Empty string.')
-        if not nr.isdigit() or (int(nr) < 0) or (int(nr) > 5):
-            raise ValueError('Rating must be an integer between 0 and 5')
-        self.c.setRating(releaseId, nr)
-
-    def Refresh(self):
-        """Refresh XML metadata from MusicBrainz."""
-        releaseId = self.Search(
-            "Enter search terms or release ID [empty for all]: ")
-
-        maxAge = self.s.nextLine(
-            "Enter maximum cache age in minutes [leave empty for one minute]: ")
-        maxAge = int(maxAge) * 60 if maxAge else 60
-
-        if not releaseId:
-            t = mbcat.dialogs.TextProgress(
-                self.c.refreshAllMetaData(self.c, maxAge))
-            t.start()
-            t.join()
-        elif releaseId not in self.c:
-            self.s.write("Release not found\n")
+    def cmd_do(self, cmd, cmd_d, line_parts):
+        if not line_parts or line_parts[0] not in cmd_d:
+            self.show_subcmds(cmd)
             return
+        if len(line_parts) == 1 and callable(cmd_d[line_parts[0]]):
+            try:
+                cmd_d[line_parts[0]](self)
+            except ValueError as e:
+                print ('Command failed: '+str(e))
+            except EOFError as e:
+                print ('Command failed: '+str(e))
         else:
-            self.c.addRelease(releaseId, olderThan=maxAge)
+            self.cmd_do(line_parts[0], cmd_d[line_parts[0]], line_parts[1:])
 
-    def CoverArt(self):
-        """Refresh cover art from coverart.org or Amazon.com."""
-        try:
-            releaseId = self.Search(
-                "Enter search terms or release ID [empty for all]: ")
-        except ValueError as e:
-            # TODO this function needs to be rewritten like refreshAllMetaData
-            self.c.refreshAllCoverArt()
+    def cmd_complete(self, cmd_d, text, line_parts, begidx, endidx):
+        if len(line_parts) > 1:
+            if line_parts[0] not in cmd_d:
+                return
+            return self.cmd_complete(cmd_d[line_parts[0]], text,
+                                      line_parts[1:], begidx, endidx)
         else:
-            self.c.getCoverArt(releaseId)
+            if not text:
+                completions = [name for name, func in cmd_d.items()]
+            else:
+                completions = [ name
+                        for name, func in cmd_d.items()
+                        if name.startswith(text)
+                        ]
+            return completions
 
-    def Switch(self):
-        """Substitute one release ID for another."""
-        releaseId = self.Search()
-        oldReleaseTitle = self.c.getReleaseTitle(releaseId)
-        self.s.write("Enter new release ID: ")
-        newReleaseId = self.s.nextWord()
-        self.c.renameRelease(releaseId, newReleaseId)
-        newReleaseTitle = self.c.getReleaseTitle(newReleaseId)
-        if oldReleaseTitle != newReleaseTitle:
-            self.s.write("Replaced '%s' with '%s'\n" %
-                         (oldReleaseTitle, newReleaseTitle))
-        else:
-            self.s.write("Replaced '%s'\n" % (oldReleaseTitle))
+    def do_catalog(self, line):
+        """Catalog commands"""
+        self.cmd_do('catalog', self.cmds['catalog'], line.split(' '))
 
-    def Html(self):
-        """Write HTML file."""
-        import mbcat.html
-        fileName = self.s.nextLine(
-            'Path for HTML file [empty for catalog.html]: ')
-        if not fileName:
-            fileName = 'catalog.html'
-        widgets = ["Releases: ", progressbar.Bar(
-            marker="=", left="[", right="]"), " ", progressbar.Percentage()]
+    def complete_catalog(self, text, line, begidx, endidx):
+        return self.cmd_complete(self.cmds['catalog'], text,
+                                 line.split(' ')[1:], begidx, endidx)
+
+    def help_catalog(self):
+        self.show_subcmds('catalog')
+
+    def do_search(self, line):
+        """Search commands"""
+        self.cmd_do('search', self.cmds['search'], line.split(' '))
+
+    def complete_search(self, text, line, begidx, endidx):
+        return self.cmd_complete(self.cmds['search'], text,
+                                 line.split(' ')[1:], begidx, endidx)
+
+    def help_search(self):
+        self.show_subcmds('search')
+
+    def catalog_report(self):
+        """Display high-level information about catalog"""
+        self.c.report()
+
+    def catalog_rebuild(self):
+        """Rebuild cache database tables (used for searching)"""
         t = mbcat.dialogs.TextProgress(
-            mbcat.html.HtmlWriter(self.c, htmlFileName=fileName))
+            self.c.rebuildDerivedTables(self.c))
         t.start()
         t.join()
 
-        if self.confirm('Open browser to view HTML?', default=False):
-            _log.info('Opening web browser.')
-            webbrowser.open(fileName)
+    def catalog_check(self):
+        """Check releases for missing information"""
+        print("Running checks...\n")
+        self.printReleaseList(self.c.checkReleases())
 
-    def Add(self):
-        """Add a release."""
-        self.s.write("Enter release ID: ")
-        releaseId = mbcat.utils.getReleaseIdFromInput(self.s.nextWord())
-        if not releaseId:
-            self.s.write("No input")
-            return
-        if releaseId in self.c:
-            self.s.write("Release '%s' already exists.\n" %
-                         self.c.getRelease(releaseId)['title'])
-            return
-        try:
-            self.c.addRelease(releaseId)
-        except mb.ResponseError as e:
-            self.s.write(str(e) + " bad release ID?\n")
-            return
+    def formatReleaseInfo(self, releaseId):
+        return ' '.join([
+                releaseId, ':', \
+                self.c.getReleaseArtist(releaseId), '-', \
+                self.c.getReleaseDate(releaseId), '-', \
+                self.c.getReleaseTitle(releaseId), \
+                #'('+release['disambiguation']+')' if 'disambiguation' in \
+                    #release else '', \
+                '['+str(self.c.getReleaseFormat(releaseId))+']', \
+            ])
 
-        self.s.write("Added '%s'.\n" % self.c.getRelease(releaseId)['title'])
+    def _search_release(self, prompt="Enter search terms (or release ID): "):
+        """Search for a release and return release ID."""
+        # TODO could use readline.get_completer() and
+        # readline.set_completer(fun) here in order to temporarily substitute a
+        # custom completer for releases
+        while(True):
+            input = raw_input(prompt)
+            if input:
+                if len(mbcat.utils.getReleaseIdFromInput(input)) == 36:
+                    releaseId = mbcat.utils.getReleaseIdFromInput(input)
+                    print("Release %s selected.\n" % \
+                            self.formatReleaseInfo(releaseId))
+                    return releaseId
+                matches = list(self.c._search(input))
+                if len(matches) > 1:
+                    print("%d matches found:\n" % len(matches))
+                    for i, match in enumerate(matches):
+                        print(str(i) + " " + self.formatReleaseInfo(match))
+                    while (True):
+                        try:
+                            index = int(raw_input("Select a match: "))
+                            return matches[index]
+                        except ValueError as e:
+                            print(str(e) + " try again\n")
+                        except IndexError as e:
+                            print(str(e) + " try again\n")
 
-        self.c.getCoverArt(releaseId)
+                elif len(matches) == 1:
+                    print("Release %s selected.\n" % \
+                            self.formatReleaseInfo(matches[0]))
+                    return matches[0]
+                else:
+                    raise ValueError("No matches for \"%s\"." % input)
+            else:
+                raise ValueError('No release specified.')
 
-    def BarcodeSearch(self):
-        """Search for a release by barcode."""
-        barCodeEntered = self.s.nextWord("Enter barcode: ")
+    def search_release(self):
+        """Search for a release and display its neighbors in the sorting scheme.
+        Useful for sorting physical media."""
+        releaseId = self._search_release()
+        (index, neighborhood) = self.c.getSortNeighbors(
+            releaseId, matchFormat=True)
+        self.printReleaseList(neighborhood, highlightId=releaseId)
+
+    def search_barcode(self):
+        """Search for a release by barcode"""
+        barCodeEntered = raw_input("Enter barcode: ")
         barCodes = UPC(barCodeEntered).variations()
         found = False
 
@@ -328,70 +190,275 @@ class Shell:
                 found = True
 
         for releaseId in pairs:
-            self.s.write(self.formatReleaseInfo(releaseId) + '\n')
+            print(self.formatReleaseInfo(releaseId) + '\n')
 
         if not found:
             raise KeyError('No variation of barcode %s found' % barCodeEntered)
 
-    def Delete(self):
+    def do_release(self, line):
+        """Release commands"""
+        self.cmd_do('release', self.cmds['release'], line.split(' '))
+
+    def complete_release(self, text, line, begidx, endidx):
+        return self.cmd_complete(self.cmds['release'], text,
+                                 line.split(' ')[1:], begidx, endidx)
+
+    def help_release(self):
+        self.show_subcmds('release')
+
+    def release_add(self):
+        """Add a release."""
+        usr_input = raw_input("Enter release ID: ")
+        releaseId = mbcat.utils.getReleaseIdFromInput(usr_input)
+        if not releaseId:
+            print("No input")
+            return
+        if releaseId in self.c:
+            print("Release '%s' already exists.\n" %
+                         self.c.getRelease(releaseId)['title'])
+            return
+        try:
+            self.c.addRelease(releaseId)
+        except mb.ResponseError as e:
+            print(str(e) + " bad release ID?\n")
+            return
+
+        print("Added '%s'.\n" % self.c.getRelease(releaseId)['title'])
+
+        self.c.getCoverArt(releaseId)
+
+    def release_switch(self):
+        """Substitute one release ID for another."""
+        releaseId = self._search_release()
+        oldReleaseTitle = self.c.getReleaseTitle(releaseId)
+        # TODO make more consistent use of getReleaseIdFromInput()
+        newReleaseId = mbcat.utils.getReleaseIdFromInput(
+                raw_input("Enter new release ID: "))
+        self.c.renameRelease(releaseId, newReleaseId)
+        newReleaseTitle = self.c.getReleaseTitle(newReleaseId)
+        if oldReleaseTitle != newReleaseTitle:
+            print("Replaced '%s' with '%s'\n" %
+                         (oldReleaseTitle, newReleaseTitle))
+        else:
+            print("Replaced '%s'\n" % (oldReleaseTitle))
+
+    def release_delete(self):
         """Delete a release."""
-        releaseId = self.Search("Enter search terms or release ID to delete: ")
+        releaseId = self._search_release(
+                "Enter search terms or release ID to delete: ")
         if self.confirm('Delete release?', default=False):
             self.c.deleteRelease(releaseId)
 
-    def Check(self):
-        """Check releases for missing information."""
-        self.s.write("Running checks...\n")
-        self.printReleaseList(self.c.checkReleases())
+    def release_refresh(self):
+        """Refresh XML metadata from MusicBrainz."""
+        releaseId = self._search_release(
+            "Enter search terms or release ID [empty for all]: ")
+
+        maxAge = raw_input(
+            "Enter maximum cache age in minutes "
+            "[leave empty for one minute]: ")
+        maxAge = int(maxAge) * 60 if maxAge else 60
+
+        if not releaseId:
+            t = mbcat.dialogs.TextProgress(
+                self.c.refreshAllMetaData(self.c, maxAge))
+            t.start()
+            t.join()
+        elif releaseId not in self.c:
+            print("Release not found\n")
+            return
+        else:
+            self.c.addRelease(releaseId, olderThan=maxAge)
 
     def PrintCheckOutEvents(self, releaseId):
         """List the check out and in events."""
         history = self.c.getCheckOutHistory(releaseId)
         if not history:
-            self.s.write('No checkout events for %s' % (releaseId,))
+            print('No checkout events for %s' % (releaseId,))
         for event in history:
             if len(event) == 2:
-                self.s.write('Checked out on: '+mbcat.decodeDate(event[0])+\
+                print('Checked out on: '+mbcat.decodeDate(event[0])+\
                         ' by: '+event[1]+'.\n')
             elif len(event) == 1:
-                self.s.write('Checked in on: '+mbcat.decodeDate(event[0])+\
+                print('Checked in on: '+mbcat.decodeDate(event[0])+\
                         '.\n')
 
-    def CheckOut(self):
+    def release_check_out(self):
         """Check out a release."""
-        releaseId = self.Search()
+        releaseId = self._search_release()
 
         self.PrintCheckOutEvents(releaseId)
 
         if self.c.getCheckOutStatus(releaseId):
             raise ValueError('Release is already checked out. Check in first.')
 
-        borrower = self.s.nextLine("Borrower (leave empty to return): ")
+        borrower = raw_input("Borrower (leave empty to return): ")
         if not borrower:
             raise ValueError('No borrower specified.')
 
-        date = self.promptDate("Lend date")
+        date = self.prompt_date("Lend date")
         if date:
             self.c.addCheckOutEvent(releaseId, borrower, date)
 
-    def CheckIn(self):
+    def release_check_in(self):
         """Check in a release."""
-        releaseId = self.Search()
+        releaseId = self._search_release()
 
         self.PrintCheckOutEvents(releaseId)
 
         if not self.c.getCheckOutStatus(releaseId):
             raise ValueError('Release is not checked out. Check out first.')
 
-        date = self.promptDate("Return date")
+        date = self.prompt_date("Return date")
         if date:
             self.c.addCheckInEvent(releaseId, date)
 
-    def DigitalPathAdd(self):
-        """Add a path to a digital copy of a release."""
-        releaseId = self.Search()
+    def release_copycount(self):
+        """Check and set the on-hand copy count for a release"""
 
-        path = self.s.nextLine("Enter path to add: ")
+        releaseId = self._search_release("Enter search terms or release ID: ")
+        if not releaseId:
+            raise ValueError('no release specified')
+        print('Current copy count: %d\n' %
+                     self.c.getCopyCount(releaseId))
+        newCount = raw_input('New copy count [empty for no change]: ')
+        if newCount:
+            try:
+                self.c.setCopyCount(releaseId, int(newCount))
+            except ValueError as e:
+                raise ValueError('copy count must be an integer')
+
+    def release_tracklist(self):
+        """Print a list of track titles and times."""
+        # TODO function below should be part of this class, not Catalog
+        self.c.writeTrackList(sys.stdout, self._search_release())
+
+    def release_coverart(self):
+        """Refresh cover art from coverart.org or Amazon.com."""
+        try:
+            releaseId = self._search_release(
+                "Enter search terms or release ID [empty for all]: ")
+        except ValueError as e:
+            # TODO this function needs to be rewritten like refreshAllMetaData
+            self.c.refreshAllCoverArt()
+        else:
+            self.c.getCoverArt(releaseId)
+
+    def release_add_purchase(self):
+        """Add a purchase date."""
+        releaseId = self._search_release()
+
+        purchases = self.c.getPurchases(releaseId)
+        hdrFmtStr = '%-10s %-7s %-20s\n'
+        rowFmtStr = '%-10s %7s %-20s\n'
+        if purchases:
+            print(''.join([
+                    hdrFmtStr % ('Date', 'Price', 'Vendor')]))
+            for date,price,vendor in purchases:
+                print(rowFmtStr % (mbcat.decodeDate(date),price,vendor))
+        dateStr = raw_input(
+                'Enter purchase date ('+mbcat.dateFmtUsr+'): ')
+        if not dateStr:
+            raise ValueError('Empty date string.')
+        vendorStr = raw_input('Vendor: ')
+        if not vendorStr:
+            raise ValueError('Empty vendor string.')
+        priceStr = raw_input('Price: ')
+        if not vendorStr:
+            raise ValueError('Empty price string.')
+
+        self.c.addPurchase(releaseId,
+                float(mbcat.encodeDate(dateStr)),
+                float(priceStr),
+                vendorStr)
+
+    def release_add_listen(self):
+        """Add a listen date."""
+        releaseId = self._search_release()
+
+        listenDates = self.c.getListenDates(releaseId)
+        for listenDate in listenDates:
+            print(str(mbcat.decodeDateTime(listenDate))+'\n')
+        date = self.promptDate('Enter listen date')
+        if date:
+            self.c.addListenDate(releaseId, date)
+
+    # TODO also need a delete comment function
+    def release_add_comment(self):
+        """Edit comments."""
+        releaseId = self._search_release()
+        comment = self.c.getComment(releaseId)
+        tfd, tfn = tempfile.mkstemp()
+        tf = os.fdopen(tfd, 'w')
+        if comment:
+            tf.write(comment)
+        tf.close()
+
+        os.system('editor %s' % tfn)
+
+        with open(tfn, 'r') as f:
+            self.c.setComment(releaseId, f.read())
+
+        os.unlink(tfn)
+
+    def release_set_rating(self):
+        """Add a rating."""
+        releaseId = self._search_release()
+        currentRating = self.c.getRating(releaseId)
+        if currentRating is not None and currentRating != 'None':
+            print('Current rating: %d/5\n' % currentRating)
+        else:
+            print('No rating set\n')
+        nr = raw_input('New rating [leave empty for no change]: ')
+        if not nr:
+            raise ValueError('Empty string.')
+        if not nr.isdigit() or (int(nr) < 0) or (int(nr) > 5):
+            raise ValueError('Rating must be an integer between 0 and 5')
+        self.c.setRating(releaseId, nr)
+
+    def release_browse(self):
+        """Open a web browser for a musicbrainz release page"""
+        releaseId = self._search_release("Enter search terms or release ID: ")
+        if not releaseId:
+            raise ValueError('no release specified')
+
+        webbrowser.open(self.c.releaseUrl + releaseId)
+
+    def do_audacity(self, line):
+        """Audacity commands"""
+        self.cmd_do('audacity', self.cmds['audacity'], line.split(' '))
+
+    def complete_audacity(self, text, line, begidx, endidx):
+        return self.cmd_complete(self.cmds['audacity'], text,
+                                 line.split(' ')[1:], begidx, endidx)
+
+    def help_audacity(self):
+        self.show_subcmds('audacity')
+
+    def audacity_labeltrack(self):
+        """Create label track file for Audacity; useful when transferring vinyl."""
+        self.c.makeLabelTrack(self._search_release())
+
+    def audacity_metatags(self):
+        """Create metadata tags for Audacity."""
+        self.c.writeMetaTags(self._search_release())
+
+    def do_digital(self, line):
+        """Digital path commands"""
+        self.cmd_do('digital', self.cmds['digital'], line.split(' '))
+
+    def complete_digital(self, text, line, begidx, endidx):
+        return self.cmd_complete(self.cmds['digital'], text,
+                                 line.split(' ')[1:], begidx, endidx)
+
+    def help_digital(self):
+        self.show_subcmds('digital')
+
+    def digital_path_add(self):
+        """Add a path to a digital copy of a release."""
+        releaseId = self._search_release()
+
+        path = raw_input("Enter path to add: ")
         if path.startswith("'") and path.endswith("'"):
             path = path[1:-1]
         if not os.path.isdir(path):
@@ -399,10 +466,10 @@ class Shell:
         fmt = mbcat.digital.guessDigitalFormat(path)
         self.c.addDigitalPath(releaseId, fmt, path)
 
-    def DigitalSearch(self):
+    def digital_search(self):
         """Search for digital copies of releases."""
         try:
-            releaseId = self.Search(
+            releaseId = self._search_release(
                 "Enter search terms or release ID [enter for all]: ")
         except ValueError as e:
             releaseId = ''
@@ -413,89 +480,22 @@ class Shell:
         t.start()
         t.join()
 
-    def SyncCollection(self):
-        """Synchronize with a musicbrainz collection (currently only pushes releases)."""
-        if not self.c.prefs.username:
-            username = self.s.nextLine('Enter username: ')
-            self.c.prefs.username = username
-            self.c.prefs.save()
-        else:
-            username = self.c.prefs.username
+    def do_webservice(self, line):
+        """Web service commands"""
+        self.cmd_do('webservice', self.cmds['webservice'], line.split(' '))
 
-        # Input the password.
-        import getpass
-        password = getpass.getpass("Password for '%s': " % username)
+    def complete_webservice(self, text, line, begidx, endidx):
+        return self.cmd_complete(self.cmds['webservice'], text,
+                                 line.split(' ')[1:], begidx, endidx)
 
-        # Call musicbrainzngs.auth() before making any API calls that
-        # require authentication.
-        mb.auth(username, password)
-
-        result = mb.get_collections()
-        for i, collection in enumerate(result['collection-list']):
-            self.s.write('%d: "%s" by %s (%s)\n' % (i, collection['name'],
-                        collection['editor'], collection['id']))
-
-        col_i = int(self.s.nextLine('Enter collection index: '))
-        colId = result['collection-list'][col_i]['id']
-
-        t = mbcat.dialogs.TextProgress(
-            self.c.syncCollection(self.c, colId))
-        t.start()
-        t.join()
-
-    def LabelTrack(self):
-        """Create label track file for Audacity; useful when transferring vinyl."""
-        self.c.makeLabelTrack(self.Search())
-
-    def MetaTags(self):
-        """Create metadata tags for Audacity."""
-        self.c.writeMetaTags(self.Search())
-
-    def TrackList(self):
-        """Print a list of track titles and times."""
-        self.c.writeTrackList(self.s, self.Search())
-
-    def GetSimilar(self):
-        """Helps the user identify similar, possibly duplicate, releases."""
-        number = 20
-        t = mbcat.dialogs.TextProgress(
-            self.c.checkLevenshteinDistances(self.c, limit=2))
-        t.start()
-        t.join()
-        lds = t.task.result
-        for i in xrange(number):
-            self.s.write(str(lds[i][0]) + '\t' +
-                         self.formatReleaseInfo(lds[i][1]) + ' <-> ' +
-                         self.formatReleaseInfo(lds[i][2]) + '\n')
-
-    def ZipExport(self):
-        """Export the catalog to a zip file containing release XML files."""
-        path = self.s.nextLine('Enter path for file [empty for \'%s\']: '
-                               % self.c.defaultZipPath)
-        if not path:
-            path = self.c.defaultZipPath
-
-        t = mbcat.dialogs.TextProgress(self.c.saveZip(self.c, path))
-        t.start()
-        t.join()
-
-    def ZipImport(self):
-        """Import a zip file containing XML files into the catalog."""
-        defaultPath = 'mbcat-catalog.zip'
-        path = self.s.nextLine('Enter path for file [empty for \'%s\']: '
-                               % self.c.defaultZipPath)
-        if not path:
-            path = self.c.defaultZipPath
-
-        t = mbcat.dialogs.TextProgress(self.c.loadZip(self.c, path))
-        t.start()
-        t.join()
+    def help_webservice(self):
+        self.show_subcmds('webservice')
 
     def printQueryResults(self, results):
-        self.s.write('Release Results:\n')
+        print('Release Results:\n')
         # TODO this is a mess and should be combined with other code
         for release in results['release-list']:
-            self.s.write(release['id'] + ' ' +
+            print(release['id'] + ' ' +
                         # Artist(s)
                          ''.join([(('"' + cred['artist']['name'] + '"') \
                                     if isinstance(cred, dict) else cred)
@@ -526,20 +526,20 @@ class Shell:
     def printDiscQueryResults(self, results):
         oneInCatalog = []
         for i, rel in enumerate(results['disc']['release-list']):
-            self.s.write("\nResult : %d\n" % i)
+            print("\nResult : %d\n" % i)
             inCatalog = rel['id'] in self.c
             if inCatalog:
                 oneInCatalog.append(rel['id'])
-            self.s.write("Release  : %s%s\n" % (rel['id'],
+            print("Release  : %s%s\n" % (rel['id'],
                                                 ' (in catalog)' if inCatalog else ''))
-            self.s.write("Artist   : %s\n" % rel['artist-credit-phrase'])
-            self.s.write("Title    : %s\n" % (rel['title']))
-            self.s.write("Date    : %s\n" %
+            print("Artist   : %s\n" % rel['artist-credit-phrase'])
+            print("Title    : %s\n" % (rel['title']))
+            print("Date    : %s\n" %
                          (rel['date'] if 'date' in rel else ''))
-            self.s.write("Country    : %s\n" %
+            print("Country    : %s\n" %
                          (rel['country'] if 'country' in rel else ''))
             if 'barcode' in rel:
-                self.s.write("Barcode    : %s\n" % rel['barcode'])
+                print("Barcode    : %s\n" % rel['barcode'])
             if 'label-info-list' in rel:
                 for label_info in rel['label-info-list']:
                     for label, field in [
@@ -547,16 +547,16 @@ class Shell:
                             ("Catalog #:", rel['catalog-number']),
                             ("Barcode :", rel['barcode'])]:
                         if field:
-                            self.s.write(label + ' ' + field + ',\t')
+                            print(label + ' ' + field + ',\t')
                         else:
-                            self.s.write(label + '\t,\t')
-            self.s.write('\n')
+                            print(label + '\t,\t')
+            print('\n')
         return oneInCatalog
 
     def printGroupQueryResults(self, results):
-        self.s.write('Release Group Results:\n')
+        print('Release Group Results:\n')
         for group in results['release-group-list']:
-            self.s.write(group['id'] + ' ' +
+            print(group['id'] + ' ' +
                 ''.join([
                         (('"' + cred['artist']['name'] + '"') \
                         if type(cred) == dict else cred)
@@ -568,7 +568,7 @@ class Shell:
 
     def MBReleaseBarcode(self):
         """Search for release on musicbrainz by barcode"""
-        barcode = self.s.nextLine('Enter barcode: ')
+        barcode = raw_input('Enter barcode: ')
         results = musicbrainzngs.search_releases(barcode=barcode,
                                                  limit=self.searchResultsLimit)
 
@@ -577,7 +577,7 @@ class Shell:
 
     def MBReleaseCatno(self):
         """Search for release on musicbrainz by catalog number"""
-        catno = self.s.nextLine('Enter catalog number: ')
+        catno = raw_input('Enter catalog number: ')
         if ' ' in catno:
             _log.warning('Removing whitespaces from string (workaround)')
             catno = catno.replace(' ', '')
@@ -589,7 +589,7 @@ class Shell:
 
     def MBReleaseTitle(self):
         """Search for release on musicbrainz by title"""
-        title = self.s.nextLine('Enter title: ')
+        title = raw_input('Enter title: ')
         results = musicbrainzngs.search_releases(release=title,
                                                  limit=self.searchResultsLimit)
 
@@ -598,7 +598,7 @@ class Shell:
 
     def MBReleaseGroup(self):
         """Search for releases on musicbrainz by group ID"""
-        rgid = self.s.nextLine('Enter release group ID: ')
+        rgid = raw_input('Enter release group ID: ')
         results = musicbrainzngs.search_releases(rgid=rgid,
                 limit=self.searchResultsLimit)
 
@@ -608,7 +608,7 @@ class Shell:
     def MBRelGroupTitle(self):
         """Search for release groups on musicbrainz by title"""
 
-        title = self.s.nextLine('Enter title: ')
+        title = raw_input('Enter title: ')
         results = musicbrainzngs.search_release_groups(
                 releasegroup=title,
                 limit=self.searchResultsLimit)
@@ -616,47 +616,93 @@ class Shell:
         if results:
             self.printGroupQueryResults(results)
 
-    def CopyCount(self):
-        """Check and set the on-hand copy count for a release"""
+    def SyncCollection(self):
+        """Synchronize with a musicbrainz collection (currently only pushes releases)."""
+        if not self.c.prefs.username:
+            username = raw_input('Enter username: ')
+            self.c.prefs.username = username
+            self.c.prefs.save()
+        else:
+            username = self.c.prefs.username
 
-        releaseId = self.Search("Enter search terms or release ID: ")
-        if not releaseId:
-            raise ValueError('no release specified')
-        self.s.write('Current copy count: %d\n' %
-                     self.c.getCopyCount(releaseId))
-        newCount = self.s.nextLine('New copy count [empty for no change]: ')
-        if newCount:
-            try:
-                self.c.setCopyCount(releaseId, int(newCount))
-            except ValueError as e:
-                raise ValueError('copy count must be an integer')
+        # Input the password.
+        import getpass
+        password = getpass.getpass("Password for '%s': " % username)
 
-    def OpenBrowser(self):
-        """Open a web browser for a musicbrainz release page"""
-        releaseId = self.Search("Enter search terms or release ID: ")
-        if not releaseId:
-            raise ValueError('no release specified')
+        # Call musicbrainzngs.auth() before making any API calls that
+        # require authentication.
+        mb.auth(username, password)
 
-        webbrowser.open(self.c.releaseUrl + releaseId)
+        result = mb.get_collections()
+        for i, collection in enumerate(result['collection-list']):
+            print('%d: "%s" by %s (%s)\n' % (i, collection['name'],
+                        collection['editor'], collection['id']))
 
-    def Report(self):
-        """Display high-level information about catalog"""
-        self.c.report()
+        col_i = int(raw_input('Enter collection index: '))
+        colId = result['collection-list'][col_i]['id']
 
-    def RebuildCache(self):
-        """Rebuild cache database tables (used for searching)"""
         t = mbcat.dialogs.TextProgress(
-            self.c.rebuildDerivedTables(self.c))
+            self.c.syncCollection(self.c, colId))
         t.start()
         t.join()
 
-    def ReadDiscTOC(self, spec_device=None):
-        """Read table of contents from a CD-ROM, search for a release, and add
-to the catalog"""
-        def askBrowseSubmission():
-            if self.confirm('Open browser to Submission URL?', default=False):
-                _log.info('Opening web browser.')
-                webbrowser.open(disc.submission_url)
+    @staticmethod
+    def askBrowseSubmission():
+        if self.confirm('Open browser to Submission URL?', default=False):
+            _log.info('Opening web browser.')
+            webbrowser.open(disc.submission_url)
+
+    def addResultToCatalog(self, result, choice):
+        if choice in self.c:
+            if not self.confirm('Release already exists. Add again?',
+                    default=False):
+                return
+        else:
+            if not self.confirm('Add release?', default=False):
+                return
+
+        print("Adding '%s' to the catalog.\n" %
+                     result['disc']['release-list'][choice]['title'])
+
+        releaseId = mbcat.utils.extractUuid(
+            result['disc']['release-list'][choice]['id'])
+
+        self.c.addRelease(releaseId)
+        return releaseId
+
+    def printDiscQueryResults(self, results):
+        oneInCatalog = []
+        for i, rel in enumerate(results['disc']['release-list']):
+            print("Result : %d" % i)
+            inCatalog = rel['id'] in self.c
+            if inCatalog:
+                oneInCatalog.append(rel['id'])
+            print("Release  : %s%s" % (rel['id'],
+                                                ' (in catalog)' if inCatalog else ''))
+            print("Artist   : %s" % rel['artist-credit-phrase'])
+            print("Title    : %s" % (rel['title']))
+            print("Date    : %s" %
+                         (rel['date'] if 'date' in rel else ''))
+            print("Country    : %s" %
+                         (rel['country'] if 'country' in rel else ''))
+            if 'barcode' in rel:
+                print("Barcode    : %s" % rel['barcode'])
+            if 'label-info-list' in rel:
+                for label_info in rel['label-info-list']:
+                    for label, field in [
+                            ("Label:", rel['label']['name']),
+                            ("Catalog #:", rel['catalog-number']),
+                            ("Barcode :", rel['barcode'])]:
+                        if field:
+                            print(label + ' ' + field + ',\t')
+                        else:
+                            print(label + '\t,\t')
+            print('')
+        return oneInCatalog
+
+    def _do_disc(self, spec_device=None):
+        """Read table of contents from a CD-ROM, search for a release, and
+        optionally add to the catalog"""
 
         try:
             import discid
@@ -664,7 +710,7 @@ to the catalog"""
             raise Exception('Could not import discid')
         default_device = discid.get_default_device()
         if not spec_device:
-            spec_device = self.s.nextLine('Device to read [empty for \'%s\']: ' %
+            spec_device = raw_input('Device to read [empty for \'%s\']: ' %
                                           default_device)
         if not spec_device:
             spec_device = default_device
@@ -673,14 +719,14 @@ to the catalog"""
             disc = discid.read(spec_device)
         except discid.DiscError as e:
             raise Exception("DiscID calculation failed: " + str(e))
-        self.s.write('DiscID: %s\n' % disc.id)
-        self.s.write('Submisson URL: %s\n' % disc.submission_url)
+        print('DiscID: %s' % disc.id)
+        print('Submisson URL: %s' % disc.submission_url)
 
         try:
-            self.s.write("Querying MusicBrainz...")
+            print("Querying MusicBrainz...")
             result = mb.get_releases_by_discid(disc.id,
                                                includes=["artists"])
-            self.s.write('OK\n')
+            print('OK')
         except mb.ResponseError:
             _log.warning('Disc not found or bad MusicBrainz response.')
             askBrowseSubmission()
@@ -695,177 +741,115 @@ to the catalog"""
                         ('Title', 'title'),
                         ('Barcode', 'barcode')]:
                     if key in result['cdstub']:
-                        self.s.write('%10s: %s\n' %
+                        print('%10s: %s' %
                                      (label, result['cdstub'][key]))
                 askBrowseSubmission()
 
                 raise Exception('There was only a CD stub.')
 
-        def addResultToCatalog(choice):
-            if choice in self.c:
-                if not self.confirm('Release already exists. Add again?',
-                        default=False):
-                    return
-            else:
-                if not self.confirm('Add release?', default=False):
-                    return
-
-            self.s.write("Adding '%s' to the catalog.\n" %
-                         result['disc']['release-list'][choice]['title'])
-
-            releaseId = mbcat.utils.extractUuid(
-                result['disc']['release-list'][choice]['id'])
-
-            self.c.addRelease(releaseId)
-            return releaseId
-
         if len(result['disc']['release-list']) == 0:
             raise Exception("There were no matches for disc ID: %s" % disc.id)
         elif len(result['disc']['release-list']) == 1:
-            self.s.write("There was one match. " +
-                         ('It is already in the catalog. ' if oneInCatalog else '') +
-                         '\n')
+            print("There was one match. " +
+                         ('It is already in the catalog. ' if oneInCatalog else ''))
             if not oneInCatalog:
                 return addResultToCatalog(0)
             else:
                 return oneInCatalog[0]
         else:
-            self.s.write("There were %d matches.\n" %
+            print("There were %d matches." %
                          len(result['disc']['release-list']))
-            choice = self.s.nextLine(
+            choice = raw_input(
                 'Choose one result to add (empty for none): ')
             if not choice.isdigit():
                 raise Exception('Input was not a number')
             choice = int(choice)
             if choice < 0 or choice >= len(result['disc']['release-list']):
                 raise Exception('Input was out of range')
-            return addResultToCatalog(choice)
+            return self.addResultToCatalog(result, choice)
 
-    def Quit(self):
-        """quit (or press enter)"""
-        sys.exit(0)
-
-    # The master list of shell commands
-    shellCommands = {
-        'q': Quit,
-        'release' : {
-            'add': Add,
-            'switch': Switch,
-            'delete': Delete,
-            'refresh': Refresh,
-            'checkout': CheckOut,
-            'checkin': CheckIn,
-            'count': CopyCount,
-            'tracklist': TrackList,
-            'coverart': CoverArt,
-            'purchase': AddPurchaseEvent,
-            'listen': AddListenDate,
-            'comment': AddComment,
-            'rate': SetRating,
-            },
-        'search': {
-            'release' : SearchSort,
-            'barcode': BarcodeSearch,
-            'track': SearchTrackShowReleases,
-            },
-        'catalog' : {
-            'html': Html,
-            'similar': GetSimilar,
-            'export': {
-                'zip': ZipExport,
-                },
-            'import': {
-                'zip': ZipImport,
-                },
-            'rebuild': RebuildCache,
-            'report': Report,
-            'check': Check,
-            },
-        'digital': {
-            'path': DigitalPathAdd,
-            'search': DigitalSearch,
-            #'list' : DigitalList,
-        },
-        'audacity': {
-            'labeltrack': LabelTrack,
-            'metatags': MetaTags,
-        },
-        'webservice': {
-            'release': {
-                'barcode': MBReleaseBarcode,
-                'catno': MBReleaseCatno,
-                'title': MBReleaseTitle,
-                'group': MBReleaseGroup,
-            },
-            'group': {
-                'title': MBRelGroupTitle,
-            },
-            'sync': SyncCollection,
-        },
-        'browser': OpenBrowser,
-        'disc': ReadDiscTOC,
-    }
-
-    def cmdSummary(self, cmdStruct, level=0, parentLeader=''):
-        """Print a summary of commands."""
-        for i, cmdname in enumerate(sorted(cmdStruct.keys())):
-            cmdfun = cmdStruct[cmdname]
-            more = i < len(cmdStruct) - 1
-            thisLeader = (
-                ('\u251c' if more else '\u2514') + '\u2500' * 3 if level > 0 else '')
-            if type(cmdfun) == dict:
-                childLeader = (
-                    ('\u2502' if more else ' ') + ' ' * 3 if level > 0 else '')
-                self.s.write(parentLeader + thisLeader + cmdname + " :\n")
-                self.cmdSummary(cmdfun, level + 1, parentLeader + childLeader)
-            else:
-                try:
-                    self.s.write(parentLeader + thisLeader + cmdname + " : " +
-                                 cmdStruct[cmdname].__doc__.strip() + "\n")
-                except AttributeError as e:
-                    raise Exception('No docstring for \'%s\'' % cmdname)
-
-    def cmdParse(self, cmdStruct, input):
+    def do_disc(self, line):
+        """Read table of contents from a CD-ROM, search for a release, and
+        optionally add to the catalog"""
         try:
-            if type(cmdStruct[input]) == dict:
-                # Help the user along if they haven't completed a command
-                if not self.s.hasMore():
-                    self.s.write('Possible completions:\n')
-                    self.cmdSummary(cmdStruct[input], parentLeader=' '*3)
-                # Use the next input word and recur into the structure
-                self.cmdParse(cmdStruct[input], self.s.nextWord().lower())
-            else:
-                # Remind the user what this command does
-                try:
-                    self.s.write(cmdStruct[input].__doc__.strip() + '\n')
-                except AttributeError as e:
-                    raise Exception('No docstring for \'%s\'' % input)
-                # Call the function
-                try:
-                    (cmdStruct[input])(self)
-                except ValueError as e:
-                    self.s.write(str(e) + " Command failed.\n")
-                except KeyError as e:
-                    self.s.write(str(e) + " Command failed.\n")
-                except Exception as e:
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
-                    traceback.print_tb(exc_traceback)
-                    self.s.write(str(e) + " Command failed.\n")
-        except KeyError as e:
-            self.s.write(str(e) + " Invalid command.\n")
+            self._do_disc()
+        except Exception as e:
+            print (e)
 
-    def main(self):
-        while (True):
-            input = self.s.nextWord("Enter command ('h' for help): ").lower()
+    def do_EOF(self, line):
+        # readline.set_history_length(length)
+        readline.write_history_file(self.history_file_path)
+        print ('')
+        return True
 
-            if not input or input.startswith('q'):
-                break
+    cmds = {
+            'catalog': {
+                'report': catalog_report,
+                'rebuild': catalog_rebuild,
+                'check': catalog_check,
+                },
+            'search': {
+                'release': search_release,
+                'barcode': search_barcode,
+                },
+            'release' : {
+                'add': release_add,
+                'switch': release_switch,
+                'delete': release_delete,
+                'refresh': release_refresh,
+                'checkout': release_check_out,
+                'checkin': release_check_in,
+                'count': release_copycount,
+                'tracklist': release_tracklist,
+                'coverart': release_coverart,
+                'purchase': release_add_purchase,
+                'listen': release_add_listen,
+                'comment': release_add_comment,
+                'rate': release_set_rating,
+                'browse': release_browse,
+                },
+            'audacity' : {
+                'labeltrack': audacity_labeltrack,
+                'metatags': audacity_metatags,
+                },
+            'digital' : {
+                'path': digital_path_add,
+                'search': digital_search,
+                #'list' : digital_list,
+                },
+            'webservice': {
+                'release': {
+                    'barcode': MBReleaseBarcode,
+                    'catno': MBReleaseCatno,
+                    'title': MBReleaseTitle,
+                    'group': MBReleaseGroup,
+                    },
+                'group': {
+                    'title': MBRelGroupTitle,
+                    },
+                'sync': SyncCollection,
+                },
+            }
 
-            if (input == 'h' or input == 'help'):
-                self.cmdSummary(self.shellCommands)
+    def _show_subcmds(self, cmd, cmd_d, depth=0):
+        print ('    '*depth + '%s sub-commands:' % cmd)
+        for subcmd, subcmd_d in cmd_d.items():
+            if (type(subcmd_d) == dict):
+                self._show_subcmds(subcmd, subcmd_d, depth+1)
+            elif callable(subcmd_d):
+                print ('    '*(depth+1) + '%s: %s' % (subcmd, subcmd_d.__doc__))
 
-            elif input in self.shellCommands.keys():
-                self.cmdParse(self.shellCommands, input)
+    def show_subcmds(self, cmd):
+        self._show_subcmds(cmd, self.cmds[cmd])
 
-            else:
-                self.s.write("Invalid command\n")
+    def printReleaseList(self, neighborhood, highlightId=None):
+        for relId, sortStr in neighborhood:
+            print(
+                ('\033[92m' if relId == highlightId else "")+\
+                relId+\
+                ' '+\
+                sortStr+\
+                ' '+\
+                ("[" + self.c.getReleaseFormat(relId) + "]")+\
+                (' <<<\033[0m' if relId == highlightId else "")
+                )
