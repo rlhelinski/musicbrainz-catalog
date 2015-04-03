@@ -57,9 +57,7 @@ class MBCatCmd(cmd.Cmd):
         if len(line_parts) == 1 and callable(cmd_d[line_parts[0]]):
             try:
                 cmd_d[line_parts[0]](self)
-            except ValueError as e:
-                print ('Command failed: '+str(e))
-            except EOFError as e:
+            except (ValueError, EOFError, KeyError) as e:
                 print ('Command failed: '+str(e))
         else:
             self.cmd_do(line_parts[0], cmd_d[line_parts[0]], line_parts[1:])
