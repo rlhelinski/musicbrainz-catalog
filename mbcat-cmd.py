@@ -52,8 +52,7 @@ class MBCatCmd(cmd.Cmd):
         """Do nothing on an empty line"""
         pass
 
-    def _cmd_do(self, cmd, cmd_d, line_parts):
-        #print ('_cmd_do(cmd=%s, line_parts=%s)' % (cmd, line_parts))
+    def cmd_do(self, cmd, cmd_d, line_parts):
         if not line_parts or line_parts[0] not in cmd_d:
             self.show_subcmds(cmd)
             return
@@ -65,22 +64,15 @@ class MBCatCmd(cmd.Cmd):
             except EOFError as e:
                 print ('Command failed: '+str(e))
         else:
-            self._cmd_do(line_parts[0], cmd_d[line_parts[0]], line_parts[1:])
+            self.cmd_do(line_parts[0], cmd_d[line_parts[0]], line_parts[1:])
 
-    def cmd_do(self, cmd, line):
-        #print ('Got subcmd: ' + line)
-        self._cmd_do(cmd, self.cmds[cmd], line.split(' '))
-
-    def _cmd_complete(self, cmd_d, text, line_parts, begidx, endidx):
-        #print ('_cmd_complete(%s, %s)' % (text, line_parts))
+    def cmd_complete(self, cmd_d, text, line_parts, begidx, endidx):
         if len(line_parts) > 1:
-            #print (cmd_d.keys())
             if line_parts[0] not in cmd_d:
                 return
-            return self._cmd_complete(cmd_d[line_parts[0]], text,
+            return self.cmd_complete(cmd_d[line_parts[0]], text,
                                       line_parts[1:], begidx, endidx)
         else:
-            #print ('2')
             if not text:
                 completions = [name for name, func in cmd_d.items()]
             else:
@@ -90,28 +82,24 @@ class MBCatCmd(cmd.Cmd):
                         ]
             return completions
 
-    def cmd_complete(self, cmd, text, line, begidx, endidx):
-        #print ("cmd_complete(cmd='%s', text='%s', line='%s', begidx=%s, endidx=%s)" %
-               #(cmd, text, line, begidx, endidx))
-        return self._cmd_complete(self.cmds[cmd], text, line.split(' ')[1:],
-                                  begidx, endidx)
-
-    def do_catalog(self, subcmd):
+    def do_catalog(self, line):
         """Catalog commands"""
-        self.cmd_do('catalog', subcmd)
+        self.cmd_do('catalog', self.cmds['catalog'], line.split(' '))
 
     def complete_catalog(self, text, line, begidx, endidx):
-        return self.cmd_complete('catalog', text, line, begidx, endidx)
+        return self.cmd_complete(self.cmds['catalog'], text,
+                                 line.split(' ')[1:], begidx, endidx)
 
     def help_catalog(self):
         self.show_subcmds('catalog')
 
-    def do_search(self, subcmd):
+    def do_search(self, line):
         """Search commands"""
-        self.cmd_do('search', subcmd)
+        self.cmd_do('search', self.cmds['search'], line.split(' '))
 
     def complete_search(self, text, line, begidx, endidx):
-        return self.cmd_complete('search', text, line, begidx, endidx)
+        return self.cmd_complete(self.cmds['search'], text,
+                                 line.split(' ')[1:], begidx, endidx)
 
     def help_search(self):
         self.show_subcmds('search')
@@ -209,12 +197,13 @@ class MBCatCmd(cmd.Cmd):
         if not found:
             raise KeyError('No variation of barcode %s found' % barCodeEntered)
 
-    def do_release(self, subcmd):
+    def do_release(self, line):
         """Release commands"""
-        self.cmd_do('release', subcmd)
+        self.cmd_do('release', self.cmds['release'], line.split(' '))
 
     def complete_release(self, text, line, begidx, endidx):
-        return self.cmd_complete('release', text, line, begidx, endidx)
+        return self.cmd_complete(self.cmds['release'], text,
+                                 line.split(' ')[1:], begidx, endidx)
 
     def help_release(self):
         self.show_subcmds('release')
@@ -437,12 +426,13 @@ class MBCatCmd(cmd.Cmd):
 
         webbrowser.open(self.c.releaseUrl + releaseId)
 
-    def do_audacity(self, subcmd):
+    def do_audacity(self, line):
         """Audacity commands"""
-        self.cmd_do('audacity', subcmd)
+        self.cmd_do('audacity', self.cmds['audacity'], line.split(' '))
 
     def complete_audacity(self, text, line, begidx, endidx):
-        return self.cmd_complete('audacity', text, line, begidx, endidx)
+        return self.cmd_complete(self.cmds['audacity'], text,
+                                 line.split(' ')[1:], begidx, endidx)
 
     def help_audacity(self):
         self.show_subcmds('audacity')
@@ -455,12 +445,13 @@ class MBCatCmd(cmd.Cmd):
         """Create metadata tags for Audacity."""
         self.c.writeMetaTags(self._search_release())
 
-    def do_digital(self, subcmd):
+    def do_digital(self, line):
         """Digital path commands"""
-        self.cmd_do('digital', subcmd)
+        self.cmd_do('digital', self.cmds['digital'], line.split(' '))
 
     def complete_digital(self, text, line, begidx, endidx):
-        return self.cmd_complete('digital', text, line, begidx, endidx)
+        return self.cmd_complete(self.cmds['digital'], text,
+                                 line.split(' ')[1:], begidx, endidx)
 
     def help_digital(self):
         self.show_subcmds('digital')
@@ -491,17 +482,13 @@ class MBCatCmd(cmd.Cmd):
         t.start()
         t.join()
 
-    def do_webservice(self, subcmd):
+    def do_webservice(self, line):
         """Web service commands"""
-        self.cmd_do('webservice', subcmd)
+        self.cmd_do('webservice', self.cmds['webservice'], line.split(' '))
 
     def complete_webservice(self, text, line, begidx, endidx):
-        return self.cmd_complete('webservice', text, line, begidx, endidx)
-
-    def complete_webservice_release(self, text, line, begidx, endidx):
-        # TODO not done here
-        return self.cmd_complete('release', text, line, begidx, endidx)
-
+        return self.cmd_complete(self.cmds['webservice'], text,
+                                 line.split(' ')[1:], begidx, endidx)
 
     def help_webservice(self):
         self.show_subcmds('webservice')
