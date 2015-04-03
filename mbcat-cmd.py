@@ -9,15 +9,19 @@ from mbcat.catalog import *
 from mbcat.shell import *
 import argparse
 
-import readline # should be imported before 'cmd'
+import readline  # should be imported before 'cmd'
 import cmd
-import sys # TODO should not need this
+# TODO should not need this after fixing Catalog.writeTrackList()
+import sys
 import webbrowser
+
 
 class MBCatCmd(cmd.Cmd):
     """An interactive shell for MBCat"""
 
     prompt = 'mbcat: '
+
+    searchResultsLimit = 20
 
     def __init__(self, catalog):
         cmd.Cmd.__init__(self)
@@ -36,7 +40,7 @@ class MBCatCmd(cmd.Cmd):
 
     def prompt_date(self, prompt='Enter a date'):
         response = raw_input(
-            prompt+' (' + mbcat.dateFmtUsr + \
+            prompt + ' (' + mbcat.dateFmtUsr +
             ') ["now" for current time, empty to cancel]: ')
         if response:
             return float(mbcat.encodeDate(response)) \
@@ -48,27 +52,49 @@ class MBCatCmd(cmd.Cmd):
         """Do nothing on an empty line"""
         pass
 
-    def cmd_do(self, cmd, subcmd):
-        if not subcmd or subcmd not in self.cmds[cmd]:
+    def _cmd_do(self, cmd, cmd_d, line_parts):
+        #print ('_cmd_do(cmd=%s, line_parts=%s)' % (cmd, line_parts))
+        if not line_parts or line_parts[0] not in cmd_d:
             self.show_subcmds(cmd)
             return
-        print ('Got subcmd: ' + subcmd)
-        try:
-            self.cmds[cmd][subcmd](self)
-        except ValueError as e:
-            print ('Command failed: '+str(e))
-        except EOFError as e:
-            print ('Command failed: '+str(e))
+        if len(line_parts) == 1 and callable(cmd_d[line_parts[0]]):
+            try:
+                cmd_d[line_parts[0]](self)
+            except ValueError as e:
+                print ('Command failed: '+str(e))
+            except EOFError as e:
+                print ('Command failed: '+str(e))
+        else:
+            self._cmd_do(line_parts[0], cmd_d[line_parts[0]], line_parts[1:])
+
+    def cmd_do(self, cmd, line):
+        #print ('Got subcmd: ' + line)
+        self._cmd_do(cmd, self.cmds[cmd], line.split(' '))
+
+    def _cmd_complete(self, cmd_d, text, line_parts, begidx, endidx):
+        #print ('_cmd_complete(%s, %s)' % (text, line_parts))
+        if len(line_parts) > 1:
+            #print (cmd_d.keys())
+            if line_parts[0] not in cmd_d:
+                return
+            return self._cmd_complete(cmd_d[line_parts[0]], text,
+                                      line_parts[1:], begidx, endidx)
+        else:
+            #print ('2')
+            if not text:
+                completions = [name for name, func in cmd_d.items()]
+            else:
+                completions = [ name
+                        for name, func in cmd_d.items()
+                        if name.startswith(text)
+                        ]
+            return completions
 
     def cmd_complete(self, cmd, text, line, begidx, endidx):
-        if not text:
-            completions = [name for name, func in self.cmds[cmd].items()]
-        else:
-            completions = [ name
-                    for name, func in self.cmds[cmd].items()
-                    if name.startswith(text)
-                    ]
-        return completions
+        #print ("cmd_complete(cmd='%s', text='%s', line='%s', begidx=%s, endidx=%s)" %
+               #(cmd, text, line, begidx, endidx))
+        return self._cmd_complete(self.cmds[cmd], text, line.split(' ')[1:],
+                                  begidx, endidx)
 
     def do_catalog(self, subcmd):
         """Catalog commands"""
@@ -107,7 +133,7 @@ class MBCatCmd(cmd.Cmd):
         self.printReleaseList(self.c.checkReleases())
 
     def formatReleaseInfo(self, releaseId):
-        return ' '.join( [
+        return ' '.join([
                 releaseId, ':', \
                 self.c.getReleaseArtist(releaseId), '-', \
                 self.c.getReleaseDate(releaseId), '-', \
@@ -115,7 +141,7 @@ class MBCatCmd(cmd.Cmd):
                 #'('+release['disambiguation']+')' if 'disambiguation' in \
                     #release else '', \
                 '['+str(self.c.getReleaseFormat(releaseId))+']', \
-            ] )
+            ])
 
     def _search_release(self, prompt="Enter search terms (or release ID): "):
         """Search for a release and return release ID."""
@@ -480,6 +506,81 @@ class MBCatCmd(cmd.Cmd):
     def help_webservice(self):
         self.show_subcmds('webservice')
 
+    def printQueryResults(self, results):
+        print('Release Results:\n')
+        # TODO this is a mess and should be combined with other code
+        for release in results['release-list']:
+            print(release['id'] + ' ' +
+                        # Artist(s)
+                         ''.join([(('"' + cred['artist']['name'] + '"') \
+                                    if isinstance(cred, dict) else cred)
+                                    for cred in release['artist-credit']]) +
+                         ' "' + release['title'] + '"' +
+                         # Format(s)
+                         (' (' + ' + '.join(mbcat.utils.mergeList(
+                             [[medium['format']] if medium and 'format' in medium else []
+                              for medium in release['medium-list']])) + ')') +
+                         # Record Label(s) and Catalog Number(s)
+                         ((' ' + ', '.join([('label: ' + info['label']['name'] if 'label' in info else '') +
+                                           (' catno.: ' + info['catalog-number']
+                                            if 'catalog-number' in info else '')
+                                           for info in release['label-info-list']])) \
+                                           if 'label-info-list' in release else '') +
+                         # Country
+                         ((' (' + ', '.join(mbcat.utils.mergeList(
+                             [[code for code in release_event['area']['iso-3166-1-code-list']]
+                              if release_event and 'area' in release_event
+                              and 'iso-3166-1-code-list' in release_event['area'] else []
+                              for release_event in release['release-event-list']])) + ')') \
+                              if 'release-event-list' in release else '') +
+                         # Barcode
+                         (', barcode: ' + release['barcode'] if 'barcode' in release
+                          else '') +
+                         '\n')
+
+    def printDiscQueryResults(self, results):
+        oneInCatalog = []
+        for i, rel in enumerate(results['disc']['release-list']):
+            print("\nResult : %d\n" % i)
+            inCatalog = rel['id'] in self.c
+            if inCatalog:
+                oneInCatalog.append(rel['id'])
+            print("Release  : %s%s\n" % (rel['id'],
+                                                ' (in catalog)' if inCatalog else ''))
+            print("Artist   : %s\n" % rel['artist-credit-phrase'])
+            print("Title    : %s\n" % (rel['title']))
+            print("Date    : %s\n" %
+                         (rel['date'] if 'date' in rel else ''))
+            print("Country    : %s\n" %
+                         (rel['country'] if 'country' in rel else ''))
+            if 'barcode' in rel:
+                print("Barcode    : %s\n" % rel['barcode'])
+            if 'label-info-list' in rel:
+                for label_info in rel['label-info-list']:
+                    for label, field in [
+                            ("Label:", rel['label']['name']),
+                            ("Catalog #:", rel['catalog-number']),
+                            ("Barcode :", rel['barcode'])]:
+                        if field:
+                            print(label + ' ' + field + ',\t')
+                        else:
+                            print(label + '\t,\t')
+            print('\n')
+        return oneInCatalog
+
+    def printGroupQueryResults(self, results):
+        print('Release Group Results:\n')
+        for group in results['release-group-list']:
+            print(group['id'] + ' ' +
+                ''.join([
+                        (('"' + cred['artist']['name'] + '"') \
+                        if type(cred) == dict else cred)
+                        for cred in group['artist-credit']]) +
+                ' "' + group['title'] + '" (%d releases)\n' % \
+                    len(group['release-list']))
+
+    searchResultsLimit = 20
+
     def MBReleaseBarcode(self):
         """Search for release on musicbrainz by barcode"""
         barcode = raw_input('Enter barcode: ')
@@ -778,4 +879,3 @@ if __name__ == "__main__":
     c = Catalog(dbPath=args.database, cachePath=args.cache, prefs=prefs)
     s = MBCatCmd(catalog=c)
     s.cmdloop()
-
