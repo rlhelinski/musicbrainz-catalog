@@ -14,6 +14,7 @@ import tempfile
 import readline  # should be imported before 'cmd'
 import cmd
 
+
 class MBCatCmd(cmd.Cmd):
     """An interactive shell for MBCat"""
 
@@ -164,12 +165,16 @@ class MBCatCmd(cmd.Cmd):
                 raise ValueError('No release specified.')
 
     def search_release(self):
-        """Search for a release and display its neighbors in the sorting scheme.
-        Useful for sorting physical media."""
+        """Search for a release and display its neighbors in the sorting
+        scheme. Useful for sorting physical media."""
         releaseId = self._search_release()
         (index, neighborhood) = self.c.getSortNeighbors(
             releaseId, matchFormat=True)
         self.printReleaseList(neighborhood, highlightId=releaseId)
+
+    def search_recent(self):
+        """List releases by when they were added. Most recent releases last."""
+        self.printReleaseList(self.c.getReleaseIdsSortStringsByAdded())
 
     def search_barcode(self):
         """Search for a release by barcode"""
@@ -789,6 +794,7 @@ class MBCatCmd(cmd.Cmd):
             'search': {
                 'release': search_release,
                 'barcode': search_barcode,
+                'recent': search_recent,
                 },
             'release' : {
                 'add': release_add,

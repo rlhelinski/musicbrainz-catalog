@@ -382,6 +382,26 @@ class Catalog(object):
         return self.cm.executeAndChain('select id from releases'
             +((' '+filter) if filter else ''))
 
+    def getReleaseIdsByAdded(self, filter=None):
+        return self.cm.executeAndChain(
+            'select release from ('
+            'select release, max(date) as max_date from added_dates '
+            'group by release '
+            'order by max_date)'
+        )
+
+    def getReleaseIdsSortStringsByAdded(self, limit=20):
+        return self.cm.executeAndFetch(
+            'select release, sortstring from ('
+            'select d.release, max(d.date) as '
+            'max_date, r.sortstring from added_dates as '
+            'd inner join releases as '
+            'r on r.id = d.release '
+            'group by release '
+            'order by max_date desc '
+            'limit %d) order by max_date asc' % limit
+        )
+
     @staticmethod
     def getReleaseDictFromXml(metaxml):
         try:
