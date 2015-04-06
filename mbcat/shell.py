@@ -174,7 +174,10 @@ class MBCatCmd(cmd.Cmd):
 
     def search_recent(self):
         """List releases by when they were added. Most recent releases last."""
-        self.printReleaseList(self.c.getReleaseIdsSortStringsByAdded())
+        limit = raw_input('Specify number of most-recent releases [100]: ')
+        limit = int(limit) if limit else 100
+        self.printReleaseList(
+            self.c.getReleaseIdsSortStringsByAdded(limit=limit))
 
     def search_barcode(self):
         """Search for a release by barcode"""
