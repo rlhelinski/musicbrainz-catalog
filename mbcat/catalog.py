@@ -642,7 +642,6 @@ class Catalog(object):
             'select id from discids where medium=?', (mediumId,))
         return discIds
 
-
     @staticmethod
     def getReleaseWords(rel):
         words = set()
@@ -828,7 +827,6 @@ class Catalog(object):
             self.cm.commit()
 
         return sortstring
-
 
     def getSortedList(self, matchFmt=None):
         if matchFmt is not None:
@@ -1617,6 +1615,22 @@ class Catalog(object):
             'select '+','.join(self.basicColumns)+' from releases'+\
             (((' where '+filt) if filt else '')+\
             ' order by sortstring'))
+
+    def getAdvTable(self, filt=''):
+        advColumns = self.basicColumns[:]
+        id_idx = advColumns.index('id')
+        advColumns[id_idx] = 'release'
+        rColumns = self.basicColumns[:]
+        del rColumns[id_idx]
+        advColumns.append('datetime(min_date, \'unixepoch\', \'localtime\')')
+        query = \
+            'select '+', '.join(advColumns)+' from ('+\
+            'select d.release, min(d.date) as min_date, '+\
+            ', '.join(['r.'+col for col in rColumns])+' from '+\
+            'added_dates as d inner join releases as r on r.id = d.release '+\
+            'group by release)'
+        print (query)
+        return self.cm.executeAndFetch(query)
 
     def getReleaseTitle(self, releaseId):
         return self.cm.executeAndFetchOne(

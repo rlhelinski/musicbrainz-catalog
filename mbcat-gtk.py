@@ -2070,8 +2070,8 @@ class MBCatGtk:
     __png_icon_file__ = 'art/MusicBrainzCatalogLogo-white-256.png'
 
     columnNames = ['Artist', 'Release Title', 'Date', 'Country', 'Label',
-        'Catalog #', 'Barcode', 'ASIN', 'Format']
-    columnWidths = [30, 45, 16, 2, 37, 23, 16, 16, 16]
+        'Catalog #', 'Barcode', 'ASIN', 'Format', 'First Added']
+    columnWidths = [30, 45, 16, 2, 37, 23, 16, 16, 16, 16]
     numFields = ['Barcode', 'ASIN']
 
     formatNames = ['All', 'Digital', 'CD', '7" Vinyl', '12" Vinyl', 'Unknown']
@@ -2761,7 +2761,7 @@ class MBCatGtk:
         releaseId = self.getSelection()
         if not releaseId:
             return
-        nr = RatingDialog(self.window, 
+        nr = RatingDialog(self.window,
             default=self.catalog.getRating(releaseId))
         if not nr:
             return
@@ -3304,10 +3304,10 @@ class MBCatGtk:
         widget.pack_start(mb, False, False, 0)
 
     def makeListStore(self, ):
-        self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str, str, str)
+        self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str, str, str, str)
 
         filtStr = ' and '.join(filter(None, [self.filtFmt, self.filt]))
-        for row in self.catalog.getBasicTable(filtStr):
+        for row in self.catalog.getAdvTable(filtStr):
             self.releaseList.append(row)
         # Need to add 1 here to get to sort string because of UUID at beginning
         self.releaseList.set_sort_column_id(1, gtk.SORT_ASCENDING)
@@ -3335,8 +3335,8 @@ class MBCatGtk:
             cell.set_property('width-chars', self.columnWidths[n])
             if (columnName in self.numFields):
                 cell.set_property('xalign', 1.0)
-            self.tvcolumn[n] = gtk.TreeViewColumn(columnName, cell)
-            self.tvcolumn[n].add_attribute(cell, 'text', n+2)
+            self.tvcolumn[n] = gtk.TreeViewColumn(columnName, cell, text=n+2)
+            self.tvcolumn[n].set_sort_column_id(n+2)
             self.tvcolumn[n].set_resizable(True)
             self.treeview.append_column(self.tvcolumn[n])
 
