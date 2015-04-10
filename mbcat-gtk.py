@@ -644,6 +644,9 @@ class BarcodeSearchDialog:
         prompt = gtk.Label(message)
         vbox.pack_start(prompt, expand=True, fill=True)
 
+        self.hint = gtk.Label('')
+        vbox.pack_start(self.hint, expand=True, fill=True)
+
         entrybox = gtk.HBox(False, 10)
         self.entry = gtk.Entry(40)
         self.entry.connect('changed', self.on_change, self.entry)
@@ -675,6 +678,9 @@ class BarcodeSearchDialog:
 
     def on_change(self, widget, entry):
         entry_text = entry.get_text()
+        self.hint.set_text(('Check digit: %d' % \
+            mbcat.barcode.UPC.checksum_upc_a(entry_text)) \
+            if len(entry_text) == 11 else '')
         self.checkIndicator.set_from_stock(
                 gtk.STOCK_APPLY if \
                     mbcat.barcode.UPC.check_upc_a(entry_text) \
