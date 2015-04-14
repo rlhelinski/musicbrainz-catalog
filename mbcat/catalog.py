@@ -1629,7 +1629,6 @@ class Catalog(object):
             ', '.join(['r.'+col for col in rColumns])+' from '+\
             'added_dates as d inner join releases as r on r.id = d.release '+\
             'group by release)'
-        print (query)
         return self.cm.executeAndFetch(query)
 
     def getReleaseTitle(self, releaseId):
