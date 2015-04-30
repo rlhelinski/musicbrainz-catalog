@@ -1603,6 +1603,7 @@ class Catalog(object):
         'barcode',
         'asin',
         'format',
+        'sortformat',
         ]
 
     def getBasicTable(self, filt=''):
@@ -1628,7 +1629,10 @@ class Catalog(object):
             'select d.release, min(d.date) as min_date, '+\
             ', '.join(['r.'+col for col in rColumns])+' from '+\
             'added_dates as d inner join releases as r on r.id = d.release '+\
-            'group by release)'
+            'group by release) '+\
+            (('where '+filt+' ') if filt else '')+\
+            'order by sortstring'
+        _log.debug(query)
         return self.cm.executeAndFetch(query)
 
     def getReleaseTitle(self, releaseId):

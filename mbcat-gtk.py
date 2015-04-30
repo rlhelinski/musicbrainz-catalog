@@ -2076,8 +2076,8 @@ class MBCatGtk:
     __png_icon_file__ = 'art/MusicBrainzCatalogLogo-white-256.png'
 
     columnNames = ['Artist', 'Release Title', 'Date', 'Country', 'Label',
-        'Catalog #', 'Barcode', 'ASIN', 'Format', 'First Added']
-    columnWidths = [30, 45, 16, 2, 37, 23, 16, 16, 16, 16]
+        'Catalog #', 'Barcode', 'ASIN', 'Format', 'Sort Format', 'First Added']
+    columnWidths = [30, 45, 16, 2, 37, 23, 16, 16, 16, 16, 16]
     numFields = ['Barcode', 'ASIN']
 
     formatNames = ['All', 'Digital', 'CD', '7" Vinyl', '12" Vinyl', 'Unknown']
@@ -3312,7 +3312,8 @@ class MBCatGtk:
         widget.pack_start(mb, False, False, 0)
 
     def makeListStore(self, ):
-        self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str, str, str, str, str)
+        self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str,
+            str, str, str, str, str)
 
         filtStr = ' and '.join(filter(None, [self.filtFmt, self.filt]))
         for row in self.catalog.getAdvTable(filtStr):
@@ -3346,6 +3347,8 @@ class MBCatGtk:
             self.tvcolumn[n] = gtk.TreeViewColumn(columnName, cell, text=n+2)
             self.tvcolumn[n].set_sort_column_id(n+2)
             self.tvcolumn[n].set_resizable(True)
+            if (columnName == 'Sort Format'):
+                self.tvcolumn[n].set_property('visible', False)
             self.treeview.append_column(self.tvcolumn[n])
 
         self.treeview.connect('row-activated', self.on_row_activate)
