@@ -2072,8 +2072,12 @@ class MBCatGtk:
     __version__ = mbcat.catalog.__version__
     __copyright__ = 'Ryan Helinski'
     __website__ = 'https://github.com/rlhelinski/musicbrainz-catalog'
-    __icon_file__ = 'art/MusicBrainzCatalogLogo-white.svg'
-    __png_icon_file__ = 'art/MusicBrainzCatalogLogo-white-256.png'
+    __icon_file__ = os.path.join(mbcat.__path__[0],
+                                 'art',
+                                 'MusicBrainzCatalogLogo-white.svg')
+    __png_icon_file__ = os.path.join(mbcat.__path__[0],
+                                 'art',
+                                 'MusicBrainzCatalogLogo-white-256.png')
 
     columnNames = ['Artist', 'Release Title', 'Date', 'Country', 'Label',
         'Catalog #', 'Barcode', 'ASIN', 'Format', 'Sort Format', 'First Added']
@@ -3416,8 +3420,12 @@ class MBCatGtk:
         self.window.set_title(self.__name__)
         try:
             self.window.set_icon_from_file(self.__icon_file__)
-        except glib.GError:
-            self.window.set_icon_from_file(self.__png_icon_file__)
+        except glib.GError as e:
+            print (e)
+            try:
+                self.window.set_icon_from_file(self.__png_icon_file__)
+            except glib.GError:
+                print (e)
         self.window.set_size_request(800, 600)
         self.window.set_position(gtk.WIN_POS_CENTER)
 
