@@ -45,4 +45,35 @@ http://en.wikipedia.org/wiki/Universal_Product_Code#Check_digits
 
         return barCodes
 
+class EAN(object):
+    """
+    Implements the European Article Number (EAN)
+    https://en.wikipedia.org/wiki/International_Article_Number_%28EAN%29
 
+    For example, the EAN-13 barcode 5901234123457 has a check digit of 7 and is
+    a valid barcode.
+    """
+    def __init__(self, code):
+        if (type(code) != str) and (type(code) != unicode):
+            raise ValueError('code must be a string')
+        self.code = code
+
+    weights = [3,1,3,1,3,1,3,1,3,1,3,1,3,1,3,1,3]
+    weights13 = [1,3,1,3,1,3,1,3,1,3,1,3]
+    weights8 = [3,1,3,1,3,1,3]
+
+    @staticmethod
+    def _checksum(code):
+        l = list(code)
+        pairs = zip(l[:12], EAN.weights13) if len(l) == 13 else \
+                zip(l[:17], EAN.weights) if len(l) == 18 else \
+                zip(l[:7], EAN.weights8)
+        products = [int(d)*w for d,w in pairs]
+        sum_products = sum(products)
+        return (sum_products / 10 + 1)*10 - sum_products
+
+    def checksum(self):
+        return self._checksum(self.code)
+
+    def __nonzero__(self):
+        return self.checksum() == int(self.code[-1])
