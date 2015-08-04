@@ -678,12 +678,18 @@ class BarcodeSearchDialog:
 
     def on_change(self, widget, entry):
         entry_text = entry.get_text()
-        self.hint.set_text(('Check digit: %d' % \
+        suggestion = ('UPC check digit: %d' % \
             mbcat.barcode.UPC.checksum_upc_a(entry_text)) \
-            if len(entry_text) == 11 else '')
+            if len(entry_text) == 11 else \
+            ('EAN check digit: %d' % \
+            mbcat.barcode.EAN._checksum(entry_text)) \
+            if len(entry_text) == 12 else ''
+        self.hint.set_text(suggestion)
         self.checkIndicator.set_from_stock(
                 gtk.STOCK_APPLY if \
                     mbcat.barcode.UPC.check_upc_a(entry_text) \
+                    or
+                    mbcat.barcode.EAN._checksum(entry_text) \
                     else gtk.STOCK_CANCEL,
                 gtk.ICON_SIZE_BUTTON)
 
