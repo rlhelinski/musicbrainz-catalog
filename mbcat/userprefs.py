@@ -23,7 +23,10 @@ class PrefManager:
         else:
             self._addPathRoot(os.path.expanduser(os.path.join('~', 'Music')))
             self.htmlPubPath = '.'
-            self.save()
+            try:
+                self.save()
+            except:
+                _log.error('Failed to create preferences file')
 
     def load(self):
         mytree = etree.parse(self.prefFile)
