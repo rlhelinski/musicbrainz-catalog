@@ -759,7 +759,7 @@ class MBCatCmd(cmd.Cmd):
             print("There was one match. " +
                          ('It is already in the catalog. ' if oneInCatalog else ''))
             if not oneInCatalog:
-                return addResultToCatalog(0)
+                return self.addResultToCatalog(result, 0)
             else:
                 return oneInCatalog[0]
         else:
