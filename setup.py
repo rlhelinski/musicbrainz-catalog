@@ -12,5 +12,6 @@ setup(name='mbcat',
       url='https://www.github.com/rlhelinski/musicbrainz-catalog',
       packages=['mbcat', 'progressbar'],
       package_data={'mbcat': ['art/*.png', 'art/*.svg']},
-      scripts=['mbcat-cmd.py', 'mbcat-gtk.py'],
+      scripts=['mbcat-cmd.py', 'mbcat-gtk.py',
+          'scripts/mbcat-add-disc', 'scripts/mbcat-disc-get-release'],
       )

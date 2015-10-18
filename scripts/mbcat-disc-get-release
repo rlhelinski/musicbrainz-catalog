@@ -1,0 +1,27 @@
+#!/usr/bin/python
+
+import discid
+import mbcat.catalog, mbcat.shell
+
+import argparse
+
+parser = argparse.ArgumentParser(description=
+	'Utility script to add a disc ID to the database')
+parser.add_argument('--dev',
+	help='Specify the device to read')
+parser.add_argument('--database',
+	help='Specify the path to the catalog database')
+parser.add_argument('--cache',
+	help='Specify the path to the file cache')
+args = parser.parse_args()
+
+# Default path should be OK, but could override
+cat = mbcat.catalog.Catalog(dbPath=args.database, cachePath=args.cache)
+
+# Could override the device here
+id = discid.read(args.dev)
+
+if id and id.id:
+	print ('Looking up releases for %s' % id.id)
+	shell = mbcat.shell.Shell(catalog=cat)
+	shell.ReadDiscTOC(args.dev)
