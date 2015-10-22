@@ -50,6 +50,7 @@ class UIManagerExample:
         <menuitem action="Quit"/>
       </menu>
       <menu action="View">
+        <menuitem action="ViewToolbar"/>
         <menuitem action="ViewDetailPane" />
         <menuitem action="ViewStatusBar" />
         <menuitem action="ViewRefresh" />
@@ -74,24 +75,51 @@ class UIManagerExample:
         <menuitem action="ReleasePurchase" />
         <menuitem action="ReleaseRate" />
       </menu>
-      <menu action="Sound">
-        <menuitem action="Mute"/>
+      <menu action="Search">
+        <menuitem action="SearchBarcode" />
+        <menuitem action="SearchArtistTitle" />
+        <menuitem action="SearchTrack" />
+        <menuitem action="SearchReleaseID" />
       </menu>
-      <menu action="RadioBand">
-        <menuitem action="AM"/>
-        <menuitem action="FM"/>
-        <menuitem action="SSB"/>
+      <menu action="Filter">
+        <menu action="FilterFormat">
+          <menuitem action="FormatAll" />
+          <menuitem action="FormatDigital" />
+          <menuitem action="FormatCD" />
+          <menuitem action="Format7Inch" />
+          <menuitem action="Format12Inch" />
+        </menu>
+        <menuitem action="FilterQuick"/>
+        <menuitem action="FilterExpression"/>
+        <menuitem action="FilterIncomplete"/>
+        <separator />
+        <menuitem action="FilterClear"/>
+      </menu>
+      <menu action="Webservice">
+        <menuitem action="WebDiscId"/>
+        <separator />
+        <menuitem action="WebReleaseGroup"/>
+        <menuitem action="WebRelease"/>
+        <menuitem action="WebBarcode"/>
+        <menuitem action="WebCatNo"/>
+        <separator />
+        <menuitem action="WebSyncColl"/>
+      </menu>
+      <menu action="Help">
+        <menuitem action="About"/>
       </menu>
     </menubar>
     <toolbar name="Toolbar">
       <toolitem action="Quit"/>
       <separator/>
-      <toolitem action="Mute"/>
+      <toolitem action="ViewDetailPane"/>
       <separator/>
-      <placeholder name="RadioBandItems">
-        <toolitem action="AM"/>
-        <toolitem action="FM"/>
-        <toolitem action="SSB"/>
+      <placeholder name="FilterFormat">
+        <toolitem action="FormatAll"/>
+        <toolitem action="FormatDigital"/>
+        <toolitem action="FormatCD"/>
+        <toolitem action="Format7Inch"/>
+        <toolitem action="Format12Inch"/>
       </placeholder>
     </toolbar>
     </ui>'''
@@ -117,14 +145,14 @@ class UIManagerExample:
 
         # Create a ToggleAction, etc.
         actiongroup.add_toggle_actions([
-            ('Mute', None, '_Mute', '<Control>m',
-                'Mute the volume', self.mute_cb),
+            ('ViewToolbar', None, 'Show Tool Bar'),
             ('ViewDetailPane', None, 'Show Detail Pane'),
             ('ViewStatusBar', None, 'Show Status Bar'),
             ])
 
         # Create actions
         actiongroup.add_actions([
+            ('Catalog', None, '_Catalog'),
             ('Quit', gtk.STOCK_QUIT, '_Quit me!', None,
                 'Quit the Program', self.quit_cb),
             ('Open', gtk.STOCK_OPEN, '_Open Database', None,
@@ -163,16 +191,36 @@ class UIManagerExample:
             ('ReleaseDigital', None, 'Digital _Paths'),
             ('ReleasePurchase', None, 'Purchase History'),
             ('ReleaseRate', None, '_Rate'),
-            ('Catalog', None, '_Catalog'),
-            ('Sound', None, '_Sound'),
-            ('RadioBand', None, '_Radio Band')])
+            ('Search', None, '_Search'),
+            ('SearchBarcode', None, 'Barcode (UPC)'),
+            ('SearchArtistTitle', None, 'Artist/Title'),
+            ('SearchTrack', None, 'Track'),
+            ('SearchReleaseID', None, 'Release ID'),
+            ('Filter', None, '_Filter'),
+            ('FilterFormat', None, '_Format'),
+            ('FilterQuick', None, 'Quick Search'),
+            ('FilterExpression', None, 'SQL Expression'),
+            ('FilterIncomplete', None, 'Incomplete Data'),
+            ('FilterClear', None, 'Clear Filters'),
+            ('Webservice', None, '_Webservice'),
+            ('WebDiscId', gtk.STOCK_CDROM, '_Disc Lookup'),
+            ('WebReleaseGroup', None, 'Release Group'),
+            ('WebRelease', None, 'Release'),
+            ('WebBarcode', None, 'Barcode (UPC)'),
+            ('WebCatNo', None, 'Catalog Number'),
+            ('WebSyncColl', None, 'Sync Collection'),
+            ('Help', None, '_Help'),
+            ('About', None, '_About'),
+            ])
         actiongroup.get_action('Quit').set_property('short-label', '_Quit')
 
         # Create some RadioActions
         actiongroup.add_radio_actions([
-            ('AM', None, '_AM', '<Control>a', 'AM Radio', 0),
-            ('FM', None, '_FM', '<Control>f', 'FM Radio', 1),
-            ('SSB', None, '_SSB', '<Control>s', 'SSB Radio', 2),
+            ('FormatAll', None, 'All', None, 'All Formats', 0),
+            ('FormatDigital', None, 'Digital', None, 'Digital Releases', 1),
+            ('FormatCD', None, 'CD', None, 'Compact Disc', 2),
+            ('Format7Inch', None, '7" Vinyl', None, '7" Vinyl', 3),
+            ('Format12Inch', None, '12" Vinyl', None, '12" Vinyl', 4),
             ], 0, self.radioband_cb)
 
         # Add the actiongroup to the uimanager
