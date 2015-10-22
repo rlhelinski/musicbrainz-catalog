@@ -45,7 +45,34 @@ class UIManagerExample:
         <menuitem action="DatabaseRebuild" />
         <menuitem action="DatabaseFindSimilar" />
         <separator />
+        <menuitem action="Preferences" />
+        <separator />
         <menuitem action="Quit"/>
+      </menu>
+      <menu action="View">
+        <menuitem action="ViewDetailPane" />
+        <menuitem action="ViewStatusBar" />
+        <menuitem action="ViewRefresh" />
+        <menuitem action="ViewScrollSelected" />
+        <menuitem action="ViewXML" />
+      </menu>
+      <menu action="Release">
+        <menuitem action="ReleaseAdd" />
+        <menuitem action="ReleaseDelete" />
+        <menuitem action="ReleaseSwitch" />
+        <menuitem action="ReleaseCoverArt" />
+        <menuitem action="ReleaseMetadata" />
+        <menuitem action="ReleaseBrowse" />
+        <menuitem action="ReleaseIndexDigital" />
+        <menuitem action="ReleaseTracklist" />
+        <separator />
+        <menuitem action="ReleaseCheckOut" />
+        <menuitem action="ReleaseComment" />
+        <menuitem action="ReleaseCount" />
+        <menuitem action="ReleaseListen" />
+        <menuitem action="ReleaseDigital" />
+        <menuitem action="ReleasePurchase" />
+        <menuitem action="ReleaseRate" />
       </menu>
       <menu action="Sound">
         <menuitem action="Mute"/>
@@ -89,8 +116,12 @@ class UIManagerExample:
         self.actiongroup = actiongroup
 
         # Create a ToggleAction, etc.
-        actiongroup.add_toggle_actions([('Mute', None, '_Mute', '<Control>m',
-                                         'Mute the volume', self.mute_cb)])
+        actiongroup.add_toggle_actions([
+            ('Mute', None, '_Mute', '<Control>m',
+                'Mute the volume', self.mute_cb),
+            ('ViewDetailPane', None, 'Show Detail Pane'),
+            ('ViewStatusBar', None, 'Show Status Bar'),
+            ])
 
         # Create actions
         actiongroup.add_actions([
@@ -106,11 +137,32 @@ class UIManagerExample:
             ('Export', None, '_Export'),
             ('ExportZip', None, '_Zip'),
             ('ExportHTML', None, '_HTML'),
-            ('RefreshMetadata', None, 'Refresh _Metadata'),
-            ('IndexDigital', None, 'Index _Digital'),
-            ('DatabaseVacuum', None, 'Vacuum Database'),
-            ('DatabaseRebuild', None, 'Rebuild Derived Tables'),
-            ('DatabaseFindSimilar', None, 'Find Similar Releases'),
+            ('RefreshMetadata', gtk.STOCK_REFRESH, 'Refresh _Metadata'),
+            ('IndexDigital', gtk.STOCK_HARDDISK, 'Index _Digital'),
+            ('DatabaseVacuum', gtk.STOCK_CLEAR, 'Vacuum Database'),
+            ('DatabaseRebuild', gtk.STOCK_EXECUTE, 'Rebuild Derived Tables'),
+            ('DatabaseFindSimilar', gtk.STOCK_FIND, 'Find Similar Releases'),
+            ('Preferences', None, 'Preferences', '<Control>p'),
+            ('View', None, '_View'),
+            ('ViewRefresh', gtk.STOCK_REFRESH, '_Refresh'),
+            ('ViewScrollSelected', None, '_Scroll to Selected'),
+            ('ViewXML', None, 'View _XML'),
+            ('Release', None, '_Release'),
+            ('ReleaseAdd', gtk.STOCK_ADD, '_Add Release', '<Control>a'),
+            ('ReleaseDelete', gtk.STOCK_DELETE, '_Delete Release', '<Control>Delete'),
+            ('ReleaseSwitch', gtk.STOCK_CONVERT, '_Switch'),
+            ('ReleaseCoverArt', gtk.STOCK_REFRESH, 'Fetch Co_ver Art'),
+            ('ReleaseMetadata', gtk.STOCK_REFRESH, '_Refresh Metadata'),
+            ('ReleaseBrowse', gtk.STOCK_REFRESH, '_Browse to Release'),
+            ('ReleaseIndexDigital', gtk.STOCK_HARDDISK, '_Index Digital Copies'),
+            ('ReleaseTracklist', gtk.STOCK_INDEX, 'Track _List'),
+            ('ReleaseCheckOut', None, '_Check Out/In'),
+            ('ReleaseComment', gtk.STOCK_EDIT, 'Co_mment'),
+            ('ReleaseCount', None, 'Cou_nt'),
+            ('ReleaseListen', None, 'Listen Events'),
+            ('ReleaseDigital', None, 'Digital _Paths'),
+            ('ReleasePurchase', None, 'Purchase History'),
+            ('ReleaseRate', None, '_Rate'),
             ('Catalog', None, '_Catalog'),
             ('Sound', None, '_Sound'),
             ('RadioBand', None, '_Radio Band')])
