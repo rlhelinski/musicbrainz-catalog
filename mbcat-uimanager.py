@@ -2415,8 +2415,20 @@ class MBCatGtk:
 
     def menu_release_items_set_sensitive(self, sens=True):
         """Make menu items specific to releases active."""
-        for menuitem in self.menu_release_items:
-            menuitem.set_sensitive(sens)
+        for item in self.menu_release_items:
+            self.actiongroup.get_action(item).set_sensitive(sens)
+
+    def toolbar_force_important(self):
+        """Force labels to appear on toolbar buttons"""
+        actions = ['ViewDetailPane',
+                'FormatAll',
+                'FormatDigital',
+                'FormatCD',
+                'Format7Inch',
+                'Format12Inch',
+                ]
+        for action in actions:
+            self.actiongroup.get_action(action).set_is_important(True)
 
     def on_row_activate(self, treeview, path, column):
         self.detailpane.show()
@@ -3061,7 +3073,6 @@ class MBCatGtk:
       </menu>
     </menubar>
     <toolbar name="Toolbar">
-      <toolitem action="Quit"/>
       <separator/>
       <toolitem action="ViewDetailPane"/>
       <separator/>
@@ -3074,6 +3085,19 @@ class MBCatGtk:
       </placeholder>
     </toolbar>
     </ui>'''
+
+    menu_release_items = [
+            'ViewScrollSelected',
+            'ReleaseRate',
+            'ViewXML',
+            'ReleaseDelete',
+            'ReleaseSwitch',
+            'ReleaseCoverArt',
+            'ReleaseMetadata',
+            'ReleaseBrowse',
+            'ReleaseIndexDigital',
+            'ReleaseTracklist',
+            ]
 
     def __init__(self, dbPath, cachePath):
         self.prefs = mbcat.userprefs.PrefManager()
@@ -3127,11 +3151,11 @@ class MBCatGtk:
 
         # Create a ToggleAction, etc.
         actiongroup.add_toggle_actions([
-            ('ViewToolbar', None, 'Show Tool Bar',
+            ('ViewToolbar', None, 'Tool Bar',
                 None, 'Show/hide tool bar', self.toggleToolBar, True),
-            ('ViewDetailPane', None, 'Show Detail Pane',
+            ('ViewDetailPane', None, 'Detail Pane',
                 None, 'Show/hide release detail pane', self.toggleDetailPane),
-            ('ViewStatusBar', None, 'Show Status Bar',
+            ('ViewStatusBar', None, 'Status Bar',
                 None, 'Show/hide status bar', self.toggleStatusBar, True),
             ])
 
@@ -3239,7 +3263,7 @@ class MBCatGtk:
             ('FormatCD', None, 'CD', None, 'Compact Disc', 2),
             ('Format7Inch', None, '7" Vinyl', None, '7" Vinyl', 3),
             ('Format12Inch', None, '12" Vinyl', None, '12" Vinyl', 4),
-            ], 0, self.radioband_cb)
+            ], 0, self.selectFormat)
 
         # Add the actiongroup to the uimanager
         uimanager.insert_action_group(actiongroup, 0)
@@ -3254,6 +3278,10 @@ class MBCatGtk:
         # Create a Toolbar
         toolbar = uimanager.get_widget('/Toolbar')
         vbox.pack_start(toolbar, False)
+        self.toolbar_force_important()
+
+        # Set sensitivities
+        self.menu_release_items_set_sensitive(False)
 
         # Create tree view for releases
         self.createTreeView()
@@ -3285,11 +3313,6 @@ class MBCatGtk:
         # action has not toggled yet
         text = ('muted', 'not muted')[action.get_active()==False]
         self.mutelabel.set_text('Sound is %s' % text)
-        return
-
-    def radioband_cb(self, action, current):
-        text = ('AM', 'FM', 'SSB')[action.get_current_value()]
-        self.bandlabel.set_text('Radio band is %s' % text)
         return
 
     def load_cb(self, b):

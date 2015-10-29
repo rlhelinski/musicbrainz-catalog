@@ -2744,7 +2744,8 @@ class MBCatGtk:
     def editComment(self, widget):
         releaseId = self.getSelection()
         oldcomment = self.catalog.getComment(releaseId)
-        newcomment = TextViewEntry(self.window, 'Edit Release Comments', oldcomment if oldcomment is not None else '')
+        newcomment = TextViewEntry(self.window, 'Edit Release Comments',
+                oldcomment if oldcomment is not None else '')
         if newcomment is not None:
             self.catalog.setComment(releaseId, newcomment)
 
