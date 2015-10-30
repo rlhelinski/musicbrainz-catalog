@@ -3234,25 +3234,29 @@ class MBCatGtk:
             ('ReleaseRate', None, '_Rate',
                 None, 'Rate release', self.rateRelease),
             ('Search', None, '_Search'),
-            ('SearchBarcode', None, 'Barcode (UPC)'),
-            ('SearchArtistTitle', None, 'Artist/Title'),
-            ('SearchTrack', None, 'Track'),
-            ('SearchReleaseID', None, 'Release ID'),
+            ('SearchBarcode', None, 'Barcode (UPC)', None, 'Search for release by barcode', self.searchBarcode),
+            ('SearchArtistTitle', None, 'Artist/Title', None,
+                'Search by keywords in artist or title',
+                self.searchArtistTitle),
+            ('SearchTrack', None, 'Track', None, 'Search for track by name',
+                self.searchTrack),
+            ('SearchReleaseID', None, 'Release ID', None,
+                'Search for release by ID', self.searchReleaseID),
             ('Filter', None, '_Filter'),
             ('FilterFormat', None, '_Format'),
-            ('FilterQuick', None, 'Quick Search'),
-            ('FilterExpression', None, 'SQL Expression'),
-            ('FilterIncomplete', None, 'Incomplete Data'),
-            ('FilterClear', None, 'Clear Filters'),
+            ('FilterQuick', None, 'Quick Search', None, 'Filter by keywords', self.menuFilterQuick),
+            ('FilterExpression', None, 'SQL Expression', None, 'Filter by SQL expression', self.menuFilterExpression),
+            ('FilterIncomplete', None, 'Incomplete Data', None, 'Filter releases except those with incomplete metadata', self.menuCatalogCheck),
+            ('FilterClear', None, 'Clear Filters', None, None, self.menuClearFilters),
             ('Webservice', None, '_Webservice'),
-            ('WebDiscId', gtk.STOCK_CDROM, '_Disc Lookup'),
-            ('WebReleaseGroup', None, 'Release Group'),
-            ('WebRelease', None, 'Release'),
-            ('WebBarcode', None, 'Barcode (UPC)'),
-            ('WebCatNo', None, 'Catalog Number'),
-            ('WebSyncColl', None, 'Sync Collection'),
+            ('WebDiscId', gtk.STOCK_CDROM, '_Disc Lookup', None, 'Read disc TOC and query by disc ID', self.readDiscTOC),
+            ('WebReleaseGroup', None, 'Release Group', None, 'Search for release group by keywords', self.webserviceReleaseGroup),
+            ('WebRelease', None, 'Release', None, 'Search for release by keywords', self.webserviceRelease),
+            ('WebBarcode', None, 'Barcode (UPC)', None, 'Search for release by barcode', self.webserviceBarcode),
+            ('WebCatNo', None, 'Catalog Number', None, 'Search for release by catalog number', self.webserviceCatNo),
+            ('WebSyncColl', None, 'Sync Collection', None, 'Synchronize with a collection on musicbrainz.org', self.webserviceSyncCollection),
             ('Help', None, '_Help'),
-            ('About', None, '_About'),
+            ('About', None, '_About', None, None, self.openAboutWindow),
             ])
         actiongroup.get_action('Quit').set_property('short-label', '_Quit')
 
@@ -3307,30 +3311,6 @@ class MBCatGtk:
 
         self.openDatabase()
 
-        return
-
-    def mute_cb(self, action):
-        # action has not toggled yet
-        text = ('muted', 'not muted')[action.get_active()==False]
-        self.mutelabel.set_text('Sound is %s' % text)
-        return
-
-    def load_cb(self, b):
-        pass
-
-    def save_as_cb(self, b):
-        pass
-
-    def quit_cb(self, b):
-        print ('Quitting program')
-        gtk.main_quit()
-
-    def toggle_sensitivity(self, b):
-        self.actiongroup.set_sensitive(b.get_active())
-        return
-
-    def toggle_visibility(self, b):
-        self.actiongroup.set_visible(b.get_active())
         return
 
     def main(self):
