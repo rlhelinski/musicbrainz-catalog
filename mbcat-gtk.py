@@ -3227,7 +3227,7 @@ class MBCatGtk:
                 None, 'Edit release count', self.changeCount),
             ('ReleaseListen', None, 'Listen Events',
                 None, 'Edit listen events', self.listen),
-            ('ReleaseDigital', None, 'Digital _Paths',
+            ('ReleaseDigital', gtk.STOCK_OPEN, 'Digital _Paths',
                 None, 'Edit digital paths', self.digitalPaths),
             ('ReleasePurchase', None, 'Purchase History',
                 None, 'Edit purchase history', self.purchaseInfo),
