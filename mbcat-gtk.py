@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-#
-#
 
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -2170,7 +2168,7 @@ class MBCatGtk:
             self.makeListStore()
 
         # Housekeeping
-        self.menuCatalogSaveAsItem.set_sensitive(True)
+        self.actiongroup.get_action('SaveAs').set_sensitive(True)
         self.updateStatusBar()
 
     def copyAndOpenDatabase(self, filename):
@@ -2417,13 +2415,25 @@ class MBCatGtk:
 
     def menu_release_items_set_sensitive(self, sens=True):
         """Make menu items specific to releases active."""
-        for menuitem in self.menu_release_items:
-            menuitem.set_sensitive(sens)
+        for item in self.menu_release_items:
+            self.actiongroup.get_action(item).set_sensitive(sens)
+
+    def toolbar_force_important(self):
+        """Force labels to appear on toolbar buttons"""
+        actions = ['ViewDetailPane',
+                'FormatAll',
+                'FormatDigital',
+                'FormatCD',
+                'Format7Inch',
+                'Format12Inch',
+                ]
+        for action in actions:
+            self.actiongroup.get_action(action).set_is_important(True)
 
     def on_row_activate(self, treeview, path, column):
         self.detailpane.show()
         self.updateDetailPane()
-        self.detailPaneCheckItem.set_active(True)
+        self.actiongroup.get_action('ViewDetailPane').set_sensitive(True)
 
     def on_row_select(self, treeview):
         self.menu_release_items_set_sensitive(True)
@@ -2514,10 +2524,17 @@ class MBCatGtk:
         self.treeview.scroll_to_cell(row, use_align=True, row_align=0.5)
 
     def toggleStatusBar(self, widget):
-        if widget.active:
+        if widget.get_active():
             self.statusbar.show()
         else:
             self.statusbar.hide()
+
+    def toggleToolBar(self, widget):
+        tb = self.uimanager.get_widget('/Toolbar')
+        if widget.get_active():
+            tb.show()
+        else:
+            tb.hide()
 
     def updateStatusBar(self):
         # TODO use this push/pop action better
@@ -2527,7 +2544,7 @@ class MBCatGtk:
         self.statusbar.push(self.context_id, msg)
 
     def toggleDetailPane(self, widget):
-        if widget.active:
+        if widget.get_active():
             if not self.getSelection():
                 self.setSelectedRow(0)
             self.detailpane.show()
@@ -2664,7 +2681,7 @@ class MBCatGtk:
         relTitle = self.catalog.getReleaseTitle(releaseId)
         # Ask the user to specify a release to which to switch
         newRelId = TextEntry(self.window,
-            'Enter release ID to replace %s\n"%s"' % (releaseId, relTitle))
+            'Enter release ID to replace\n%s\n"%s"' % (releaseId, relTitle))
         if not newRelId:
             return
         if newRelId in self.catalog:
@@ -2744,7 +2761,8 @@ class MBCatGtk:
     def editComment(self, widget):
         releaseId = self.getSelection()
         oldcomment = self.catalog.getComment(releaseId)
-        newcomment = TextViewEntry(self.window, 'Edit Release Comments', oldcomment if oldcomment is not None else '')
+        newcomment = TextViewEntry(self.window, 'Edit Release Comments',
+                oldcomment if oldcomment is not None else '')
         if newcomment is not None:
             self.catalog.setComment(releaseId, newcomment)
 
@@ -2923,404 +2941,6 @@ class MBCatGtk:
                     'There was only a CD stub. '
                     'Open browser to Submission URL?')
 
-    def createMenuBar(self, widget):
-        # Menu bar
-        mb = gtk.MenuBar()
-        self.menu_release_items = []
-
-        # Catalog (File) menu
-        menu = gtk.Menu()
-        menuitem = gtk.MenuItem("_Catalog")
-        menuitem.set_submenu(menu)
-
-        ## Open
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_OPEN, self.agr)
-        # Note that this inherits the <Control>o accelerator
-        submenuitem.connect('activate', self.menuCatalogOpen)
-        menu.append(submenuitem)
-
-        ## Save As...
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_SAVE_AS, self.agr)
-        submenuitem.set_sensitive(False) # should be enabled when opened
-        self.menuCatalogSaveAsItem = submenuitem
-        submenuitem.connect('activate', self.menuCatalogSaveAs)
-        menu.append(submenuitem)
-
-        ## Separator
-        sep = gtk.SeparatorMenuItem()
-        menu.append(sep)
-
-        ## Import
-        submenuitem = gtk.MenuItem('_Import')
-        submenu = gtk.Menu()
-        submenuitem.set_submenu(submenu)
-
-        subsubmenuitem = gtk.MenuItem('_Database')
-        subsubmenuitem.connect('activate', self.menuCatalogImportDB)
-        submenu.append(subsubmenuitem)
-
-        subsubmenuitem = gtk.MenuItem('_Zip')
-        subsubmenuitem.connect('activate', self.menuCatalogImportZip)
-        submenu.append(subsubmenuitem)
-
-        menu.append(submenuitem)
-
-        ## Export
-        submenuitem = gtk.MenuItem('_Export')
-        submenu = gtk.Menu()
-        submenuitem.set_submenu(submenu)
-
-        subsubmenuitem = gtk.MenuItem('_Zip')
-        subsubmenuitem.connect('activate', self.menuCatalogExportZip)
-        submenu.append(subsubmenuitem)
-
-        subsubmenuitem = gtk.MenuItem('_HTML')
-        subsubmenuitem.connect('activate', self.menuCatalogExportHtml)
-        submenu.append(subsubmenuitem)
-
-        menu.append(submenuitem)
-
-        ## Separator
-        sep = gtk.SeparatorMenuItem()
-        menu.append(sep)
-
-        ## Refresh Metadata
-        submenuitem = gtk.ImageMenuItem('mbcat-refresh-metadata')
-        submenuitem.connect('activate', self.menuCatalogRefresh)
-        menu.append(submenuitem)
-
-        ## Index Digital Copies
-        submenuitem = gtk.ImageMenuItem('mbcat-indexdigital')
-        submenuitem.connect('activate', self.menuCatalogIndexDigital)
-        menu.append(submenuitem)
-
-        ## Vacuum
-        submenuitem = gtk.ImageMenuItem('mbcat-vacuum')
-        submenuitem.connect('activate', self.menuCatalogVacuum)
-        menu.append(submenuitem)
-
-        ## Rebuild
-        submenuitem = gtk.ImageMenuItem('mbcat-rebuild')
-        submenuitem.connect('activate', self.menuCatalogRebuild)
-        menu.append(submenuitem)
-
-        ## Similar
-        submenuitem = gtk.ImageMenuItem('mbcat-find-similar')
-        submenuitem.connect('activate', self.menuCatalogGetSimilar)
-        menu.append(submenuitem)
-
-        ## Separator
-        sep = gtk.SeparatorMenuItem()
-        menu.append(sep)
-
-        ## Preferences
-        submenuitem = gtk.MenuItem('Preferences')
-        key, mod = gtk.accelerator_parse('<Control>p')
-        submenuitem.add_accelerator('activate', self.agr, key, mod,
-            gtk.ACCEL_VISIBLE)
-        submenuitem.connect('activate', self.menuPreferences)
-        menu.append(submenuitem)
-
-        ## Separator
-        sep = gtk.SeparatorMenuItem()
-        menu.append(sep)
-
-        ## Quit
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_QUIT, self.agr)
-        key, mod = gtk.accelerator_parse('Q')
-        submenuitem.add_accelerator('activate', self.agr, key, mod,
-            gtk.ACCEL_VISIBLE)
-        submenuitem.connect('activate', self.destroy)
-        menu.append(submenuitem)
-
-        mb.append(menuitem)
-
-        # View menu
-        menu = gtk.Menu()
-        menuitem = gtk.MenuItem("_View")
-        menuitem.set_submenu(menu)
-
-        ## Show Release Detail Pane
-        submenuitem = gtk.CheckMenuItem('Show Detail Pane')
-        submenuitem.set_active(False)
-        submenuitem.connect('activate', self.toggleDetailPane)
-        menu.append(submenuitem)
-        self.detailPaneCheckItem = submenuitem # save a reference
-
-        ## Show Statusbar
-        submenuitem = gtk.CheckMenuItem('Show Statusbar')
-        submenuitem.set_active(True)
-        submenuitem.connect('activate', self.toggleStatusBar)
-        menu.append(submenuitem)
-
-        ## Refresh
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_REFRESH)
-        submenuitem.connect('activate', self.refreshView)
-        menu.append(submenuitem)
-
-        ## Scroll to Selected
-        submenuitem = gtk.MenuItem('Scroll to Selected')
-        submenuitem.connect('activate', self.scrollToSelected)
-        self.menu_release_items.append(submenuitem)
-        menu.append(submenuitem)
-
-        ## View XML
-        submenuitem = gtk.MenuItem('View XML')
-        submenuitem.connect('activate', self.viewXml)
-        self.menu_release_items.append(submenuitem)
-        menu.append(submenuitem)
-
-        mb.append(menuitem)
-
-        # Release menu
-        menu = gtk.Menu()
-        menuitem = gtk.MenuItem("_Release")
-        menuitem.set_submenu(menu)
-
-        ## Add
-        submenuitem = gtk.ImageMenuItem(gtk.STOCK_ADD)
-        key, mod = gtk.accelerator_parse('<Control>a')
-        submenuitem.add_accelerator('activate', self.agr, key, mod,
-            gtk.ACCEL_VISIBLE)
-        submenuitem.connect('activate', self.addRelease)
-        menu.append(submenuitem)
-
-        ## Delete
-        submenuitem = gtk.ImageMenuItem('mbcat-delete')
-        key, mod = gtk.accelerator_parse('<Control>Delete')
-        submenuitem.add_accelerator('activate', self.agr, key, mod,
-            gtk.ACCEL_VISIBLE)
-        submenuitem.connect('activate', self.deleteRelease)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Switch
-        submenuitem = gtk.ImageMenuItem('mbcat-switch')
-        submenuitem.connect('activate', self.switchRelease)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Cover Art
-        submenuitem = gtk.ImageMenuItem('mbcat-coverart')
-        submenuitem.connect('activate', self.getCoverArt)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Refresh
-        submenuitem = gtk.ImageMenuItem('mbcat-refresh-metadata')
-        submenuitem.connect('activate', self.refreshRelease)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Browse to Release URL
-        submenuitem = gtk.ImageMenuItem('mbcat-browse-release')
-        submenuitem.connect('activate', self.browseRelease)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Index Digital Copies
-        submenuitem = gtk.ImageMenuItem('mbcat-indexdigital')
-        submenuitem.connect('activate', self.menuReleaseIndexDigital)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Track List
-        submenuitem = gtk.ImageMenuItem('mbcat-tracklist')
-        submenuitem.connect('activate', self.showTrackList)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Separator
-        sep = gtk.SeparatorMenuItem()
-        menu.append(sep)
-
-        ## Check Out/In
-        submenuitem = gtk.MenuItem('Check Out/In')
-        submenuitem.connect('activate', self.checkOutDialog)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Comment
-        submenuitem = gtk.ImageMenuItem('mbcat-comment')
-        submenuitem.connect('activate', self.editComment)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Count
-        submenuitem = gtk.MenuItem('Count')
-        submenuitem.connect('activate', self.changeCount)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Listen
-        submenuitem = gtk.MenuItem('Listen Events')
-        submenuitem.connect('activate', self.listen)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Digital Paths
-        submenuitem = gtk.MenuItem('Digital Paths')
-        submenuitem.connect('activate', self.digitalPaths)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Purchase History
-        submenuitem = gtk.MenuItem('Purchase History')
-        submenuitem.connect('activate', self.purchaseInfo)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        ## Rate
-        submenuitem = gtk.MenuItem('_Rate')
-        submenuitem.connect('activate', self.rateRelease)
-        menu.append(submenuitem)
-        self.menu_release_items.append(submenuitem)
-
-        mb.append(menuitem)
-        self.menu_release_items_set_sensitive(False)
-
-        # Search menu
-        menu = gtk.Menu()
-        menuitem = gtk.MenuItem("_Search")
-        menuitem.set_submenu(menu)
-        mb.append(menuitem)
-
-        ## Barcode (UPC)
-        submenuitem = gtk.MenuItem('Barcode (UPC)')
-        submenuitem.connect('activate', self.searchBarcode)
-        menu.append(submenuitem)
-
-        ## Artist/Title
-        submenuitem = gtk.MenuItem('Artist/Title')
-        submenuitem.connect('activate', self.searchArtistTitle)
-        menu.append(submenuitem)
-
-        ## Track
-        submenuitem = gtk.MenuItem('Track')
-        submenuitem.connect('activate', self.searchTrack)
-        menu.append(submenuitem)
-
-        ## Release ID
-        submenuitem = gtk.MenuItem('Release ID')
-        submenuitem.connect('activate', self.searchReleaseID)
-        menu.append(submenuitem)
-
-        # Filter
-        menu = gtk.Menu()
-        menuitem = gtk.MenuItem("Filter")
-        menuitem.set_submenu(menu)
-        mb.append(menuitem)
-
-        accelgroup = gtk.AccelGroup()
-        self.window.add_accel_group(accelgroup)
-
-        ## Formats
-        # TODO this should be dynamically generated after loading or changing
-        # the database
-        self.actiongroup = gtk.ActionGroup('FormatsGroup')
-
-        self.actiongroup.add_actions([('Formats', None, '_Formats')])
-
-        self.actiongroup.add_radio_actions(
-            [
-                (name, None, label, None, None, i) \
-                for i, [name, label] in enumerate(zip(self.formatNames, \
-                        self.formatLabels))
-            ], 0, self.selectFormat)
-        for action in self.actiongroup.list_actions():
-            action.set_accel_group(accelgroup)
-
-        submenuitem = self.actiongroup.get_action('Formats').create_menu_item()
-        menu.append(submenuitem)
-        subsubmenu = gtk.Menu()
-        submenuitem.set_submenu(subsubmenu)
-
-        for name in self.formatNames:
-            action = self.actiongroup.get_action(name)
-            subsubmenu.append(action.create_menu_item())
-
-        ## Quick search
-        submenuitem = gtk.MenuItem('Quick Search')
-        submenuitem.connect('activate', self.menuFilterQuick)
-        menu.append(submenuitem)
-
-        ## Enter expression
-        submenuitem = gtk.MenuItem('Enter Expression')
-        submenuitem.connect('activate', self.menuFilterExpression)
-        menu.append(submenuitem)
-
-        ## Check for Incomplete Data
-        submenuitem = gtk.MenuItem('Incomplete Data')
-        submenuitem.connect('activate', self.menuCatalogCheck)
-        menu.append(submenuitem)
-
-        ## Separator
-        sep = gtk.SeparatorMenuItem()
-        menu.append(sep)
-
-        ## Clear Filters
-        submenuitem = gtk.MenuItem('Clear Filters')
-        submenuitem.connect('activate', self.menuClearFilters)
-        menu.append(submenuitem)
-
-        # Webservice menu
-        menu = gtk.Menu()
-        menuitem = gtk.MenuItem("Webservice")
-        menuitem.set_submenu(menu)
-        mb.append(menuitem)
-
-        ## Disc lookup
-        submenuitem = gtk.ImageMenuItem('mbcat-discid')
-        submenuitem.connect('activate', self.readDiscTOC)
-        menu.append(submenuitem)
-
-        ## Separator
-        sep = gtk.SeparatorMenuItem()
-        menu.append(sep)
-
-        ## Release Group Search
-        submenuitem = gtk.MenuItem('Release Group')
-        submenuitem.connect('activate', self.webserviceReleaseGroup)
-        menu.append(submenuitem)
-
-        ## Release Search
-        submenuitem = gtk.MenuItem('Release')
-        submenuitem.connect('activate', self.webserviceRelease)
-        menu.append(submenuitem)
-
-        ## Barcode Search
-        submenuitem = gtk.MenuItem('Barcode (UPC)')
-        submenuitem.connect('activate', self.webserviceBarcode)
-        menu.append(submenuitem)
-
-        ## Catalog # Search
-        submenuitem = gtk.MenuItem('Catalog Number')
-        submenuitem.connect('activate', self.webserviceCatNo)
-        menu.append(submenuitem)
-
-        ## Separator
-        sep = gtk.SeparatorMenuItem()
-        menu.append(sep)
-
-        ## Sync Collection
-        submenuitem = gtk.MenuItem('Sync Collection')
-        submenuitem.connect('activate', self.webserviceSyncCollection)
-        menu.append(submenuitem)
-
-        # Help menu
-        helpmenu = gtk.Menu()
-        help = gtk.MenuItem("Help")
-        help.set_submenu(helpmenu)
-
-        aboutm = gtk.MenuItem("About")
-        aboutm.connect("activate", self.openAboutWindow)
-        helpmenu.append(aboutm)
-
-        mb.append(help)
-
-        mb.show_all()
-        widget.pack_start(mb, False, False, 0)
-
     def makeListStore(self, ):
         self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str,
             str, str, str, str, str)
@@ -3367,53 +2987,117 @@ class MBCatGtk:
         self.scrolledwindow = gtk.ScrolledWindow()
         self.scrolledwindow.add(self.treeview)
 
-    def registerNewStock(self, window):
-        ####
-        items = [
-                ('mbcat-refresh-metadata', '_Refresh Metadata', 0, 0, None),
-                ('mbcat-browse-release', '_Browse to Release', 0, 0, None),
-                ('mbcat-vacuum', '_Vacuum', 0, 0, None),
-                ('mbcat-rebuild', 'Re_build Derived Tables', 0, 0, None),
-                ('mbcat-delete', '_Delete', 0, 0, None),
-                ('mbcat-switch', '_Switch', 0, 0, None),
-                ('mbcat-switch', '_Switch', 0, 0, None),
-                ('mbcat-coverart', 'Fetch Co_ver Art', 0, 0, None),
-                ('mbcat-tracklist', 'Track _List', 0, 0, None),
-                ('mbcat-comment', 'Co_mment', 0, 0, None),
-                ('mbcat-discid', '_Disc Lookup', 0, 0, None),
-                ('mbcat-indexdigital', '_Index Digital Copies', 0, 0, None),
-                ('mbcat-edit-path', '_Choose Path', 0, 0, None),
-                ('mbcat-find-similar', 'Find _Similar', 0, 0, None),
-                ]
+    ui_xml = '''<ui>
+    <menubar name="MenuBar">
+      <menu action="Catalog">
+        <menuitem action="Open"/>
+        <menuitem action="SaveAs"/>
+        <separator />
+        <menu action="Import">
+            <menuitem action="ImportDatabase" />
+            <menuitem action="ImportZip" />
+        </menu>
+        <menu action="Export">
+            <menuitem action="ExportZip" />
+            <menuitem action="ExportHTML" />
+        </menu>
+        <separator />
+        <menuitem action="RefreshMetadata" />
+        <menuitem action="IndexDigital" />
+        <menuitem action="DatabaseVacuum" />
+        <menuitem action="DatabaseRebuild" />
+        <menuitem action="DatabaseFindSimilar" />
+        <separator />
+        <menuitem action="Preferences" />
+        <separator />
+        <menuitem action="Quit"/>
+      </menu>
+      <menu action="View">
+        <menuitem action="ViewToolbar"/>
+        <menuitem action="ViewDetailPane" />
+        <menuitem action="ViewStatusBar" />
+        <menuitem action="ViewRefresh" />
+        <menuitem action="ViewScrollSelected" />
+        <menuitem action="ViewXML" />
+      </menu>
+      <menu action="Release">
+        <menuitem action="ReleaseAdd" />
+        <menuitem action="ReleaseDelete" />
+        <menuitem action="ReleaseSwitch" />
+        <menuitem action="ReleaseCoverArt" />
+        <menuitem action="ReleaseMetadata" />
+        <menuitem action="ReleaseBrowse" />
+        <menuitem action="ReleaseIndexDigital" />
+        <menuitem action="ReleaseTracklist" />
+        <separator />
+        <menuitem action="ReleaseCheckOut" />
+        <menuitem action="ReleaseComment" />
+        <menuitem action="ReleaseCount" />
+        <menuitem action="ReleaseListen" />
+        <menuitem action="ReleaseDigital" />
+        <menuitem action="ReleasePurchase" />
+        <menuitem action="ReleaseRate" />
+      </menu>
+      <menu action="Search">
+        <menuitem action="SearchBarcode" />
+        <menuitem action="SearchArtistTitle" />
+        <menuitem action="SearchTrack" />
+        <menuitem action="SearchReleaseID" />
+      </menu>
+      <menu action="Filter">
+        <menu action="FilterFormat">
+          <menuitem action="FormatAll" />
+          <menuitem action="FormatDigital" />
+          <menuitem action="FormatCD" />
+          <menuitem action="Format7Inch" />
+          <menuitem action="Format12Inch" />
+        </menu>
+        <menuitem action="FilterQuick"/>
+        <menuitem action="FilterExpression"/>
+        <menuitem action="FilterIncomplete"/>
+        <separator />
+        <menuitem action="FilterClear"/>
+      </menu>
+      <menu action="Webservice">
+        <menuitem action="WebDiscId"/>
+        <separator />
+        <menuitem action="WebReleaseGroup"/>
+        <menuitem action="WebRelease"/>
+        <menuitem action="WebBarcode"/>
+        <menuitem action="WebCatNo"/>
+        <separator />
+        <menuitem action="WebSyncColl"/>
+      </menu>
+      <menu action="Help">
+        <menuitem action="About"/>
+      </menu>
+    </menubar>
+    <toolbar name="Toolbar">
+      <separator/>
+      <toolitem action="ViewDetailPane"/>
+      <separator/>
+      <placeholder name="FilterFormat">
+        <toolitem action="FormatAll"/>
+        <toolitem action="FormatDigital"/>
+        <toolitem action="FormatCD"/>
+        <toolitem action="Format7Inch"/>
+        <toolitem action="Format12Inch"/>
+      </placeholder>
+    </toolbar>
+    </ui>'''
 
-        # We're too lazy to make our own icons,
-        # so we use regular stock icons.
-        aliases = [
-                ('mbcat-refresh-metadata', gtk.STOCK_REFRESH),
-                ('mbcat-browse-release', gtk.STOCK_REFRESH),
-                ('mbcat-vacuum', gtk.STOCK_CLEAR),
-                ('mbcat-rebuild', gtk.STOCK_EXECUTE),
-                ('mbcat-delete', gtk.STOCK_DELETE),
-                ('mbcat-switch', gtk.STOCK_CONVERT),
-                ('mbcat-coverart', gtk.STOCK_REFRESH),
-                ('mbcat-tracklist', gtk.STOCK_INDEX),
-                ('mbcat-comment', gtk.STOCK_EDIT),
-                ('mbcat-discid', gtk.STOCK_CDROM),
-                ('mbcat-indexdigital', gtk.STOCK_HARDDISK),
-                ('mbcat-edit-path', gtk.STOCK_OPEN),
-                ('mbcat-find-similar', gtk.STOCK_FIND),
-                ]
-
-        gtk.stock_add(items)
-        factory = gtk.IconFactory()
-        factory.add_default()
-        style= window.get_style()
-        for new_stock, alias in aliases:
-            icon_set = style.lookup_icon_set(alias)
-            factory.add(new_stock, icon_set)
-
-        # Create the relabeled buttons
-        #button = gtk.Button(stock='mbcat-refresh-metadata')
+    menu_release_items = [
+            'ViewScrollSelected',
+            'ReleaseRate',
+            'ViewXML',
+            'ReleaseDelete',
+            'ReleaseSwitch',
+            'ReleaseCoverArt',
+            'ReleaseMetadata',
+            'ReleaseBrowse',
+            'ReleaseIndexDigital',
+            'ReleaseTracklist',
+            ]
 
     def __init__(self, dbPath, cachePath):
         self.prefs = mbcat.userprefs.PrefManager()
@@ -3421,7 +3105,7 @@ class MBCatGtk:
         self.filt = ''
         self.filtFmt = ''
 
-        # create a new window
+        # Create the toplevel window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_title(self.__name__)
         try:
@@ -3434,8 +3118,6 @@ class MBCatGtk:
                 print (e)
         self.window.set_size_request(800, 600)
         self.window.set_position(gtk.WIN_POS_CENTER)
-
-        self.registerNewStock(self.window)
 
         # When the window is given the "delete_event" signal (this is given
         # by the window manager, usually by the "close" option, or on the
@@ -3453,8 +3135,174 @@ class MBCatGtk:
         self.window.add_accel_group(self.agr)
 
         vbox = gtk.VBox(False, 2)
+        self.window.add(vbox)
 
-        self.createMenuBar(vbox)
+        # Create a UIManager instance
+        uimanager = gtk.UIManager()
+        self.uimanager = uimanager
+
+        # Add the accelerator group to the toplevel window
+        accelgroup = uimanager.get_accel_group()
+        self.window.add_accel_group(accelgroup)
+
+        # Create an ActionGroup
+        actiongroup = gtk.ActionGroup('UIManagerExample')
+        self.actiongroup = actiongroup
+
+        # Create a ToggleAction, etc.
+        actiongroup.add_toggle_actions([
+            ('ViewToolbar', None, 'Tool Bar',
+                None, 'Show/hide tool bar', self.toggleToolBar, True),
+            ('ViewDetailPane', None, 'Detail Pane',
+                None, 'Show/hide release detail pane', self.toggleDetailPane),
+            ('ViewStatusBar', None, 'Status Bar',
+                None, 'Show/hide status bar', self.toggleStatusBar, True),
+            ])
+
+        # Create actions
+        actiongroup.add_actions([
+            ('Catalog', None, '_Catalog'),
+            ('Quit', gtk.STOCK_QUIT, '_Quit', '<Control>q',
+                'Quit the Program', self.destroy),
+            ('Open', gtk.STOCK_OPEN, '_Open Database', None,
+                'Open a different database file', self.menuCatalogOpen),
+            ('SaveAs', gtk.STOCK_SAVE_AS, '_Save Database As', None,
+                'Save database file to a new location', self.menuCatalogSaveAs),
+            ('Import', None, '_Import'),
+            ('ImportDatabase', None, '_Database', None,
+                'Import database file', self.menuCatalogImportDB),
+            ('ImportZip', None, '_Zip', None,
+                'Import zip file', self.menuCatalogImportZip),
+            ('Export', None, '_Export'),
+            ('ExportZip', None, '_Zip', None,
+                'Export to zip file', self.menuCatalogExportZip),
+            ('ExportHTML', None, '_HTML', None,
+                'Export HTML file', self.menuCatalogExportHtml),
+            ('RefreshMetadata', gtk.STOCK_REFRESH, 'Refresh _Metadata',
+                None, 'Refresh all release metadata', self.menuCatalogRefresh),
+            ('IndexDigital', gtk.STOCK_HARDDISK, 'Index _Digital',
+                None, 'Index digital copies of releases',
+                self.menuCatalogIndexDigital),
+            ('DatabaseVacuum', gtk.STOCK_CLEAR, 'Vacuum Database',
+                None, 'Reduce space used by database file',
+                self.menuCatalogVacuum),
+            ('DatabaseRebuild', gtk.STOCK_EXECUTE, 'Rebuild Derived Tables',
+                None, 'Rebuild derived tables in database',
+                self.menuCatalogRebuild),
+            ('DatabaseFindSimilar', gtk.STOCK_FIND, 'Find Similar Releases',
+                None, 'Find similar releases in database',
+                self.menuCatalogGetSimilar),
+            ('Preferences', None, 'Preferences', '<Control>p',
+                'Edit user preferences', self.menuPreferences),
+            ('View', None, '_View'),
+            ('ViewRefresh', gtk.STOCK_REFRESH, '_Refresh',
+                None, 'Refresh view', self.refreshView),
+            ('ViewScrollSelected', None, '_Scroll to Selected',
+                None, 'Scroll to selected release', self.scrollToSelected),
+            ('ViewXML', None, 'View _XML',
+                None, 'View XML of release', self.viewXml),
+            ('Release', None, '_Release'),
+            ('ReleaseAdd', gtk.STOCK_ADD, '_Add Release', '<Control>a',
+                'Add release', self.addRelease),
+            ('ReleaseDelete', gtk.STOCK_DELETE, '_Delete Release',
+                '<Control>Delete', 'Delete release', self.deleteRelease),
+            ('ReleaseSwitch', gtk.STOCK_CONVERT, '_Switch',
+                None, 'Switch a release with another', self.switchRelease),
+            ('ReleaseCoverArt', gtk.STOCK_REFRESH, 'Fetch Co_ver Art',
+                None, 'Fetch cover art', self.getCoverArt),
+            ('ReleaseMetadata', gtk.STOCK_REFRESH, '_Refresh Metadata',
+                None, 'Refresh metadata', self.refreshRelease),
+            ('ReleaseBrowse', gtk.STOCK_REFRESH, '_Browse to Release',
+                None, 'Open browser to release URL', self.browseRelease),
+            ('ReleaseIndexDigital', gtk.STOCK_HARDDISK, '_Index Digital Copies',
+                None, 'Index digital copies of selected release',
+                self.menuReleaseIndexDigital),
+            ('ReleaseTracklist', gtk.STOCK_INDEX, 'Track _List',
+                None, 'Show release track listing', self.showTrackList),
+            ('ReleaseCheckOut', None, '_Check Out/In',
+                None, 'Check out history', self.checkOutDialog),
+            ('ReleaseComment', gtk.STOCK_EDIT, 'Co_mment',
+                None, 'Edit release comments', self.editComment),
+            ('ReleaseCount', None, 'Cou_nt',
+                None, 'Edit release count', self.changeCount),
+            ('ReleaseListen', None, 'Listen Events',
+                None, 'Edit listen events', self.listen),
+            ('ReleaseDigital', gtk.STOCK_OPEN, 'Digital _Paths',
+                None, 'Edit digital paths', self.digitalPaths),
+            ('ReleasePurchase', None, 'Purchase History',
+                None, 'Edit purchase history', self.purchaseInfo),
+            ('ReleaseRate', None, '_Rate',
+                None, 'Rate release', self.rateRelease),
+            ('Search', None, '_Search'),
+            ('SearchBarcode', None, 'Barcode (UPC)', None,
+                'Search for release by barcode', self.searchBarcode),
+            ('SearchArtistTitle', None, 'Artist/Title', None,
+                'Search by keywords in artist or title',
+                self.searchArtistTitle),
+            ('SearchTrack', None, 'Track', None, 'Search for track by name',
+                self.searchTrack),
+            ('SearchReleaseID', None, 'Release ID', None,
+                'Search for release by ID', self.searchReleaseID),
+            ('Filter', None, '_Filter'),
+            ('FilterFormat', None, '_Format'),
+            ('FilterQuick', None, 'Quick Search', None,
+                'Filter by keywords', self.menuFilterQuick),
+            ('FilterExpression', None, 'SQL Expression', None,
+                'Filter by SQL expression', self.menuFilterExpression),
+            ('FilterIncomplete', None, 'Incomplete Data', None,
+                'Filter releases except those with incomplete metadata',
+                self.menuCatalogCheck),
+            ('FilterClear', None, 'Clear Filters', None, None,
+                    self.menuClearFilters),
+            ('Webservice', None, '_Webservice'),
+            ('WebDiscId', gtk.STOCK_CDROM, '_Disc Lookup', None,
+                'Read disc TOC and query by disc ID', self.readDiscTOC),
+            ('WebReleaseGroup', None, 'Release Group', None,
+                'Search for release group by keywords',
+                self.webserviceReleaseGroup),
+            ('WebRelease', None, 'Release', None,
+                'Search for release by keywords', self.webserviceRelease),
+            ('WebBarcode', None, 'Barcode (UPC)', None,
+                'Search for release by barcode', self.webserviceBarcode),
+            ('WebCatNo', None, 'Catalog Number', None,
+                    'Search for release by catalog number',
+                    self.webserviceCatNo),
+            ('WebSyncColl', None, 'Sync Collection', None,
+                    'Synchronize with a collection on musicbrainz.org',
+                    self.webserviceSyncCollection),
+            ('Help', None, '_Help'),
+            ('About', None, '_About', None, None, self.openAboutWindow),
+            ])
+        actiongroup.get_action('Quit').set_property('short-label', '_Quit')
+
+        # Create some RadioActions
+        actiongroup.add_radio_actions([
+            ('FormatAll', None, 'All', None, 'All Formats', 0),
+            ('FormatDigital', None, 'Digital', None, 'Digital Releases', 1),
+            ('FormatCD', None, 'CD', None, 'Compact Disc', 2),
+            ('Format7Inch', None, '7" Vinyl', None, '7" Vinyl', 3),
+            ('Format12Inch', None, '12" Vinyl', None, '12" Vinyl', 4),
+            ], 0, self.selectFormat)
+
+        # Add the actiongroup to the uimanager
+        uimanager.insert_action_group(actiongroup, 0)
+
+        # Add a UI description
+        uimanager.add_ui_from_string(self.ui_xml)
+
+        # Create a MenuBar
+        menubar = uimanager.get_widget('/MenuBar')
+        vbox.pack_start(menubar, False)
+
+        # Create a Toolbar
+        toolbar = uimanager.get_widget('/Toolbar')
+        vbox.pack_start(toolbar, False)
+        self.toolbar_force_important()
+
+        # Set sensitivities
+        self.menu_release_items_set_sensitive(False)
+
+        # Create tree view for releases
         self.createTreeView()
         self.treeview.show()
         self.scrolledwindow.show()
@@ -3471,14 +3319,14 @@ class MBCatGtk:
         self.detailpane = DetailPane(self.catalog)
         vbox.pack_end(self.detailpane, False, False, 0)
 
-        self.window.add(vbox)
-
         # The final step is to display this newly created widget.
         # and the window
         vbox.show()
         self.window.show()
 
         self.openDatabase()
+
+        return
 
     def main(self):
         # All PyGTK applications must have a gtk.main(). Control ends here
