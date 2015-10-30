@@ -2681,7 +2681,7 @@ class MBCatGtk:
         relTitle = self.catalog.getReleaseTitle(releaseId)
         # Ask the user to specify a release to which to switch
         newRelId = TextEntry(self.window,
-            'Enter release ID to replace %s\n"%s"' % (releaseId, relTitle))
+            'Enter release ID to replace\n%s\n"%s"' % (releaseId, relTitle))
         if not newRelId:
             return
         if newRelId in self.catalog:
