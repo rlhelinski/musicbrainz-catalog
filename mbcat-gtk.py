@@ -2574,12 +2574,24 @@ class MBCatGtk:
 
     def menuClearFilters(self, widget=None):
         self.filt = ''
-        self.actiongroup.get_action('All').set_active(True)
+        self.actiongroup.get_action('FormatAll').set_active(True)
+        self.refreshView(widget)
+        self.searchentry.set_text('')
+
+    def menuClearSearch(self, widget=None):
+        self.filt = ''
+        self.searchentry.set_text('')
         self.refreshView(widget)
 
     def menuCatalogCheck(self, widget):
         self.filt = self.catalog.badReleaseFilter
         self.refreshView(widget)
+
+    def _setFilterQuick(self, terms):
+        self.filt = ' and '.join([
+                ('sortstring like "%'+term+'%"') \
+                for term in terms.split(' ')
+                ])
 
     def menuFilterQuick(self, widget):
         terms = TextEntry(self.window,
@@ -2587,10 +2599,13 @@ class MBCatGtk:
             'Ex.: "john smith" would show any releases including "john"\n'\
             '\tand "smith" in the title or the artist.')
         if terms:
-            self.filt = ' and '.join([
-                    ('sortstring like "%'+term+'%"') \
-                    for term in terms.split(' ')
-                    ])
+            self._setFilterQuick(terms)
+            self.refreshView(widget)
+
+    def search_callback(self, widget=None):
+        terms = self.searchentry.get_text()
+        if terms:
+            self._setFilterQuick(terms)
             self.refreshView(widget)
 
     def menuFilterExpression(self, widget):
@@ -3083,6 +3098,8 @@ class MBCatGtk:
         <toolitem action="Format7Inch"/>
         <toolitem action="Format12Inch"/>
       </placeholder>
+      <separator/>
+      <toolitem action="SearchClear"/>
     </toolbar>
     </ui>'''
 
@@ -3252,8 +3269,10 @@ class MBCatGtk:
             ('FilterIncomplete', None, 'Incomplete Data', None,
                 'Filter releases except those with incomplete metadata',
                 self.menuCatalogCheck),
-            ('FilterClear', None, 'Clear Filters', None, None,
+            ('FilterClear', gtk.STOCK_CLEAR, 'Clear Filters', None, None,
                     self.menuClearFilters),
+            ('SearchClear', gtk.STOCK_CLEAR, 'Clear Search', None, None,
+                    self.menuClearSearch),
             ('Webservice', None, '_Webservice'),
             ('WebDiscId', gtk.STOCK_CDROM, '_Disc Lookup', None,
                 'Read disc TOC and query by disc ID', self.readDiscTOC),
@@ -3298,6 +3317,16 @@ class MBCatGtk:
         toolbar = uimanager.get_widget('/Toolbar')
         vbox.pack_start(toolbar, False)
         self.toolbar_force_important()
+
+        # Add search bar to Toolbar
+        self.searchentry = gtk.Entry()
+        self.searchentry.connect('activate', self.search_callback)
+        self.searchentry.show()
+        searchitem = gtk.ToolItem()
+        searchitem.show()
+        #searchitem.set_tooltip(toolbar.tooltips, 'Search for release keywords')
+        searchitem.add(self.searchentry)
+        toolbar.insert(searchitem, 11)
 
         # Set sensitivities
         self.menu_release_items_set_sensitive(False)
