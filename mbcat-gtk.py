@@ -2431,9 +2431,10 @@ class MBCatGtk:
             self.actiongroup.get_action(action).set_is_important(True)
 
     def on_row_activate(self, treeview, path, column):
-        self.detailpane.show()
-        self.updateDetailPane()
         self.actiongroup.get_action('ViewDetailPane').set_sensitive(True)
+        self.actiongroup.get_action('ViewDetailPane').set_active(True)
+        # self.detailpane.show() # This is activated by set_active() above
+        # self.updateDetailPane() # This is also activated
 
     def on_row_select(self, treeview):
         self.menu_release_items_set_sensitive(True)
