@@ -131,7 +131,11 @@ def getArtistPathVariations(release):
 
 def getTitlePathVariations(release):
     s = set()
-    for prefix in ['', '%s - ' % (release['date'])]:
+    prefixes = ['']
+    if 'date' in release:
+        prefixes.append('%s - ' % (release['date']))
+        prefixes.append('%s - ' % (release['date'].split('-')[0]))
+    for prefix in prefixes:
         s.add(prefix+release['title'])
         if 'disambiguation' in release:
             s.add(prefix+release['disambiguation'])
@@ -142,6 +146,7 @@ def getPathAlNumPrefixes(path):
     """Returns a set of prefixes used for directory balancing"""
     return set([
             '', # in case nothing is used
+            '0-9' if path[0].isdigit() else '',
             path[0].lower(), # most basic implementation
             path[0:1].lower(), # have never seen this
             (path[0]+'/'+path[0:2]).lower(), # used by Wikimedia
@@ -228,6 +233,15 @@ class DigitalSearch(dialogs.ThreadedTask):
             _log.warning('No digital paths found for '+releaseId)
 
     def searchForRelease(self, relId, rootPathId, rootPath):
+        def sepFilesDirs(root, l):
+            files = list(); dirs = list()
+            for name in l:
+                if os.path.isfile(os.path.join(root, name)):
+                    files.append(name)
+                elif os.path.isdir(os.path.join(root, name)):
+                    dirs.append(name)
+            return dirs, files
+
         rel = self.catalog.getRelease(relId)
 
         # Try to guess the sub-directory path
@@ -235,9 +249,18 @@ class DigitalSearch(dialogs.ThreadedTask):
             absTitlePath = os.path.join(rootPath, titlePath)
             if os.path.isdir(absTitlePath):
                 fileList = os.listdir(absTitlePath)
-                if len(fileList) < self.catalog.getTrackCount(relId):
+                dirs, files = sepFilesDirs(absTitlePath, fileList)
+                if len(files) == self.catalog.getTrackCount(relId):
+                    fmt = guessDigitalFormat(fileList)
+                elif dirs:
+                    for d in dirs:
+                        subDirFileList = os.listdir(os.path.join(
+                                absTitlePath, d))
+                        fmt = guessDigitalFormat(subDirFileList)
+                        if fmt and fmt is not '[unknown]':
+                            break
+                else:
                     continue
-                fmt = guessDigitalFormat(fileList)
                 _log.info(
                         'Found release %s in "%s" under "%s" in %s format'\
                         %(relId, rootPath, titlePath, fmt)
