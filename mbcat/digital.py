@@ -250,7 +250,7 @@ class DigitalSearch(dialogs.ThreadedTask):
             if os.path.isdir(absTitlePath):
                 fileList = os.listdir(absTitlePath)
                 dirs, files = sepFilesDirs(absTitlePath, fileList)
-                if len(files) == self.catalog.getTrackCount(relId):
+                if len(files) >= self.catalog.getTrackCount(relId):
                     fmt = guessDigitalFormat(fileList)
                 elif dirs:
                     for d in dirs:
