@@ -1591,6 +1591,11 @@ class Catalog(object):
             'medium_recordings.medium = media.id '
             'where releases.id=?', (releaseId,))[0]
 
+    def getTrackCounts(self, releaseId):
+        rel = self.getRelease(releaseId)
+        for medium in rel['medium-list']:
+            yield len(medium['track-list'])
+
     basicColumns = [
         'id',
         'sortstring',

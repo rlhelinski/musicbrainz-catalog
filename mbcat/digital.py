@@ -250,21 +250,25 @@ class DigitalSearch(dialogs.ThreadedTask):
             if os.path.isdir(absTitlePath):
                 fileList = os.listdir(absTitlePath)
                 dirs, files = sepFilesDirs(absTitlePath, fileList)
-                if len(files) >= self.catalog.getTrackCount(relId):
+                if len(files) >= min([trackCount for trackCount in \
+                        self.catalog.getTrackCounts(relId)]):
                     fmt = guessDigitalFormat(fileList)
                 elif dirs:
                     for d in dirs:
                         subDirFileList = os.listdir(os.path.join(
                                 absTitlePath, d))
-                        fmt = guessDigitalFormat(subDirFileList)
-                        if fmt and fmt is not '[unknown]':
-                            break
+                        files.extend(subDirFileList)
+                    fmt = guessDigitalFormat(files)
                 else:
                     continue
                 _log.info(
                         'Found release %s in "%s" under "%s" in %s format'\
                         %(relId, rootPath, titlePath, fmt)
                         )
+                if len(files) < self.catalog.getTrackCount(relId):
+                    _log.warning('Some tracks missing for "%s" (%d / %d)' % \
+                            (relId, len(files), \
+                            self.catalog.getTrackCount(relId)))
                 self.catalog.addDigitalPath(relId,
                         fmt,
                         rootPathId,
