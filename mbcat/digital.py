@@ -129,6 +129,8 @@ def getArtistPathVariations(release):
             catalog.getArtistSortPhrase(release)
             ])
 
+punctuation = { 0x2018:0x27, 0x2019:0x27, 0x201C:0x22, 0x201D:0x22 }
+
 def getTitlePathVariations(release):
     s = set()
     prefixes = ['']
@@ -140,6 +142,8 @@ def getTitlePathVariations(release):
         if 'disambiguation' in release:
             s.add(prefix+release['disambiguation'])
             s.add(prefix+release['title']+' ('+release['disambiguation']+')')
+    for i in list(s):
+        s.add(i.translate(punctuation).encode('ascii', 'ignore'))
     return s
 
 def getPathAlNumPrefixes(path):
