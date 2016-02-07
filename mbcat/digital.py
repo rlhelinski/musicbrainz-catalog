@@ -117,8 +117,11 @@ class DigitalPath(list):
                 elem.eval(release) for elem in self
             ])
 
+punctuation = { 0x2018:0x27, 0x2019:0x27, 0x201C:0x22, 0x201D:0x22,
+        0x2010:0x2d }
+
 def getArtistPathVariations(release):
-    return set([
+    s = set([
             # the non-sorting-friendly string
             release['artist-credit-phrase'],
             # if just the first artist is used
@@ -128,8 +131,9 @@ def getArtistPathVariations(release):
             # the sort-friendly string with all artists credited
             catalog.getArtistSortPhrase(release)
             ])
-
-punctuation = { 0x2018:0x27, 0x2019:0x27, 0x201C:0x22, 0x201D:0x22 }
+    for i in list(s):
+        s.add(unicode(i).translate(punctuation).encode('ascii', 'ignore'))
+    return s
 
 def getTitlePathVariations(release):
     s = set()

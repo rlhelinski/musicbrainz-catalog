@@ -1737,7 +1737,7 @@ def formatQueryCatNo(releaseDict):
 def getArtistSortPhrase(release):
     """Join artist sort names together"""
     return ''.join([
-            credit if type(credit)==str else \
+            credit if type(credit)!=dict else \
             credit['artist']['sort-name'] \
             for credit in release['artist-credit']
             ])
