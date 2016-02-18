@@ -153,6 +153,14 @@ def getTitlePathVariations(release):
             while n.startswith('.'):
                 n = n[1:]
             s.add(n)
+        if '/' in i:
+            s.add(i.replace('/', '-'))
+            s.add(i.replace('/', ' - '))
+            s.add(i.replace(' / ', ': '))
+        if ' - ' in i:
+            s.add(i.replace(' - ', ': '))
+        if ':' in i:
+            s.add(i.replace(':', ' -'))
     return s
 
 def getPathAlNumPrefixes(path):
