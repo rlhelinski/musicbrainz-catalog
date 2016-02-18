@@ -1198,13 +1198,7 @@ class TrackListView(gtk.ScrolledWindow):
                 'select id,position,format from media '
                 'where release=? order by position',
                 (releaseId,)):
-            parent = trackTreeStore.append(None,
-                ('',
-                format+' '+str(position),
-                mbcat.catalog.recLengthAsString(
-                    self.catalog.getMediumLen(mediumId)
-                    )))
-            for recId,recLength,recPosition,title in self.catalog.cm.executeAndFetch(
+            trackData = self.catalog.cm.executeAndFetch(
                     'select recordings.id, recordings.length, '
                     'medium_recordings.position, recordings.title '
                     'from recordings '
@@ -1212,7 +1206,14 @@ class TrackListView(gtk.ScrolledWindow):
                     'medium_recordings.recording=recordings.id '
                     'inner join media on medium_recordings.medium=media.id '
                     'where media.id=? order by medium_recordings.position',
-                    (mediumId,)):
+                    (mediumId,))
+            parent = trackTreeStore.append(None,
+                ('',
+                format+' '+str(position)+' ('+str(len(trackData))+')',
+                mbcat.catalog.recLengthAsString(
+                    self.catalog.getMediumLen(mediumId)
+                    )))
+            for recId,recLength,recPosition,title in trackData:
                 trackTreeStore.append(parent,
                     (recId,
                     title,
