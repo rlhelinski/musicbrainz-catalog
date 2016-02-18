@@ -148,6 +148,11 @@ def getTitlePathVariations(release):
             s.add(prefix+release['title']+' ('+release['disambiguation']+')')
     for i in list(s):
         s.add(i.translate(punctuation).encode('ascii', 'ignore'))
+        if i.startswith('.'):
+            n = i
+            while n.startswith('.'):
+                n = n[1:]
+            s.add(n)
     return s
 
 def getPathAlNumPrefixes(path):
@@ -268,6 +273,8 @@ class DigitalSearch(dialogs.ThreadedTask):
                         files.extend(subDirFileList)
                     fmt = guessDigitalFormat(files)
                 else:
+                    _log.debug('%s exists, but does not contain files'\
+                            %rootPath)
                     continue
                 _log.info(
                         'Found release %s in "%s" under "%s" in %s format'\
