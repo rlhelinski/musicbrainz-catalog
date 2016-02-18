@@ -652,11 +652,10 @@ class MBCatCmd(cmd.Cmd):
         t.start()
         t.join()
 
-    @staticmethod
-    def askBrowseSubmission():
+    def askBrowseSubmission(self, url):
         if self.confirm('Open browser to Submission URL?', default=False):
             _log.info('Opening web browser.')
-            webbrowser.open(disc.submission_url)
+            webbrowser.open(url)
 
     def addResultToCatalog(self, result, choice):
         if choice in self.c:
@@ -735,7 +734,8 @@ class MBCatCmd(cmd.Cmd):
             print('OK')
         except mb.ResponseError:
             _log.warning('Disc not found or bad MusicBrainz response.')
-            askBrowseSubmission()
+            self.askBrowseSubmission(disc.submission_url)
+            return
 
         else:
             if result.get("disc"):
@@ -749,7 +749,8 @@ class MBCatCmd(cmd.Cmd):
                     if key in result['cdstub']:
                         print('%10s: %s' %
                                      (label, result['cdstub'][key]))
-                askBrowseSubmission()
+                # TODO this is broken, needs argument
+                self.askBrowseSubmission()
 
                 raise Exception('There was only a CD stub.')
 

@@ -1,7 +1,10 @@
 #!/usr/bin/python
-
 import discid
 import mbcat.catalog, mbcat.shell
+
+import logging
+logging.basicConfig(level=logging.INFO)
+_log = logging.getLogger("mbcat")
 
 import argparse
 
