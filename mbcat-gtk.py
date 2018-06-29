@@ -5,10 +5,9 @@ from __future__ import unicode_literals
 import logging
 logging.basicConfig(level=logging.INFO)
 import threading
-import gobject
-import glib
-import gtk
-import pango
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import GLib, Gtk, GObject, Pango, Gdk
 import mbcat
 import mbcat.catalog
 import mbcat.barcode
@@ -23,21 +22,18 @@ import webbrowser
 import sqlite3
 import os
 
-# Initialize GTK's threading engine
-gobject.threads_init()
-
 _log = logging.getLogger("mbcat")
 
 default_dialog_size = (500, 300)
 
-class PreferencesDialog(gtk.Window):
+class PreferencesDialog(Gtk.Window):
     def __init__(self, parentWindow, prefs, catalog):
         self.prefs = prefs
         self.catalog = catalog
         self.parentWindow = parentWindow
         self.checkDigitalPathRoots()
 
-        gtk.Window.__init__(self)
+        Gtk.Window.__init__(self)
         self.set_transient_for(parentWindow)
         self.set_destroy_with_parent(True)
         self.set_title('Preferences')
@@ -45,44 +41,44 @@ class PreferencesDialog(gtk.Window):
         self.show()
 
     def buildWidgets(self):
-        self.notebook = gtk.Notebook()
+        self.notebook = Gtk.Notebook()
         self.add(self.notebook)
 
         ####
-        tablbl = gtk.Label('Digital Paths')
-        digvbox = gtk.VBox(False, 0)
+        tablbl = Gtk.Label('Digital Paths')
+        digvbox = Gtk.VBox(False, 0)
         #digvbox.set_border_width(10)
         self.notebook.append_page(digvbox, tablbl)
 
-        pathRootFrame = gtk.Frame('Path Roots')
+        pathRootFrame = Gtk.Frame('Path Roots')
         pathRootFrame.set_border_width(10)
-        digvbox.pack_start(pathRootFrame, True, True)
+        digvbox.pack_start(pathRootFrame, True, True, 0)
 
-        digRootFrameVBox = gtk.VBox(False, 10)
+        digRootFrameVBox = Gtk.VBox(False, 10)
         digRootFrameVBox.set_border_width(10)
         pathRootFrame.add(digRootFrameVBox)
 
-        digpathsw = gtk.ScrolledWindow()
-        digpathsw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        digRootFrameVBox.pack_start(digpathsw, True, True)
+        digpathsw = Gtk.ScrolledWindow()
+        digpathsw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        digRootFrameVBox.pack_start(digpathsw, True, True, 0)
 
-        self.digpathtv = gtk.TreeView()
+        self.digpathtv = Gtk.TreeView()
         self.digpathtv.set_headers_visible(False)
         self.digpathtv.set_size_request(500, 150)
         digpathsw.add(self.digpathtv)
 
-        self.pathmodel = gtk.ListStore(str, str)
+        self.pathmodel = Gtk.ListStore(str, str)
 
         for i, (label, textWidth) in enumerate(
             [('Root Path', 60),
             ]):
-            cell = gtk.CellRendererText()
+            cell = Gtk.CellRendererText()
             cell.set_property('editable', True)
             cell.connect('edited', self.edited_path_cb, self.pathmodel)
             cell.set_property('xalign', 0)
-            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('ellipsize', Pango.EllipsizeMode.END)
             cell.set_property('width-chars', textWidth)
-            col = gtk.TreeViewColumn(label, cell)
+            col = Gtk.TreeViewColumn(label, cell)
             col.add_attribute(cell, 'text', i+1)
             col.set_resizable(True)
             self.digpathtv.append_column(col)
@@ -91,86 +87,86 @@ class PreferencesDialog(gtk.Window):
 
         self.buildDigPathTV()
 
-        digpathbtns = gtk.HBox()
-        digRootFrameVBox.pack_start(digpathbtns, False, False)
+        digpathbtns = Gtk.HBox()
+        digRootFrameVBox.pack_start(digpathbtns, False, False, 0)
 
-        addbtn = gtk.Button(stock=gtk.STOCK_ADD)
+        addbtn = Gtk.Button(stock=Gtk.STOCK_ADD)
         addbtn.connect('clicked', self.on_rootpath_add)
-        digpathbtns.pack_start(addbtn, False, False)
+        digpathbtns.pack_start(addbtn, False, False, 0)
 
-        delbtn = gtk.Button(stock=gtk.STOCK_REMOVE)
+        delbtn = Gtk.Button(stock=Gtk.STOCK_REMOVE)
         delbtn.connect('clicked', self.on_rootpath_del)
-        digpathbtns.pack_start(delbtn, False, False)
+        digpathbtns.pack_start(delbtn, False, False, 0)
 
-        editbtn = gtk.Button(stock='mbcat-edit-path')
+        editbtn = Gtk.Button(stock='mbcat-edit-path')
         editbtn.connect('clicked', self.on_rootpath_edit)
-        digpathbtns.pack_start(editbtn, False, False)
+        digpathbtns.pack_start(editbtn, False, False, 0)
 
-        digspecframe = gtk.Frame('Release Path Spec.')
+        digspecframe = Gtk.Frame('Release Path Spec.')
         #digspecframe.set_border_width(10)
-        digRootFrameVBox.pack_start(digspecframe, False, False)
-        digspecentryvbox = gtk.VBox(False, 10)
+        digRootFrameVBox.pack_start(digspecframe, False, False, 0)
+        digspecentryvbox = Gtk.VBox(False, 10)
         digspecframe.add(digspecentryvbox)
         digspecentryvbox.set_border_width(10)
-        self.digspecentry = gtk.Entry()
+        self.digspecentry = Gtk.Entry()
         self.digspecentry.set_sensitive(False)
         self.digspecentry.connect('activate', self.on_specentry_activate)
         digspecentryvbox.add(self.digspecentry)
 
-        defPathSpecFrame = gtk.Frame('Default Path Spec.')
+        defPathSpecFrame = Gtk.Frame('Default Path Spec.')
         defPathSpecFrame.set_border_width(10)
-        digvbox.pack_start(defPathSpecFrame, False, False)
+        digvbox.pack_start(defPathSpecFrame, False, False, 0)
 
-        defPathSpecFrameVBox = gtk.VBox(False, 10)
+        defPathSpecFrameVBox = Gtk.VBox(False, 10)
         defPathSpecFrameVBox.set_border_width(10)
         defPathSpecFrame.add(defPathSpecFrameVBox)
-        entry = gtk.Entry()
+        entry = Gtk.Entry()
         entry.set_text(self.prefs.defaultPathSpec)
         entry.connect('activate', self.on_defaultPathSpec_activate)
-        defPathSpecFrameVBox.pack_start(entry, False, False)
+        defPathSpecFrameVBox.pack_start(entry, False, False, 0)
 
 
         ####
-        tablbl = gtk.Label('MusicBrainz.org')
-        mbvbox = gtk.VBox(False, 10)
+        tablbl = Gtk.Label('MusicBrainz.org')
+        mbvbox = Gtk.VBox(False, 10)
         self.notebook.append_page(mbvbox, tablbl)
 
-        serverframe = gtk.Frame('Servers')
+        serverframe = Gtk.Frame('Servers')
         serverframe.set_border_width(10)
-        mbvbox.pack_start(serverframe, False, False)
+        mbvbox.pack_start(serverframe, False, False, 0)
 
-        mbprefs = gtk.Table(2, 4, homogeneous=False)
+        mbprefs = Gtk.Table(2, 4, homogeneous=False)
         mbprefs.set_border_width(10)
         serverframe.add(mbprefs)
 
         r = 0
-        lbl = gtk.Label('Host Name :')
+        lbl = Gtk.Label('Host Name :')
         mbprefs.attach(lbl, 0, 1, r, r+1)
-        entry = gtk.Entry()
+        entry = Gtk.Entry()
         entry.set_text(self.prefs.getHostName())
         entry.connect('activate', self.on_hostname_activate)
         mbprefs.attach(entry, 1, 2, r, r+1)
 
         r += 1
-        lbl = gtk.Label('Cover Art Archive :')
+        lbl = Gtk.Label('Cover Art Archive :')
         mbprefs.attach(lbl, 0, 1, r, r+1)
-        entry = gtk.Entry()
+        entry = Gtk.Entry()
         entry.set_text(self.prefs.getCAAHostName())
         entry.connect('activate', self.on_caa_hostname_activate)
         mbprefs.attach(entry, 1, 2, r, r+1)
 
-        acctframe = gtk.Frame('User Account')
+        acctframe = Gtk.Frame('User Account')
         acctframe.set_border_width(10)
-        mbvbox.pack_start(acctframe, False, False)
+        mbvbox.pack_start(acctframe, False, False, 0)
 
-        mbprefs = gtk.Table(2, 4, homogeneous=False)
+        mbprefs = Gtk.Table(2, 4, homogeneous=False)
         mbprefs.set_border_width(10)
         acctframe.add(mbprefs)
 
         r = 0
-        lbl = gtk.Label('Username :')
+        lbl = Gtk.Label('Username :')
         mbprefs.attach(lbl, 0, 1, r, r+1)
-        entry = gtk.Entry()
+        entry = Gtk.Entry()
         entry.set_text(self.prefs.username)
         entry.connect('activate', self.on_username_activate)
         mbprefs.attach(entry, 1, 2, r, r+1)
@@ -218,16 +214,16 @@ class PreferencesDialog(gtk.Window):
         self.prefs.setDefaultPathSpec(newspec)
 
     def choose_rootpath(self, parent=None):
-        dialog = gtk.FileChooserDialog(
+        dialog = Gtk.FileChooserDialog(
             title='Choose path to digital copy',
             parent=parent if parent else self,
-            action=gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
-            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                gtk.STOCK_OPEN, gtk.RESPONSE_OK))
-        dialog.set_default_response(gtk.RESPONSE_OK)
-        # TODO use gtk.FileChooser.set_current_folder and add a named argument
+            action=Gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
+            buttons=(Gtk.STOCK_CANCEL, Gtk.RESPONSE_CANCEL,
+                Gtk.STOCK_OPEN, Gtk.RESPONSE_OK))
+        dialog.set_default_response(Gtk.RESPONSE_OK)
+        # TODO use Gtk.FileChooser.set_current_folder and add a named argument
         response = dialog.run()
-        if response != gtk.RESPONSE_OK:
+        if response != Gtk.RESPONSE_OK:
             dialog.destroy()
             return
 
@@ -244,13 +240,13 @@ class PreferencesDialog(gtk.Window):
         path_id, path = self.get_digpath_selected()
         if ConfirmDialog(self.parentWindow,
                 'Are you sure you want to delete "%s"?' % path,
-                buttons=gtk.BUTTONS_YES_NO, expect=gtk.RESPONSE_YES,
-                default=gtk.RESPONSE_NO):
+                buttons=Gtk.BUTTONS_YES_NO, expect=Gtk.RESPONSE_YES,
+                default=Gtk.RESPONSE_NO):
             self.prefs.delPathRoot(path_id)
             if ConfirmDialog(self.parentWindow,
                     'Also delete associations with "%s"?' % path,
-                    buttons=gtk.BUTTONS_YES_NO, expect=gtk.RESPONSE_YES,
-                    default=gtk.RESPONSE_YES):
+                    buttons=Gtk.BUTTONS_YES_NO, expect=Gtk.RESPONSE_YES,
+                    default=Gtk.RESPONSE_YES):
                 self.catalog.deleteDigitalPathRoot(path_id)
             model, it = self.digpathtv.get_selection().get_selected()
             self.pathmodel.remove(it)
@@ -283,7 +279,7 @@ class PreferencesDialog(gtk.Window):
                 _log.error(msg)
                 if ConfirmDialog(self.parentWindow,
                         msg+'\nWould you like to browse for a new path?',
-                        buttons=gtk.BUTTONS_YES_NO, expect=gtk.RESPONSE_YES):
+                        buttons=Gtk.BUTTONS_YES_NO, expect=Gtk.RESPONSE_YES):
                     newpath = self.choose_rootpath(self.parentWindow)
                     if newpath and os.path.isdir(newpath):
                         self.prefs.editPathRoot(root_id, newpath)
@@ -294,25 +290,25 @@ def TextEntry(parent, message, default='', textVisible=True):
     Display a dialog with a text entry.
     Returns the text, or None if canceled.
     """
-    d = gtk.MessageDialog(parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL,
+    d = Gtk.MessageDialog(parent,
+            Gtk.DIALOG_MODAL | Gtk.DIALOG_DESTROY_WITH_PARENT,
+            Gtk.MESSAGE_QUESTION,
+            Gtk.BUTTONS_OK_CANCEL,
             message)
-    entry = gtk.Entry()
+    entry = Gtk.Entry()
     entry.set_visibility(textVisible)
     entry.set_text(default)
     entry.set_width_chars(36)
-    entry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
+    entry.connect('activate', lambda _: d.response(Gtk.RESPONSE_OK))
     entry.show()
     d.vbox.pack_end(entry)
-    d.set_default_response(gtk.RESPONSE_OK)
+    d.set_default_response(Gtk.RESPONSE_OK)
 
     r = d.run()
-    # have to get the text before we destroy the gtk.Entry
+    # have to get the text before we destroy the Gtk.Entry
     text = entry.get_text().decode('utf8')
     d.destroy()
-    if r == gtk.RESPONSE_OK:
+    if r == Gtk.RESPONSE_OK:
         return text
     else:
         return None
@@ -324,62 +320,62 @@ def DateEntry(parent, message, default=None):
     """
     if not default:
         default = datetime.datetime.now()
-    d = gtk.MessageDialog(parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL,
+    d = Gtk.MessageDialog(parent,
+            Gtk.DIALOG_MODAL | Gtk.DIALOG_DESTROY_WITH_PARENT,
+            Gtk.MESSAGE_QUESTION,
+            Gtk.BUTTONS_OK_CANCEL,
             message)
-    entry = gtk.Calendar()
+    entry = Gtk.Calendar()
     entry.select_month(default.month-1, default.year)
     entry.select_day(default.day)
-    d.vbox.pack_start(entry)
+    d.vbox.pack_start(entry, False, False, 0)
 
     # Hour, Minute, Second Spinners
-    hbox = gtk.HBox(False, 0)
+    hbox = Gtk.HBox(False, 0)
 
-    vbox2 = gtk.VBox(False, 0)
+    vbox2 = Gtk.VBox(False, 0)
     hbox.pack_start(vbox2, True, True, 5)
 
-    label = gtk.Label("Hour :")
+    label = Gtk.Label("Hour :")
     label.set_alignment(0, 0.5)
     vbox2.pack_start(label, False, True, 0)
 
-    adj = gtk.Adjustment(default.hour, 0, 23, 1, 12, 0)
-    hour_spinner = gtk.SpinButton(adj, 0, 0)
+    adj = Gtk.Adjustment(default.hour, 0, 23, 1, 12, 0)
+    hour_spinner = Gtk.SpinButton(adj, 0, 0)
     hour_spinner.set_wrap(True)
     vbox2.pack_start(hour_spinner, False, True, 0)
 
-    vbox2 = gtk.VBox(False, 0)
+    vbox2 = Gtk.VBox(False, 0)
     hbox.pack_start(vbox2, True, True, 5)
 
-    label = gtk.Label("Minute :")
+    label = Gtk.Label("Minute :")
     label.set_alignment(0, 0.5)
     vbox2.pack_start(label, False, True, 0)
 
-    adj = gtk.Adjustment(default.minute, 0, 59, 1, 15, 0)
-    minute_spinner = gtk.SpinButton(adj, 0, 0)
+    adj = Gtk.Adjustment(default.minute, 0, 59, 1, 15, 0)
+    minute_spinner = Gtk.SpinButton(adj, 0, 0)
     minute_spinner.set_wrap(True)
     vbox2.pack_start(minute_spinner, False, True, 0)
 
-    vbox2 = gtk.VBox(False, 0)
+    vbox2 = Gtk.VBox(False, 0)
     hbox.pack_start(vbox2, True, True, 5)
 
-    label = gtk.Label("Second :")
+    label = Gtk.Label("Second :")
     label.set_alignment(0, 0.5)
     vbox2.pack_start(label, False, True, 0)
 
-    adj = gtk.Adjustment(default.second, 0, 59, 1, 15, 0)
-    second_spinner = gtk.SpinButton(adj, 0, 0)
+    adj = Gtk.Adjustment(default.second, 0, 59, 1, 15, 0)
+    second_spinner = Gtk.SpinButton(adj, 0, 0)
     second_spinner.set_wrap(True)
     vbox2.pack_start(second_spinner, False, True, 0)
 
     d.vbox.pack_start(hbox, True, True, 5)
     d.vbox.show_all()
 
-    d.set_default_response(gtk.RESPONSE_OK)
+    d.set_default_response(Gtk.RESPONSE_OK)
 
     r = d.run()
-    # have to get the text before we destroy the gtk.Entry
+    # have to get the text before we destroy the Gtk.Entry
     year, month, day = entry.get_date()
     hour, minute, second = hour_spinner.get_value_as_int(), \
             minute_spinner.get_value_as_int(), \
@@ -395,7 +391,7 @@ def DateEntry(parent, message, default=None):
             minute,
             second)
     d.destroy()
-    if r == gtk.RESPONSE_OK:
+    if r == Gtk.RESPONSE_OK:
         return entered_datetime
     else:
         return None
@@ -409,43 +405,43 @@ def PurchaseInfoEntry(parent,
     # TODO this should have hour, minute and second added to be consistent with
     # other date entries
     # ELSE could drop multiple purchases when deleting
-    d = gtk.MessageDialog(parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL,
+    d = Gtk.MessageDialog(parent,
+            Gtk.DIALOG_MODAL | Gtk.DIALOG_DESTROY_WITH_PARENT,
+            Gtk.MESSAGE_QUESTION,
+            Gtk.BUTTONS_OK_CANCEL,
             message)
     d.set_resizable(True)
-    table = gtk.Table(3, 2)
+    table = Gtk.Table(3, 2)
 
-    label = gtk.Label('Date:')
+    label = Gtk.Label('Date:')
     label.set_alignment(xalign=0, yalign=0)
     table.attach(label, 0, 1, 0, 1)
-    dateEntry = gtk.Calendar()
+    dateEntry = Gtk.Calendar()
     table.attach(dateEntry, 1, 2, 0, 1)
 
-    label = gtk.Label('Vendor:')
+    label = Gtk.Label('Vendor:')
     label.set_alignment(xalign=0, yalign=0)
     table.attach(label, 0, 1, 1, 2)
-    vendorEntry = gtk.Entry()
+    vendorEntry = Gtk.Entry()
     vendorEntry.set_width_chars(20)
-    vendorEntry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
+    vendorEntry.connect('activate', lambda _: d.response(Gtk.RESPONSE_OK))
     table.attach(vendorEntry, 1, 2, 1, 2)
 
-    label = gtk.Label('Price:')
+    label = Gtk.Label('Price:')
     label.set_alignment(xalign=0, yalign=0)
     table.attach(label, 0, 1, 2, 3)
-    adj = gtk.Adjustment(0.0, 0.0, 1000000.0, 0.01, 0.01, 0.0)
-    priceEntry = gtk.SpinButton(adj, 1.0, 2)
+    adj = Gtk.Adjustment(0.0, 0.0, 1000000.0, 0.01, 0.01, 0.0)
+    priceEntry = Gtk.SpinButton(adj, 1.0, 2)
     priceEntry.set_width_chars(20)
-    priceEntry.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
+    priceEntry.connect('activate', lambda _: d.response(Gtk.RESPONSE_OK))
     table.attach(priceEntry, 1, 2, 2, 3)
 
     table.show_all()
     d.vbox.pack_end(table)
-    d.set_default_response(gtk.RESPONSE_OK)
+    d.set_default_response(Gtk.RESPONSE_OK)
 
     r = d.run()
-    # have to get the text before we destroy the gtk.Entry
+    # have to get the text before we destroy the Gtk.Entry
     year, month, day = dateEntry.get_date()
     val = {'date': float(mbcat.encodeDateTime(
             datetime.datetime(year, month+1, day))),
@@ -454,17 +450,17 @@ def PurchaseInfoEntry(parent,
         }
 
     d.destroy()
-    if r == gtk.RESPONSE_OK:
+    if r == Gtk.RESPONSE_OK:
         return val
     else:
         return None
 
-def ErrorDialog(parent, message, type=gtk.MESSAGE_ERROR):
+def ErrorDialog(parent, message, type=Gtk.MessageType.ERROR):
     _log.error(message)
-    d = gtk.MessageDialog(parent,
-        gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+    d = Gtk.MessageDialog('Yo', parent,
+        Gtk.DIALOG_MODAL | Gtk.DIALOG_DESTROY_WITH_PARENT,
         type,
-        buttons=gtk.BUTTONS_OK)
+        buttons=Gtk.ButtonsType.OK)
     d.set_markup(message)
     d.run()
     d.destroy()
@@ -474,33 +470,33 @@ def ReleaseSelectDialog(parent,
         message='Choose a release',
         releaseIdList=[],
         ):
-    d = gtk.MessageDialog(parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL,
+    d = Gtk.MessageDialog(parent,
+            Gtk.DIALOG_MODAL | Gtk.DIALOG_DESTROY_WITH_PARENT,
+            Gtk.MessageType.QUESTION,
+            Gtk.ButtonsType.OK_CANCEL,
             message)
     d.set_resizable(True)
-    sw = gtk.ScrolledWindow()
-    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+    sw = Gtk.ScrolledWindow()
+    sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
     d.set_size_request(*default_dialog_size)
 
-    tv = gtk.TreeView()
+    tv = Gtk.TreeView()
     for i, (label, textWidth) in enumerate(
         [('Artist', 20),
         ('Title', 30),
         ('Format', -1),
         ]):
-        cell = gtk.CellRendererText()
+        cell = Gtk.CellRendererText()
         cell.set_property('xalign', 0)
-        cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+        cell.set_property('ellipsize', Pango.EllipsizeMode.END)
         cell.set_property('width-chars', textWidth)
-        col = gtk.TreeViewColumn(label, cell)
+        col = Gtk.TreeViewColumn(label, cell)
         col.add_attribute(cell, 'text', i+1)
         col.set_resizable(True)
         tv.append_column(col)
 
     # make the list store
-    releaseListStore = gtk.ListStore(str, str, str, str)
+    releaseListStore = Gtk.ListStore(str, str, str, str)
     for releaseId in releaseIdList:
         releaseListStore.append((
             #release['id'],
@@ -518,11 +514,11 @@ def ReleaseSelectDialog(parent,
     sw.add(tv)
     sw.show()
     d.vbox.pack_end(sw)
-    d.set_default_response(gtk.RESPONSE_OK)
+    d.set_default_response(Gtk.RESPONSE_OK)
 
     r = d.run()
     model, it = tv.get_selection().get_selected()
-    if r == gtk.RESPONSE_OK and it:
+    if r == Gtk.RESPONSE_OK and it:
         selection = model.get_value(it, 0)
     else:
         selection = None
@@ -534,34 +530,34 @@ def TrackSelectDialog(parent,
         message='Choose a track',
         trackIdList=[],
         ):
-    d = gtk.MessageDialog(parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL,
+    d = Gtk.MessageDialog(parent,
+            Gtk.DIALOG_MODAL | Gtk.DIALOG_DESTROY_WITH_PARENT,
+            Gtk.MESSAGE_QUESTION,
+            Gtk.BUTTONS_OK_CANCEL,
             message)
     d.set_resizable(True)
-    sw = gtk.ScrolledWindow()
-    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+    sw = Gtk.ScrolledWindow()
+    sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
     d.set_size_request(*default_dialog_size)
 
-    tv = gtk.TreeView()
+    tv = Gtk.TreeView()
     for i, (label, xalign, textWidth) in enumerate(
         [('Title', 0, 30),
         ('Length', 1.0, -1),
         ('Appears on', 0, 30),
         ('Artist', 0, 20),
         ]):
-        cell = gtk.CellRendererText()
+        cell = Gtk.CellRendererText()
         cell.set_property('xalign', xalign)
-        cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+        cell.set_property('ellipsize', Pango.EllipsizeMode.END)
         cell.set_property('width-chars', textWidth)
-        col = gtk.TreeViewColumn(label, cell)
+        col = Gtk.TreeViewColumn(label, cell)
         col.add_attribute(cell, 'text', i+1)
         col.set_resizable(True)
         tv.append_column(col)
 
     # make the list store
-    trackListStore = gtk.ListStore(str, str, str, str, str, str)
+    trackListStore = Gtk.ListStore(str, str, str, str, str, str)
     for trackId in trackIdList:
         for releaseId in catalog.recordingGetReleases(trackId):
             trackListStore.append((
@@ -582,11 +578,11 @@ def TrackSelectDialog(parent,
     sw.add(tv)
     sw.show()
     d.vbox.pack_end(sw)
-    d.set_default_response(gtk.RESPONSE_OK)
+    d.set_default_response(Gtk.RESPONSE_OK)
 
     r = d.run()
     model, it = tv.get_selection().get_selected()
-    if r == gtk.RESPONSE_OK and it:
+    if r == Gtk.RESPONSE_OK and it:
         # use the releaseId in position 5
         selection = model.get_value(it, 5)
     else:
@@ -625,51 +621,51 @@ class BarcodeSearchDialog:
             ):
         self.parentWindow = parentWindow
         self.app = app
-        self.window = gtk.Window()
+        self.window = Gtk.Window()
         self.window.set_transient_for(parentWindow)
         self.window.set_destroy_with_parent(True)
         self.window.set_border_width(10)
         self.window.connect('destroy', self.on_destroy)
         self.window.set_title(title)
 
-        key, mod = gtk.accelerator_parse('Escape')
-        accel = gtk.AccelGroup()
+        key, mod = Gtk.accelerator_parse('Escape')
+        accel = Gtk.AccelGroup()
         accel.connect_group(key, mod, 0, lambda w,x,y,z: self.window.destroy())
         self.window.add_accel_group(accel)
 
-        vbox = gtk.VBox(False, 10)
+        vbox = Gtk.VBox(False, 10)
 
-        prompt = gtk.Label(message)
-        vbox.pack_start(prompt, expand=True, fill=True)
+        prompt = Gtk.Label(message)
+        vbox.pack_start(prompt, expand=True, fill=True, padding=0)
 
-        self.hint = gtk.Label('')
-        vbox.pack_start(self.hint, expand=True, fill=True)
+        self.hint = Gtk.Label('')
+        vbox.pack_start(self.hint, expand=True, fill=True, padding=0)
 
-        entrybox = gtk.HBox(False, 10)
-        self.entry = gtk.Entry(40)
+        entrybox = Gtk.HBox(False, 10)
+        self.entry = Gtk.Entry(40)
         self.entry.connect('changed', self.on_change, self.entry)
         self.entry.connect('activate', self.on_submit)
         if default:
             self.entry.set_text(default)
-        entrybox.pack_start(self.entry, expand=True, fill=True)
-        self.checkIndicator = gtk.Image()
+        entrybox.pack_start(self.entry, expand=True, fill=True, padding=0)
+        self.checkIndicator = Gtk.Image()
         self.checkIndicator.set_from_stock(
-                gtk.STOCK_CANCEL, gtk.ICON_SIZE_BUTTON)
-        entrybox.pack_start(self.checkIndicator, expand=False, fill=False)
+                Gtk.STOCK_CANCEL, Gtk.ICON_SIZE_BUTTON)
+        entrybox.pack_start(self.checkIndicator, expand=False, fill=False, padding=0)
 
-        vbox.pack_start(entrybox, expand=False, fill=False)
+        vbox.pack_start(entrybox, expand=False, fill=False, padding=0)
 
-        buttonbox = gtk.HBox(False, 10)
+        buttonbox = Gtk.HBox(False, 10)
 
-        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        btn = Gtk.Button('Close', Gtk.STOCK_CLOSE)
         btn.connect('clicked', self.on_close)
         buttonbox.pack_end(btn, expand=False, fill=False)
 
-        btn = gtk.Button('Add', gtk.STOCK_OK)
+        btn = Gtk.Button('Add', Gtk.STOCK_OK)
         btn.connect('clicked', self.on_submit)
         buttonbox.pack_end(btn, expand=False, fill=False)
 
-        vbox.pack_start(buttonbox, expand=False, fill=False)
+        vbox.pack_start(buttonbox, expand=False, fill=False, padding=0)
 
         self.window.add(vbox)
         self.window.show_all()
@@ -684,12 +680,12 @@ class BarcodeSearchDialog:
             if len(entry_text) == 12 else ''
         self.hint.set_text(suggestion)
         self.checkIndicator.set_from_stock(
-                gtk.STOCK_APPLY if \
+                Gtk.STOCK_APPLY if \
                     mbcat.barcode.UPC.check_upc_a(entry_text) \
                     or
                     mbcat.barcode.EAN._checksum(entry_text) \
-                    else gtk.STOCK_CANCEL,
-                gtk.ICON_SIZE_BUTTON)
+                    else Gtk.STOCK_CANCEL,
+                Gtk.ICON_SIZE_BUTTON)
 
     def get_matches(self, entry):
         barCodes = mbcat.barcode.UPC(entry).variations()
@@ -767,7 +763,7 @@ def TrackSearchDialog(parent,
         ErrorDialog(parent, 'No matches found for "%s"' % entry)
 
 def buildRatingComboBox(default=None):
-    combobox = gtk.combo_box_new_text()
+    combobox = Gtk.ComboBoxText.new()
     combobox.append_text('None')
     combobox.append_text('1')
     combobox.append_text('2')
@@ -781,22 +777,22 @@ def buildRatingComboBox(default=None):
 def RatingDialog(parent,
     message='Enter rating',
     default=None):
-    d = gtk.MessageDialog(parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL,
+    d = Gtk.MessageDialog(parent,
+            Gtk.DIALOG_MODAL | Gtk.DIALOG_DESTROY_WITH_PARENT,
+            Gtk.MESSAGE_QUESTION,
+            Gtk.BUTTONS_OK_CANCEL,
             message
             )
     combobox = buildRatingComboBox(default)
     d.vbox.pack_end(combobox)
-    d.set_default_response(gtk.RESPONSE_OK)
+    d.set_default_response(Gtk.RESPONSE_OK)
 
     r = d.run()
     model = combobox.get_model()
     index = combobox.get_active()
     text = model[index][0]
     d.destroy()
-    if r == gtk.RESPONSE_OK and text != 'None':
+    if r == Gtk.RESPONSE_OK and text != 'None':
         return text
     else:
         return None
@@ -806,37 +802,37 @@ def IntegerDialog(parent,
         default=0,
         lower=0,
         upper=1000):
-    d = gtk.MessageDialog(parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL,
+    d = Gtk.MessageDialog(parent,
+            Gtk.DIALOG_MODAL | Gtk.DIALOG_DESTROY_WITH_PARENT,
+            Gtk.MESSAGE_QUESTION,
+            Gtk.BUTTONS_OK_CANCEL,
             message)
-    adjustment = gtk.Adjustment(
+    adjustment = Gtk.Adjustment(
         value=1,
         lower=lower,
         upper=upper,
         step_incr=1)
-    spinbutton = gtk.SpinButton(adjustment)
+    spinbutton = Gtk.SpinButton(adjustment)
     spinbutton.set_value(default)
     spinbutton.show()
     d.vbox.pack_end(spinbutton)
-    spinbutton.connect('activate', lambda _: d.response(gtk.RESPONSE_OK))
-    d.set_default_response(gtk.RESPONSE_OK)
+    spinbutton.connect('activate', lambda _: d.response(Gtk.RESPONSE_OK))
+    d.set_default_response(Gtk.RESPONSE_OK)
 
     r = d.run()
     val = spinbutton.get_value_as_int()
     d.destroy()
-    if r == gtk.RESPONSE_OK:
+    if r == Gtk.RESPONSE_OK:
         return val
     else:
         return None
 
-def ConfirmDialog(parent, message, type=gtk.MESSAGE_QUESTION,
-        buttons=gtk.BUTTONS_OK_CANCEL, expect=gtk.RESPONSE_OK,
-        default=gtk.RESPONSE_OK):
-    d = gtk.MessageDialog(parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_QUESTION,
+def ConfirmDialog(parent, message, type=Gtk.MessageType.QUESTION,
+        buttons=Gtk.ButtonsType.OK_CANCEL, expect=Gtk.ResponseType.OK,
+        default=Gtk.ResponseType.OK):
+    d = Gtk.MessageDialog(parent,
+            Gtk.DIALOG_MODAL | Gtk.DIALOG_DESTROY_WITH_PARENT,
+            Gtk.MessageType.QUESTION,
             buttons,
             message)
     d.set_default_response(default)
@@ -863,7 +859,7 @@ class QueryTask(mbcat.dialogs.ThreadedCall):
             # TODO this manipulates GTK from another thread (BAD)
             ErrorDialog(self.window, 'No results found for "%s"' % str(kwargs))
         else:
-            gobject.idle_add(startResultViewer, self.result_viewer,
+            GObject.idle_add(startResultViewer, self.result_viewer,
                     self.window, self.app, self.result)
             # TODO can implement this with a killParent flag to __init__
             #if type(self.app) == BarcodeQueryDialog:
@@ -905,7 +901,7 @@ class QueryResultsDialog:
             queryResult,
             message='Release Results',
         ):
-        self.window = gtk.Window()
+        self.window = Gtk.Window()
         self.window.set_transient_for(parentWindow)
         self.window.set_destroy_with_parent(True)
         self.window.set_resizable(True)
@@ -914,14 +910,14 @@ class QueryResultsDialog:
         self.window.set_title(message)
         self.window.set_size_request(*default_dialog_size)
 
-        key, mod = gtk.accelerator_parse('Escape')
-        accel = gtk.AccelGroup()
+        key, mod = Gtk.accelerator_parse('Escape')
+        accel = Gtk.AccelGroup()
         accel.connect_group(key, mod, 0, lambda w,x,y,z: self.window.destroy())
         self.window.add_accel_group(accel)
 
         self.active_on_row_selected = []
 
-        vbox = gtk.VBox(False, 10)
+        vbox = Gtk.VBox(False, 10)
 
         # Keep reference to catalog for later
         self.app = app
@@ -935,8 +931,8 @@ class QueryResultsDialog:
         self.window.show_all()
 
     def buildWidgets(self, vbox, queryResult):
-        sw = gtk.ScrolledWindow()
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw = Gtk.ScrolledWindow()
+        sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
 
         self.buildTreeView()
         self.buildListStore(queryResult)
@@ -945,7 +941,7 @@ class QueryResultsDialog:
         self.tv.connect('cursor-changed', self.on_row_select)
         self.tv.connect('unselect-all', self.on_unselect_all)
         sw.add(self.tv)
-        vbox.pack_start(sw, expand=True, fill=True)
+        vbox.pack_start(sw, expand=True, fill=True, padding=0)
 
         hbox = self.buildButtons()
         self.row_widgets_set_sensitive(False)
@@ -954,9 +950,9 @@ class QueryResultsDialog:
         self.buildRowInfoWidgets(vbox)
 
     def buildTreeView(self):
-        self.tv = gtk.TreeView()
-        cell = gtk.CellRendererPixbuf()
-        col = gtk.TreeViewColumn('Have', cell)
+        self.tv = Gtk.TreeView()
+        cell = Gtk.CellRendererPixbuf()
+        col = Gtk.TreeViewColumn('Have', cell)
         col.add_attribute(cell, 'stock-id', 1)
         self.tv.append_column(col)
         for i, (label, textWidth) in enumerate([
@@ -968,11 +964,11 @@ class QueryResultsDialog:
             ('Catalog #', 20),
             ('Barcode', 25),
             ]):
-            cell = gtk.CellRendererText()
+            cell = Gtk.CellRendererText()
             cell.set_property('xalign', 0)
-            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('ellipsize', Pango.EllipsizeMode.END)
             cell.set_property('width-chars', textWidth)
-            col = gtk.TreeViewColumn(label, cell)
+            col = Gtk.TreeViewColumn(label, cell)
             col.add_attribute(cell, 'text', i+2)
             col.set_resizable(True)
             self.tv.append_column(col)
@@ -980,11 +976,11 @@ class QueryResultsDialog:
 
     def buildListStore(self, queryResult):
         # make the list store
-        resultListStore = gtk.ListStore(str, str, str, str, str, str, str, str, str)
+        resultListStore = Gtk.ListStore(str, str, str, str, str, str, str, str, str)
         for release in queryResult['release-list']:
             resultListStore.append((
                 release['id'],
-                gtk.STOCK_APPLY if release['id'] in self.app.catalog else '',
+                Gtk.STOCK_APPLY if release['id'] in self.app.catalog else '',
                 mbcat.catalog.formatQueryArtist(release),
                 release['title'],
                 mbcat.catalog.formatQueryMedia(release),
@@ -997,17 +993,17 @@ class QueryResultsDialog:
 
     def buildButtons(self):
         # Buttons
-        hbox = gtk.HBox(False, 10)
-        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        hbox = Gtk.HBox(False, 10)
+        btn = Gtk.Button('Close', Gtk.STOCK_CLOSE)
         btn.connect('clicked', self.on_close)
         hbox.pack_end(btn, expand=False, fill=False)
 
-        btn = gtk.Button('Add', gtk.STOCK_ADD)
+        btn = Gtk.Button('Add', Gtk.STOCK_ADD)
         btn.connect('clicked', self.add_release)
         hbox.pack_end(btn, expand=False, fill=False)
         self.active_on_row_selected.append(btn)
 
-        btn = gtk.Button('Browse Release')
+        btn = Gtk.Button('Browse Release')
         btn.connect('clicked', self.browse_release)
         hbox.pack_end(btn, expand=False, fill=False)
         self.active_on_row_selected.append(btn)
@@ -1016,7 +1012,7 @@ class QueryResultsDialog:
 
     def buildRowInfoWidgets(self, vbox):
         # Info on the selected row
-        self.selInfo = gtk.Label()
+        self.selInfo = Gtk.Label()
         vbox.pack_end(self.selInfo, expand=False)
 
     def get_selection(self):
@@ -1078,17 +1074,17 @@ class GroupQueryResultsDialog(QueryResultsDialog):
             queryResult, message)
 
     def buildTreeView(self):
-        self.tv = gtk.TreeView()
+        self.tv = Gtk.TreeView()
         for i, (label, textWidth, xalign) in enumerate([
                 ('Artist', 20, 0),
                 ('Title', 27, 0),
                 ('Releases', 3, 1.0),
             ]):
-            cell = gtk.CellRendererText()
+            cell = Gtk.CellRendererText()
             cell.set_property('xalign', xalign)
-            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('ellipsize', Pango.EllipsizeMode.END)
             cell.set_property('width-chars', textWidth)
-            col = gtk.TreeViewColumn(label, cell)
+            col = Gtk.TreeViewColumn(label, cell)
             col.add_attribute(cell, 'text', i+1)
             col.set_resizable(True)
             self.tv.append_column(col)
@@ -1096,7 +1092,7 @@ class GroupQueryResultsDialog(QueryResultsDialog):
 
     def buildListStore(self, queryResult):
         # make the list store
-        resultListStore = gtk.ListStore(str, str, str, str)
+        resultListStore = Gtk.ListStore(str, str, str, str)
         for group in queryResult['release-group-list']:
             resultListStore.append((
                 group['id'],
@@ -1108,18 +1104,18 @@ class GroupQueryResultsDialog(QueryResultsDialog):
 
     def buildButtons(self):
         # Buttons
-        hbox = gtk.HBox(False, 10)
-        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        hbox = Gtk.HBox(False, 10)
+        btn = Gtk.Button('Close', Gtk.STOCK_CLOSE)
         btn.connect('clicked', self.on_close)
         hbox.pack_end(btn, expand=False, fill=False)
 
-        # TODO could use gtk.STOCK_CONNECT here
-        btn = gtk.Button('Get Releases')
+        # TODO could use Gtk.STOCK_CONNECT here
+        btn = Gtk.Button('Get Releases')
         btn.connect('clicked', self.get_releases)
         hbox.pack_end(btn, expand=False, fill=False)
         self.active_on_row_selected.append(btn)
 
-        btn = gtk.Button('Browse Group')
+        btn = Gtk.Button('Browse Group')
         btn.connect('clicked', self.browse_group)
         hbox.pack_end(btn, expand=False, fill=False)
         self.active_on_row_selected.append(btn)
@@ -1153,7 +1149,7 @@ class DiscQueryResultsDialog(QueryResultsDialog):
     def buildButtons(self):
         hbox = QueryResultsDialog.buildButtons(self)
 
-        btn = gtk.Button('Submit Disc')
+        btn = Gtk.Button('Submit Disc')
         btn.connect('clicked', self.submit_disc)
         hbox.pack_end(btn, expand=False, fill=False)
 
@@ -1162,12 +1158,12 @@ class DiscQueryResultsDialog(QueryResultsDialog):
     def submit_disc(self, widget):
         webbrowser.open(self.submission_url)
 
-class TrackListView(gtk.ScrolledWindow):
+class TrackListView(Gtk.ScrolledWindow):
     titleColWidth = 32
     def __init__(self, catalog):
         self.catalog = catalog
-        gtk.ScrolledWindow.__init__(self)
-        self.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        Gtk.ScrolledWindow.__init__(self)
+        self.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
 
         self.buildTreeView()
 
@@ -1177,22 +1173,22 @@ class TrackListView(gtk.ScrolledWindow):
         self.add(self.tv)
 
     def buildTreeView(self):
-        self.tv = gtk.TreeView()
+        self.tv = Gtk.TreeView()
         for i, (label, xalign, textWidth) in enumerate(
             [('Title', 0, self.titleColWidth),
             ('Length', 1.0, 2),
             ]):
-            cell = gtk.CellRendererText()
+            cell = Gtk.CellRendererText()
             cell.set_property('xalign', xalign)
-            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('ellipsize', Pango.EllipsizeMode.END)
             cell.set_property('width-chars', textWidth)
-            col = gtk.TreeViewColumn(label, cell)
+            col = Gtk.TreeViewColumn(label, cell)
             col.add_attribute(cell, 'text', i+1)
             col.set_resizable(True)
             self.tv.append_column(col)
 
     def makeTreeStore(self, releaseId):
-        trackTreeStore = gtk.TreeStore(str, str, str)
+        trackTreeStore = Gtk.TreeStore(str, str, str)
         # TODO this should be a Catalog method
         for mediumId,position,format in self.catalog.cm.executeAndFetch(
                 'select id,position,format from media '
@@ -1268,7 +1264,7 @@ class TrackListDialog(QueryResultsDialog):
         self.trackListView.update(releaseId)
         self.trackListView.show()
 
-        vbox.pack_start(self.trackListView, expand=True, fill=True)
+        vbox.pack_start(self.trackListView, expand=True, fill=True, padding=0)
 
         hbox = self.buildButtons()
         vbox.pack_end(hbox, expand=False, fill=False)
@@ -1277,12 +1273,12 @@ class TrackListDialog(QueryResultsDialog):
 
     def buildButtons(self):
         # Buttons
-        hbox = gtk.HBox(False, 10)
-        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        hbox = Gtk.HBox(False, 10)
+        btn = Gtk.Button('Close', Gtk.STOCK_CLOSE)
         btn.connect('clicked', self.on_close)
         hbox.pack_end(btn, expand=False, fill=False)
 
-        btn = gtk.Button('Browse Recording')
+        btn = Gtk.Button('Browse Recording')
         btn.connect('clicked', self.browse_recording)
         hbox.pack_end(btn, expand=False, fill=False)
         self.active_on_row_selected.append(btn)
@@ -1307,7 +1303,7 @@ class TrackListDialog(QueryResultsDialog):
             self.row_widgets_set_sensitive(False)
 
 def startResultViewer(viewer, *args, **kwargs):
-    """For use with gobject.idle_add"""
+    """For use with GObject.idle_add"""
     viewer(*args, **kwargs)
     return False
 
@@ -1322,17 +1318,17 @@ class ReleaseDistanceDialog(QueryResultsDialog):
             queryResult, message)
 
     def buildTreeView(self):
-        self.tv = gtk.TreeView()
+        self.tv = Gtk.TreeView()
         for i, (label, textWidth, xalign) in enumerate([
                 ('Distance', 4, 1.0),
                 ('Left', 32, 0),
                 ('Right', 32, 0),
             ]):
-            cell = gtk.CellRendererText()
+            cell = Gtk.CellRendererText()
             cell.set_property('xalign', xalign)
-            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('ellipsize', Pango.EllipsizeMode.END)
             cell.set_property('width-chars', textWidth)
-            col = gtk.TreeViewColumn(label, cell)
+            col = Gtk.TreeViewColumn(label, cell)
             col.add_attribute(cell, 'text', i+2)
             col.set_resizable(True)
             self.tv.append_column(col)
@@ -1340,7 +1336,7 @@ class ReleaseDistanceDialog(QueryResultsDialog):
 
     def buildListStore(self, queryResult):
         # make the list store
-        resultListStore = gtk.ListStore(str, str, str, str, str)
+        resultListStore = Gtk.ListStore(str, str, str, str, str)
         for distance, left, right in queryResult[:200]:
             resultListStore.append((
                 left,
@@ -1352,18 +1348,18 @@ class ReleaseDistanceDialog(QueryResultsDialog):
 
     def buildButtons(self):
         # Buttons
-        hbox = gtk.HBox(False, 10)
-        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        hbox = Gtk.HBox(False, 10)
+        btn = Gtk.Button('Close', Gtk.STOCK_CLOSE)
         btn.connect('clicked', self.on_close)
         hbox.pack_end(btn, expand=False, fill=False)
 
-        # TODO could use gtk.STOCK_CONNECT here
-        btn = gtk.Button('Select Right')
+        # TODO could use Gtk.STOCK_CONNECT here
+        btn = Gtk.Button('Select Right')
         btn.connect('clicked', self.select_release, 1)
         hbox.pack_end(btn, expand=False, fill=False)
         self.active_on_row_selected.append(btn)
 
-        btn = gtk.Button('Select Left')
+        btn = Gtk.Button('Select Left')
         btn.connect('clicked', self.select_release, 0)
         hbox.pack_end(btn, expand=False, fill=False)
         self.active_on_row_selected.append(btn)
@@ -1372,17 +1368,17 @@ class ReleaseDistanceDialog(QueryResultsDialog):
 
     def buildRowInfoWidgets(self, vbox):
         # Info on the selected row
-        hbox = gtk.HBox(10, False)
-        self.leftInfo = gtk.Label()
-        self.leftInfo.set_ellipsize(pango.ELLIPSIZE_END)
+        hbox = Gtk.HBox(10, False)
+        self.leftInfo = Gtk.Label()
+        self.leftInfo.set_ellipsize(Pango.EllipsizeMode.END)
         self.leftInfo.set_width_chars(36)
-        hbox.pack_start(self.leftInfo, True, True)
-        self.vsLbl = gtk.Label('<->')
-        hbox.pack_start(self.vsLbl, False, False)
-        self.rightInfo = gtk.Label()
-        self.rightInfo.set_ellipsize(pango.ELLIPSIZE_END)
+        hbox.pack_start(self.leftInfo, True, True, 0)
+        self.vsLbl = Gtk.Label('<->')
+        hbox.pack_start(self.vsLbl, False, False, 0)
+        self.rightInfo = Gtk.Label()
+        self.rightInfo.set_ellipsize(Pango.EllipsizeMode.END)
         self.rightInfo.set_width_chars(36)
-        hbox.pack_start(self.rightInfo, True, True)
+        hbox.pack_start(self.rightInfo, True, True, 0)
         vbox.pack_end(hbox, False, False)
 
     def on_row_select(self, treeview):
@@ -1411,37 +1407,37 @@ def SelectCollectionDialog(parent, result):
     """
     Display a dialog with a list of collections from a query.
     """
-    d = gtk.MessageDialog(parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL,
+    d = Gtk.MessageDialog(parent,
+            Gtk.DIALOG_MODAL | Gtk.DIALOG_DESTROY_WITH_PARENT,
+            Gtk.MESSAGE_QUESTION,
+            Gtk.BUTTONS_OK_CANCEL,
             'Track List')
     d.set_resizable(True)
-    sw = gtk.ScrolledWindow()
-    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+    sw = Gtk.ScrolledWindow()
+    sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
     d.set_size_request(*default_dialog_size)
-    tv = gtk.TreeView()
+    tv = Gtk.TreeView()
 
-    authorCell = gtk.CellRendererText()
+    authorCell = Gtk.CellRendererText()
     authorCell.set_property('xalign', 0)
-    authorCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    authorCell.set_property('ellipsize', Pango.EllipsizeMode.END)
     authorCell.set_property('width-chars', 30)
-    authorCol = gtk.TreeViewColumn('Name', authorCell)
+    authorCol = Gtk.TreeViewColumn('Name', authorCell)
     authorCol.add_attribute(authorCell, 'text', 1)
     authorCol.set_resizable(True)
     tv.append_column(authorCol)
 
-    titleCell = gtk.CellRendererText()
+    titleCell = Gtk.CellRendererText()
     titleCell.set_property('xalign', 0)
-    titleCell.set_property('ellipsize', pango.ELLIPSIZE_END)
+    titleCell.set_property('ellipsize', Pango.EllipsizeMode.END)
     titleCell.set_property('width-chars', 20)
-    titleCol = gtk.TreeViewColumn('Editor', titleCell)
+    titleCol = Gtk.TreeViewColumn('Editor', titleCell)
     titleCol.add_attribute(titleCell, 'text', 2)
     titleCol.set_resizable(True)
     tv.append_column(titleCol)
 
     # make the list store
-    resultListStore = gtk.ListStore(str, str, str)
+    resultListStore = Gtk.ListStore(str, str, str)
     for i, collection in enumerate(result['collection-list']):
         resultListStore.append((
             collection['id'],
@@ -1455,11 +1451,11 @@ def SelectCollectionDialog(parent, result):
     sw.add(tv)
     sw.show()
     d.vbox.pack_end(sw)
-    d.set_default_response(gtk.RESPONSE_OK)
+    d.set_default_response(Gtk.RESPONSE_OK)
 
     r = d.run()
     model, it = tv.get_selection().get_selected()
-    id = model.get_value(it, 0) if r == gtk.RESPONSE_OK and it \
+    id = model.get_value(it, 0) if r == Gtk.RESPONSE_OK and it \
         else None
     d.destroy()
     return id
@@ -1481,24 +1477,24 @@ class CheckOutHistoryDialog(QueryResultsDialog):
         pass
 
     def buildTreeView(self):
-        self.tv = gtk.TreeView()
+        self.tv = Gtk.TreeView()
         for i, (label, textWidth) in enumerate(
             [('Check Out', 20),
             ('Check In', 20),
             ('Borrower', 10),
             ]):
-            cell = gtk.CellRendererText()
+            cell = Gtk.CellRendererText()
             cell.set_property('xalign', 0)
-            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell.set_property('ellipsize', Pango.EllipsizeMode.END)
             cell.set_property('width-chars', textWidth)
-            col = gtk.TreeViewColumn(label, cell)
+            col = Gtk.TreeViewColumn(label, cell)
             col.add_attribute(cell, 'text', i)
             col.set_resizable(True)
             self.tv.append_column(col)
 
     def buildListStore(self, releaseId):
         # make the list store
-        resultListStore = gtk.ListStore(str, str, str)
+        resultListStore = Gtk.ListStore(str, str, str)
 
         for event in self.app.catalog.getCheckOutHistory(self.releaseId):
             if len(event) == 2:
@@ -1529,16 +1525,16 @@ class CheckOutHistoryDialog(QueryResultsDialog):
 
     def buildButtons(self):
         # Buttons
-        hbox = gtk.HBox(False, 10)
-        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        hbox = Gtk.HBox(False, 10)
+        btn = Gtk.Button('Close', Gtk.STOCK_CLOSE)
         btn.connect('clicked', self.on_close)
         hbox.pack_end(btn, expand=False, fill=False)
 
-        self.checkInBtn = gtk.Button('Check In')
+        self.checkInBtn = Gtk.Button('Check In')
         self.checkInBtn.connect('clicked', self.check_in)
         hbox.pack_end(self.checkInBtn, expand=False, fill=False)
 
-        self.checkOutBtn = gtk.Button('Check Out')
+        self.checkOutBtn = Gtk.Button('Check Out')
         self.checkOutBtn.connect('clicked', self.check_out)
         hbox.pack_end(self.checkOutBtn, expand=False, fill=False)
 
@@ -1565,7 +1561,7 @@ class ListenHistoryDialog(QueryResultsDialog):
             ):
         self.releaseId = releaseId
         QueryResultsDialog.__init__(self, parentWindow, app, releaseId, message)
-        self.selInfo.set_ellipsize(pango.ELLIPSIZE_END)
+        self.selInfo.set_ellipsize(Pango.EllipsizeMode.END)
         self.selInfo.set_text('Release "%s" (%s)' %
                 (self.app.catalog.getReleaseTitle(releaseId), releaseId))
 
@@ -1577,20 +1573,20 @@ class ListenHistoryDialog(QueryResultsDialog):
         self.buildListStore(self.releaseId)
 
     def buildTreeView(self):
-        self.tv = gtk.TreeView()
+        self.tv = Gtk.TreeView()
         for i, (label, textWidth) in enumerate(
             [('Date', 20),
             ]):
-            cell = gtk.CellRendererText()
+            cell = Gtk.CellRendererText()
             cell.set_property('xalign', 1.0)
             cell.set_property('width-chars', textWidth)
-            col = gtk.TreeViewColumn(label, cell)
+            col = Gtk.TreeViewColumn(label, cell)
             col.add_attribute(cell, 'text', i+1)
             col.set_resizable(True)
             self.tv.append_column(col)
 
     def buildListStore(self, releaseId):
-        resultListStore = gtk.ListStore(float, str)
+        resultListStore = Gtk.ListStore(float, str)
 
         for event in self.app.catalog.getListenDates(self.releaseId):
             resultListStore.append((event, mbcat.decodeDateTime(event)))
@@ -1598,17 +1594,17 @@ class ListenHistoryDialog(QueryResultsDialog):
 
     def buildButtons(self):
         # Buttons
-        hbox = gtk.HBox(False, 10)
-        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        hbox = Gtk.HBox(False, 10)
+        btn = Gtk.Button('Close', Gtk.STOCK_CLOSE)
         btn.connect('clicked', self.on_close)
         hbox.pack_end(btn, expand=False, fill=False)
 
-        self.checkInBtn = gtk.Button('Delete Date')
+        self.checkInBtn = Gtk.Button('Delete Date')
         self.checkInBtn.connect('clicked', self.delete_date)
         self.checkInBtn.set_sensitive(False)
         hbox.pack_end(self.checkInBtn, expand=False, fill=False)
 
-        self.checkOutBtn = gtk.Button('Add Date')
+        self.checkOutBtn = Gtk.Button('Add Date')
         self.checkOutBtn.connect('clicked', self.add_date)
         hbox.pack_end(self.checkOutBtn, expand=False, fill=False)
 
@@ -1650,7 +1646,7 @@ class DigitalPathListDialog(QueryResultsDialog):
             ):
         self.releaseId = releaseId
         QueryResultsDialog.__init__(self, parentWindow, app, releaseId, message)
-        self.selInfo.set_ellipsize(pango.ELLIPSIZE_END)
+        self.selInfo.set_ellipsize(Pango.EllipsizeMode.END)
         self.selInfo.set_text('Release "%s" (%s)' %
                 (self.app.catalog.getReleaseTitle(releaseId), releaseId))
 
@@ -1662,23 +1658,23 @@ class DigitalPathListDialog(QueryResultsDialog):
         self.buildListStore(self.releaseId)
 
     def buildTreeView(self):
-        self.tv = gtk.TreeView()
+        self.tv = Gtk.TreeView()
         for i, (label, textWidth, xalign) in enumerate([
             ('Path', 52, 0),
             ('Format', 6, 1.0),
             ]):
-            cell = gtk.CellRendererText()
+            cell = Gtk.CellRendererText()
             cell.set_property('xalign', xalign)
             cell.set_property('width-chars', textWidth)
             if i == 0:
-                cell.set_property('ellipsize', pango.ELLIPSIZE_END)
-            col = gtk.TreeViewColumn(label, cell)
+                cell.set_property('ellipsize', Pango.EllipsizeMode.END)
+            col = Gtk.TreeViewColumn(label, cell)
             col.add_attribute(cell, 'text', i+2)
             col.set_resizable(True)
             self.tv.append_column(col)
 
     def buildListStore(self, releaseId):
-        resultListStore = gtk.ListStore(str, str, str, str)
+        resultListStore = Gtk.ListStore(str, str, str, str)
 
         for root_id,path,fmt in self.app.catalog.getDigitalPaths(
                 self.releaseId):
@@ -1700,17 +1696,17 @@ class DigitalPathListDialog(QueryResultsDialog):
 
     def buildButtons(self):
         # Buttons
-        hbox = gtk.HBox(False, 10)
-        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        hbox = Gtk.HBox(False, 10)
+        btn = Gtk.Button('Close', Gtk.STOCK_CLOSE)
         btn.connect('clicked', self.on_close)
         hbox.pack_end(btn, expand=False, fill=False)
 
-        self.checkInBtn = gtk.Button('Delete Path')
+        self.checkInBtn = Gtk.Button('Delete Path')
         self.checkInBtn.connect('clicked', self.delete_path)
         self.checkInBtn.set_sensitive(False)
         hbox.pack_end(self.checkInBtn, expand=False, fill=False)
 
-        self.checkOutBtn = gtk.Button('Add Path')
+        self.checkOutBtn = Gtk.Button('Add Path')
         self.checkOutBtn.connect('clicked', self.add_path)
         hbox.pack_end(self.checkOutBtn, expand=False, fill=False)
 
@@ -1722,14 +1718,14 @@ class DigitalPathListDialog(QueryResultsDialog):
                 if it else (None, None)
 
     def add_path(self, button):
-        dialog = gtk.FileChooserDialog(
+        dialog = Gtk.FileChooserDialog(
             title='Choose path to digital copy',
-            action=gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
-            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                gtk.STOCK_OPEN, gtk.RESPONSE_OK))
-        dialog.set_default_response(gtk.RESPONSE_OK)
+            action=Gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
+            buttons=(Gtk.STOCK_CANCEL, Gtk.RESPONSE_CANCEL,
+                Gtk.STOCK_OPEN, Gtk.RESPONSE_OK))
+        dialog.set_default_response(Gtk.RESPONSE_OK)
         response = dialog.run()
-        if response != gtk.RESPONSE_OK:
+        if response != Gtk.RESPONSE_OK:
             dialog.destroy()
             return
 
@@ -1779,7 +1775,7 @@ class PurchaseHistoryDialog(QueryResultsDialog):
             ):
         self.releaseId = releaseId
         QueryResultsDialog.__init__(self, parentWindow, app, releaseId, message)
-        self.selInfo.set_ellipsize(pango.ELLIPSIZE_END)
+        self.selInfo.set_ellipsize(Pango.EllipsizeMode.END)
         self.selInfo.set_text('Release "%s" (%s)' %
                 (self.app.catalog.getReleaseTitle(releaseId), releaseId))
 
@@ -1791,22 +1787,22 @@ class PurchaseHistoryDialog(QueryResultsDialog):
         self.buildListStore(self.releaseId)
 
     def buildTreeView(self):
-        self.tv = gtk.TreeView()
+        self.tv = Gtk.TreeView()
         for i, (label, textWidth, xalign) in enumerate([
             ('Date', 20, 0),
             ('Price', 5, 1.0),
             ('Vendor', 20, 0),
             ]):
-            cell = gtk.CellRendererText()
+            cell = Gtk.CellRendererText()
             cell.set_property('xalign', xalign)
             cell.set_property('width-chars', textWidth)
-            col = gtk.TreeViewColumn(label, cell)
+            col = Gtk.TreeViewColumn(label, cell)
             col.add_attribute(cell, 'text', i+1)
             col.set_resizable(True)
             self.tv.append_column(col)
 
     def buildListStore(self, releaseId):
-        resultListStore = gtk.ListStore(float, str, str, str)
+        resultListStore = Gtk.ListStore(float, str, str, str)
 
         for date,price,vendor in self.app.catalog.getPurchases(
                 self.releaseId):
@@ -1820,17 +1816,17 @@ class PurchaseHistoryDialog(QueryResultsDialog):
 
     def buildButtons(self):
         # Buttons
-        hbox = gtk.HBox(False, 10)
-        btn = gtk.Button('Close', gtk.STOCK_CLOSE)
+        hbox = Gtk.HBox(False, 10)
+        btn = Gtk.Button('Close', Gtk.STOCK_CLOSE)
         btn.connect('clicked', self.on_close)
         hbox.pack_end(btn, expand=False, fill=False)
 
-        self.checkInBtn = gtk.Button('Delete Event')
+        self.checkInBtn = Gtk.Button('Delete Event')
         self.checkInBtn.connect('clicked', self.delete_event)
         self.checkInBtn.set_sensitive(False)
         hbox.pack_end(self.checkInBtn, expand=False, fill=False)
 
-        self.checkOutBtn = gtk.Button('Add Event')
+        self.checkOutBtn = Gtk.Button('Add Event')
         self.checkOutBtn.connect('clicked', self.add_event)
         hbox.pack_end(self.checkOutBtn, expand=False, fill=False)
 
@@ -1863,25 +1859,25 @@ def TextViewEntry(parent, message, default='', editable=True):
     Display a dialog with a text entry.
     Returns the text, or None if canceled.
     """
-    d = gtk.MessageDialog(parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_QUESTION,
-            gtk.BUTTONS_OK_CANCEL if editable else gtk.BUTTONS_CLOSE,
+    d = Gtk.MessageDialog(parent,
+            Gtk.DIALOG_MODAL | Gtk.DIALOG_DESTROY_WITH_PARENT,
+            Gtk.MESSAGE_QUESTION,
+            Gtk.BUTTONS_OK_CANCEL if editable else Gtk.BUTTONS_CLOSE,
             message)
     d.set_size_request(*default_dialog_size)
     d.set_resizable(True)
-    sw = gtk.ScrolledWindow()
-    sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-    textview = gtk.TextView()
+    sw = Gtk.ScrolledWindow()
+    sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+    textview = Gtk.TextView()
     textview.set_editable(editable)
     textbuffer = textview.get_buffer()
     sw.add(textview)
     textbuffer.set_text(default)
-    textview.set_wrap_mode(gtk.WRAP_WORD)
+    textview.set_wrap_mode(Gtk.WRAP_WORD)
     sw.show()
     textview.show()
     d.vbox.pack_end(sw)
-    d.set_default_response(gtk.RESPONSE_OK)
+    d.set_default_response(Gtk.RESPONSE_OK)
 
     r = d.run()
     # TODO is there any easier way to get the whole buffer?
@@ -1889,85 +1885,85 @@ def TextViewEntry(parent, message, default='', editable=True):
         textbuffer.get_start_iter(),
         textbuffer.get_end_iter()).decode('utf8')
     d.destroy()
-    if r == gtk.RESPONSE_OK:
+    if r == Gtk.RESPONSE_OK:
         return text
     else:
         return None
 
-class DetailPane(gtk.HBox):
+class DetailPane(Gtk.HBox):
     imgpx = 258
     def __init__(self, catalog):
-        gtk.HBox.__init__(self, False, 0)
+        Gtk.HBox.__init__(self, False, 0)
         self.catalog = catalog
 
-        self.coverart = gtk.Image()
+        self.coverart = Gtk.Image()
         self.coverart.set_size_request(self.imgpx, self.imgpx)
-        self.pack_start(self.coverart, expand=False, fill=False)
+        self.pack_start(self.coverart, expand=False, fill=False, padding=0)
 
         self.trackList = TrackListView(self.catalog)
         self.trackList.show()
-        self.pack_start(self.trackList)
+        self.pack_start(self.trackList, False, False, 0)
 
         self.buildInfoTable()
 
-        self.pack_start(self.lt, expand=False, fill=False)
+        self.pack_start(self.lt, False, False, 0)
         self.lt.show()
 
     def buildInfoTable(self):
-        self.lt = gtk.Table(2, 4, homogeneous=False)
+        self.lt = Gtk.Table(2, 4, homogeneous=False)
         self.lt.set_border_width(5)
 
         r = 0
-        self.releaseIdLbl = gtk.Label()
-        self.releaseIdLbl.set_ellipsize(pango.ELLIPSIZE_END)
+        self.releaseIdLbl = Gtk.Label()
+        self.releaseIdLbl.set_ellipsize(Pango.EllipsizeMode.END)
         self.lt.attach(self.releaseIdLbl, 0, 2, r, r+1) # span two columns
         r += 1
 
-        l = gtk.Label('Release ID:')
+        l = Gtk.Label('Release ID:')
         l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
-        hbox = gtk.HBox()
-        self.clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
-        self.releaseIdCopyBtn = gtk.Button(stock=gtk.STOCK_COPY)
+        hbox = Gtk.HBox()
+        self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        self.releaseIdCopyBtn = Gtk.Button(stock=Gtk.STOCK_COPY)
         self.releaseIdCopyBtn.connect('clicked', self.copyReleaseId)
         #self.releaseIdBtn.show()
         #self.vb.pack_start(self.releaseIdBtn, expand=False, fill=False)
-        hbox.pack_start(self.releaseIdCopyBtn)
-        self.releaseIdBrowseBtn = gtk.Button('Browse')
+        hbox.pack_start(self.releaseIdCopyBtn, False, False, 0)
+        self.releaseIdBrowseBtn = Gtk.Button('Browse')
         self.releaseIdBrowseBtn.connect('clicked', self.browse_release)
-        hbox.pack_start(self.releaseIdBrowseBtn)
+        hbox.pack_start(self.releaseIdBrowseBtn, False, False, 0)
         self.lt.attach(hbox, 1, 2, r, r+1)
         r += 1
 
-        l = gtk.Label('Last Refresh:')
+        l = Gtk.Label('Last Refresh:')
         l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
-        self.lastRefreshLbl = gtk.Label()
+        self.lastRefreshLbl = Gtk.Label()
         self.lt.attach(self.lastRefreshLbl, 1, 2, r, r+1)
         r += 1
 
-        l = gtk.Label('First Added:')
+        l = Gtk.Label('First Added:')
         l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
-        self.firstAddedLbl = gtk.Label()
+        self.firstAddedLbl = Gtk.Label()
         self.lt.attach(self.firstAddedLbl, 1, 2, r, r+1)
         r += 1
 
-        l = gtk.Label('Last Listened:')
+        l = Gtk.Label('Last Listened:')
         l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
-        self.lastListenedLbl = gtk.Label()
+        self.lastListenedLbl = Gtk.Label()
         self.lt.attach(self.lastListenedLbl, 1, 2, r, r+1)
         r += 1
 
-        l = gtk.Label('Digital Formats:')
+        l = Gtk.Label('Digital Formats:')
         l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
-        self.digFormatsLbl = gtk.Label()
+        self.digFormatsLbl = Gtk.Label()
         self.lt.attach(self.digFormatsLbl, 1, 2, r, r+1)
         r += 1
 
-        l = gtk.Label('Rating:')
+        l = Gtk.Label('Rating:')
         l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
         self.ratingLbl = buildRatingComboBox()
@@ -1975,24 +1971,24 @@ class DetailPane(gtk.HBox):
         self.lt.attach(self.ratingLbl, 1, 2, r, r+1)
         r += 1
 
-        l = gtk.Label('On-hand Count:')
+        l = Gtk.Label('On-hand Count:')
         l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
-        adjustment = gtk.Adjustment(
+        adjustment = Gtk.Adjustment(
             value=1,
             lower=0,
             upper=1000,
             step_incr=1)
-        self.countSpinButton = gtk.SpinButton(adjustment)
+        self.countSpinButton = Gtk.SpinButton(adjustment=adjustment)
         adjustment.connect('value_changed', self.setCount)
         self.lt.attach(self.countSpinButton, 1, 2, r, r+1)
         r += 1
 
-        l = gtk.Label('Checked Out?')
+        l = Gtk.Label('Checked Out?')
         l.set_alignment(0, 0.5)
         self.lt.attach(l, 0, 1, r, r+1)
-        self.checkOutLbl = gtk.Label()
-        self.checkOutLbl.set_ellipsize(pango.ELLIPSIZE_END)
+        self.checkOutLbl = Gtk.Label()
+        self.checkOutLbl.set_ellipsize(Pango.EllipsizeMode.END)
         self.lt.attach(self.checkOutLbl, 1, 2, r, r+1)
         r += 1
 
@@ -2034,7 +2030,7 @@ class DetailPane(gtk.HBox):
         try:
             self.pixbuf = self.coverart.get_pixbuf()
             resized = self.pixbuf.scale_simple(self.imgpx,self.imgpx,
-                gtk.gdk.INTERP_BILINEAR)
+                Gtk.gdk.INTERP_BILINEAR)
             self.coverart.set_from_pixbuf(resized)
         except ValueError:
             pass
@@ -2133,23 +2129,23 @@ class MBCatGtk:
 
     def destroy(self, widget, data=None):
         print ("destroy signal occurred")
-        gtk.main_quit()
+        Gtk.main_quit()
 
     def url_hook_func(self, ignore1, url, ignore2):
         webbrowser.open(url, new=2)
 
     def openAboutWindow(self, widget):
-        about = gtk.AboutDialog()
+        about = Gtk.AboutDialog()
         about.set_program_name(self.__name__)
         about.set_version(self.__version__)
         about.set_copyright(self.__copyright__)
         about.set_comments(self.__doc__)
         about.set_website(self.__website__)
-        gtk.about_dialog_set_url_hook(self.url_hook_func, data=None)
+        Gtk.about_dialog_set_url_hook(self.url_hook_func, data=None)
         try:
-            about.set_logo(gtk.gdk.pixbuf_new_from_file(self.__icon_file__))
-        except glib.GError:
-            about.set_logo(gtk.gdk.pixbuf_new_from_file(self.__png_icon_file__))
+            about.set_logo(Gtk.gdk.pixbuf_new_from_file(self.__icon_file__))
+        except GLib.GError:
+            about.set_logo(Gtk.gdk.pixbuf_new_from_file(self.__png_icon_file__))
         about.run()
         about.destroy()
         return
@@ -2181,25 +2177,25 @@ class MBCatGtk:
 
     def addPatternsToDialog(self, dialog, patterns):
         for desc, pattern in patterns:
-            filt = gtk.FileFilter()
+            filt = Gtk.FileFilter()
             filt.set_name(desc)
             filt.add_pattern(pattern)
             dialog.add_filter(filt)
 
     def menuCatalogOpen(self, widget):
         # Ask the user where to store the new database
-        dialog = gtk.FileChooserDialog(
+        dialog = Gtk.FileChooserDialog(
             title='Open database file',
-            action=gtk.FILE_CHOOSER_ACTION_OPEN,
-            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+            action=Gtk.FILE_CHOOSER_ACTION_OPEN,
+            buttons=(Gtk.STOCK_CANCEL, Gtk.RESPONSE_CANCEL,
+                Gtk.STOCK_OPEN, Gtk.RESPONSE_OK))
 
-        dialog.set_default_response(gtk.RESPONSE_OK)
+        dialog.set_default_response(Gtk.RESPONSE_OK)
 
         self.addPatternsToDialog(dialog, self.filePatterns)
 
         response = dialog.run()
-        if response != gtk.RESPONSE_OK:
+        if response != Gtk.RESPONSE_OK:
             dialog.destroy()
             return
 
@@ -2210,18 +2206,18 @@ class MBCatGtk:
 
     def menuCatalogSaveAs(self, widget):
         # Ask the user where to store the new database
-        dialog = gtk.FileChooserDialog(
+        dialog = Gtk.FileChooserDialog(
             title='Save database file as',
-            action=gtk.FILE_CHOOSER_ACTION_SAVE,
-            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+            action=Gtk.FILE_CHOOSER_ACTION_SAVE,
+            buttons=(Gtk.STOCK_CANCEL, Gtk.RESPONSE_CANCEL,
+                Gtk.STOCK_SAVE, Gtk.RESPONSE_OK))
 
-        dialog.set_default_response(gtk.RESPONSE_OK)
+        dialog.set_default_response(Gtk.RESPONSE_OK)
 
         self.addPatternsToDialog(dialog, self.filePatterns)
 
         response = dialog.run()
-        if response != gtk.RESPONSE_OK:
+        if response != Gtk.RESPONSE_OK:
             dialog.destroy()
             return
 
@@ -2231,18 +2227,18 @@ class MBCatGtk:
         self.copyAndOpenDatabase(filename)
 
     def menuCatalogImportZip(self, widget):
-        dialog = gtk.FileChooserDialog(
+        dialog = Gtk.FileChooserDialog(
             title='Import from zip file',
-            action=gtk.FILE_CHOOSER_ACTION_SAVE,
-            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+            action=Gtk.FILE_CHOOSER_ACTION_SAVE,
+            buttons=(Gtk.STOCK_CANCEL, Gtk.RESPONSE_CANCEL,
+                Gtk.STOCK_SAVE, Gtk.RESPONSE_OK))
 
-        dialog.set_default_response(gtk.RESPONSE_OK)
+        dialog.set_default_response(Gtk.RESPONSE_OK)
 
         self.addPatternsToDialog(dialog, self.zipFilePatterns)
 
         response = dialog.run()
-        if response != gtk.RESPONSE_OK:
+        if response != Gtk.RESPONSE_OK:
             dialog.destroy()
             return
 
@@ -2253,18 +2249,18 @@ class MBCatGtk:
         dialog.destroy()
 
     def menuCatalogExportZip(self, widget):
-        dialog = gtk.FileChooserDialog(
+        dialog = Gtk.FileChooserDialog(
             title='Export to zip file',
-            action=gtk.FILE_CHOOSER_ACTION_SAVE,
-            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+            action=Gtk.FILE_CHOOSER_ACTION_SAVE,
+            buttons=(Gtk.STOCK_CANCEL, Gtk.RESPONSE_CANCEL,
+                Gtk.STOCK_SAVE, Gtk.RESPONSE_OK))
 
-        dialog.set_default_response(gtk.RESPONSE_OK)
+        dialog.set_default_response(Gtk.RESPONSE_OK)
 
         self.addPatternsToDialog(dialog, self.zipFilePatterns)
 
         response = dialog.run()
-        if response != gtk.RESPONSE_OK:
+        if response != Gtk.RESPONSE_OK:
             dialog.destroy()
             return
 
@@ -2275,18 +2271,18 @@ class MBCatGtk:
         dialog.destroy()
 
     def menuCatalogImportDB(self, widget):
-        dialog = gtk.FileChooserDialog(
+        dialog = Gtk.FileChooserDialog(
             title='Import from sqlite3 database file',
-            action=gtk.FILE_CHOOSER_ACTION_SAVE,
-            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+            action=Gtk.FILE_CHOOSER_ACTION_SAVE,
+            buttons=(Gtk.STOCK_CANCEL, Gtk.RESPONSE_CANCEL,
+                Gtk.STOCK_SAVE, Gtk.RESPONSE_OK))
 
-        dialog.set_default_response(gtk.RESPONSE_OK)
+        dialog.set_default_response(Gtk.RESPONSE_OK)
 
         self.addPatternsToDialog(dialog, self.filePatterns)
 
         response = dialog.run()
-        if response != gtk.RESPONSE_OK:
+        if response != Gtk.RESPONSE_OK:
             dialog.destroy()
             return
 
@@ -2307,18 +2303,18 @@ class MBCatGtk:
             ErrorDialog(self.window, 'Error importing: '+str(e))
             return
 
-        dialog = gtk.FileChooserDialog(
+        dialog = Gtk.FileChooserDialog(
             title='Export to HTML file',
-            action=gtk.FILE_CHOOSER_ACTION_SAVE,
-            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+            action=Gtk.FILE_CHOOSER_ACTION_SAVE,
+            buttons=(Gtk.STOCK_CANCEL, Gtk.RESPONSE_CANCEL,
+                Gtk.STOCK_SAVE, Gtk.RESPONSE_OK))
 
-        dialog.set_default_response(gtk.RESPONSE_OK)
+        dialog.set_default_response(Gtk.RESPONSE_OK)
 
         self.addPatternsToDialog(dialog, self.htmlFilePatterns)
 
         response = dialog.run()
-        if response != gtk.RESPONSE_OK:
+        if response != Gtk.RESPONSE_OK:
             dialog.destroy()
             return
 
@@ -2332,8 +2328,8 @@ class MBCatGtk:
         # line manipulates GTK
         if ConfirmDialog(self.window,
                 'Open HTML file in browser?',
-                buttons=gtk.BUTTONS_YES_NO, expect=gtk.RESPONSE_YES,
-                default=gtk.RESPONSE_NO):
+                buttons=Gtk.BUTTONS_YES_NO, expect=Gtk.RESPONSE_YES,
+                default=Gtk.RESPONSE_NO):
             _log.info('Opening browser to "%s"' % htmlfilename)
             webbrowser.open(htmlfilename)
 
@@ -2376,7 +2372,7 @@ class MBCatGtk:
         def run(self):
             self.task.start()
             self.task.join()
-            gobject.idle_add(self.app.refreshView)
+            GObject.idle_add(self.app.refreshView)
 
     class CheckTask(threading.Thread):
         def __init__(self, window, app, result_viewer, task):
@@ -2388,7 +2384,7 @@ class MBCatGtk:
         def run(self):
             self.task.start()
             self.task.join()
-            gobject.idle_add(startResultViewer, self.result_viewer,
+            GObject.idle_add(startResultViewer, self.result_viewer,
                     self.window, self.app, self.task.task.result)
 
     def menuCatalogRebuild(self, widget):
@@ -2509,7 +2505,7 @@ class MBCatGtk:
                 self.setSelectedRow(newRow)
             else:
                 self.setSelectedRow(selRow)
-        return False # for use with gobject.idle_add
+        return False # for use with GObject.idle_add
 
     def viewXml(self, widget=None):
         import xml.dom.minidom
@@ -2959,14 +2955,14 @@ class MBCatGtk:
                     'Open browser to Submission URL?')
 
     def makeListStore(self, ):
-        self.releaseList = gtk.ListStore(str, str, str, str, str, str, str, str,
+        self.releaseList = Gtk.ListStore(str, str, str, str, str, str, str, str,
             str, str, str, str, str)
 
         filtStr = ' and '.join(filter(None, [self.filtFmt, self.filt]))
         for row in self.catalog.getAdvTable(filtStr):
             self.releaseList.append(row)
         # Need to add 1 here to get to sort string because of UUID at beginning
-        self.releaseList.set_sort_column_id(1, gtk.SORT_ASCENDING)
+        self.releaseList.set_sort_column_id(1, Gtk.SortType.ASCENDING)
 
         self.treeview.set_model(self.releaseList)
         # search by release title; have to add 2 because of UUID and sort
@@ -2977,7 +2973,7 @@ class MBCatGtk:
 
     def createTreeView(self):
         # create the TreeView
-        self.treeview = gtk.TreeView()
+        self.treeview = Gtk.TreeView()
         # TODO add ability to sort by headers
         self.treeview.set_headers_clickable(True)
         # rules-hint
@@ -2986,12 +2982,12 @@ class MBCatGtk:
         # create the TreeViewColumns to display the data
         self.tvcolumn = [None] * len(self.columnNames)
         for n, columnName in enumerate(self.columnNames):
-            cell = gtk.CellRendererText()
-            cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+            cell = Gtk.CellRendererText()
+            cell.set_property('ellipsize', Pango.EllipsizeMode.END)
             cell.set_property('width-chars', self.columnWidths[n])
             if (columnName in self.numFields):
                 cell.set_property('xalign', 1.0)
-            self.tvcolumn[n] = gtk.TreeViewColumn(columnName, cell, text=n+2)
+            self.tvcolumn[n] = Gtk.TreeViewColumn(columnName, cell, text=n+2)
             self.tvcolumn[n].set_sort_column_id(n+2)
             self.tvcolumn[n].set_resizable(True)
             if (columnName == 'Sort Format'):
@@ -3001,7 +2997,7 @@ class MBCatGtk:
         self.treeview.connect('row-activated', self.on_row_activate)
         self.treeview.connect('cursor-changed', self.on_row_select)
         self.treeview.connect('unselect-all', self.on_unselect_all)
-        self.scrolledwindow = gtk.ScrolledWindow()
+        self.scrolledwindow = Gtk.ScrolledWindow()
         self.scrolledwindow.add(self.treeview)
 
     ui_xml = '''<ui>
@@ -3125,18 +3121,18 @@ class MBCatGtk:
         self.filtFmt = ''
 
         # Create the toplevel window
-        self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        self.window = Gtk.Window(Gtk.WindowType.TOPLEVEL)
         self.window.set_title(self.__name__)
         try:
             self.window.set_icon_from_file(self.__icon_file__)
-        except glib.GError as e:
+        except GLib.GError as e:
             print (e)
             try:
                 self.window.set_icon_from_file(self.__png_icon_file__)
-            except glib.GError:
+            except GLib.GError:
                 print (e)
         self.window.set_size_request(800, 600)
-        self.window.set_position(gtk.WIN_POS_CENTER)
+        self.window.set_position(Gtk.WindowPosition.CENTER)
 
         # When the window is given the "delete_event" signal (this is given
         # by the window manager, usually by the "close" option, or on the
@@ -3150,14 +3146,14 @@ class MBCatGtk:
         # or if we return FALSE in the "delete_event" callback.
         self.window.connect("destroy", self.destroy)
 
-        self.agr = gtk.AccelGroup()
+        self.agr = Gtk.AccelGroup()
         self.window.add_accel_group(self.agr)
 
-        vbox = gtk.VBox(False, 2)
+        vbox = Gtk.VBox(False, 2)
         self.window.add(vbox)
 
         # Create a UIManager instance
-        uimanager = gtk.UIManager()
+        uimanager = Gtk.UIManager()
         self.uimanager = uimanager
 
         # Add the accelerator group to the toplevel window
@@ -3165,7 +3161,7 @@ class MBCatGtk:
         self.window.add_accel_group(accelgroup)
 
         # Create an ActionGroup
-        actiongroup = gtk.ActionGroup('UIManagerExample')
+        actiongroup = Gtk.ActionGroup('UIManagerExample')
         self.actiongroup = actiongroup
 
         # Create a ToggleAction, etc.
@@ -3181,11 +3177,11 @@ class MBCatGtk:
         # Create actions
         actiongroup.add_actions([
             ('Catalog', None, '_Catalog'),
-            ('Quit', gtk.STOCK_QUIT, '_Quit', '<Control>q',
+            ('Quit', Gtk.STOCK_QUIT, '_Quit', '<Control>q',
                 'Quit the Program', self.destroy),
-            ('Open', gtk.STOCK_OPEN, '_Open Database', None,
+            ('Open', Gtk.STOCK_OPEN, '_Open Database', None,
                 'Open a different database file', self.menuCatalogOpen),
-            ('SaveAs', gtk.STOCK_SAVE_AS, '_Save Database As', None,
+            ('SaveAs', Gtk.STOCK_SAVE_AS, '_Save Database As', None,
                 'Save database file to a new location', self.menuCatalogSaveAs),
             ('Import', None, '_Import'),
             ('ImportDatabase', None, '_Database', None,
@@ -3197,56 +3193,56 @@ class MBCatGtk:
                 'Export to zip file', self.menuCatalogExportZip),
             ('ExportHTML', None, '_HTML', None,
                 'Export HTML file', self.menuCatalogExportHtml),
-            ('RefreshMetadata', gtk.STOCK_REFRESH, 'Refresh _Metadata',
+            ('RefreshMetadata', Gtk.STOCK_REFRESH, 'Refresh _Metadata',
                 None, 'Refresh all release metadata', self.menuCatalogRefresh),
-            ('IndexDigital', gtk.STOCK_HARDDISK, 'Index _Digital',
+            ('IndexDigital', Gtk.STOCK_HARDDISK, 'Index _Digital',
                 None, 'Index digital copies of releases',
                 self.menuCatalogIndexDigital),
-            ('DatabaseVacuum', gtk.STOCK_CLEAR, 'Vacuum Database',
+            ('DatabaseVacuum', Gtk.STOCK_CLEAR, 'Vacuum Database',
                 None, 'Reduce space used by database file',
                 self.menuCatalogVacuum),
-            ('DatabaseRebuild', gtk.STOCK_EXECUTE, 'Rebuild Derived Tables',
+            ('DatabaseRebuild', Gtk.STOCK_EXECUTE, 'Rebuild Derived Tables',
                 None, 'Rebuild derived tables in database',
                 self.menuCatalogRebuild),
-            ('DatabaseFindSimilar', gtk.STOCK_FIND, 'Find Similar Releases',
+            ('DatabaseFindSimilar', Gtk.STOCK_FIND, 'Find Similar Releases',
                 None, 'Find similar releases in database',
                 self.menuCatalogGetSimilar),
             ('Preferences', None, 'Preferences', '<Control>p',
                 'Edit user preferences', self.menuPreferences),
             ('View', None, '_View'),
-            ('ViewRefresh', gtk.STOCK_REFRESH, '_Refresh',
+            ('ViewRefresh', Gtk.STOCK_REFRESH, '_Refresh',
                 None, 'Refresh view', self.refreshView),
             ('ViewScrollSelected', None, '_Scroll to Selected',
                 None, 'Scroll to selected release', self.scrollToSelected),
             ('ViewXML', None, 'View _XML',
                 None, 'View XML of release', self.viewXml),
             ('Release', None, '_Release'),
-            ('ReleaseAdd', gtk.STOCK_ADD, '_Add Release', '<Control>a',
+            ('ReleaseAdd', Gtk.STOCK_ADD, '_Add Release', '<Control>a',
                 'Add release', self.addRelease),
-            ('ReleaseDelete', gtk.STOCK_DELETE, '_Delete Release',
+            ('ReleaseDelete', Gtk.STOCK_DELETE, '_Delete Release',
                 '<Control>Delete', 'Delete release', self.deleteRelease),
-            ('ReleaseSwitch', gtk.STOCK_CONVERT, '_Switch',
+            ('ReleaseSwitch', Gtk.STOCK_CONVERT, '_Switch',
                 None, 'Switch a release with another', self.switchRelease),
-            ('ReleaseCoverArt', gtk.STOCK_REFRESH, 'Fetch Co_ver Art',
+            ('ReleaseCoverArt', Gtk.STOCK_REFRESH, 'Fetch Co_ver Art',
                 None, 'Fetch cover art', self.getCoverArt),
-            ('ReleaseMetadata', gtk.STOCK_REFRESH, '_Refresh Metadata',
+            ('ReleaseMetadata', Gtk.STOCK_REFRESH, '_Refresh Metadata',
                 None, 'Refresh metadata', self.refreshRelease),
-            ('ReleaseBrowse', gtk.STOCK_REFRESH, '_Browse to Release',
+            ('ReleaseBrowse', Gtk.STOCK_REFRESH, '_Browse to Release',
                 None, 'Open browser to release URL', self.browseRelease),
-            ('ReleaseIndexDigital', gtk.STOCK_HARDDISK, '_Index Digital Copies',
+            ('ReleaseIndexDigital', Gtk.STOCK_HARDDISK, '_Index Digital Copies',
                 None, 'Index digital copies of selected release',
                 self.menuReleaseIndexDigital),
-            ('ReleaseTracklist', gtk.STOCK_INDEX, 'Track _List',
+            ('ReleaseTracklist', Gtk.STOCK_INDEX, 'Track _List',
                 None, 'Show release track listing', self.showTrackList),
             ('ReleaseCheckOut', None, '_Check Out/In',
                 None, 'Check out history', self.checkOutDialog),
-            ('ReleaseComment', gtk.STOCK_EDIT, 'Co_mment',
+            ('ReleaseComment', Gtk.STOCK_EDIT, 'Co_mment',
                 None, 'Edit release comments', self.editComment),
             ('ReleaseCount', None, 'Cou_nt',
                 None, 'Edit release count', self.changeCount),
             ('ReleaseListen', None, 'Listen Events',
                 None, 'Edit listen events', self.listen),
-            ('ReleaseDigital', gtk.STOCK_OPEN, 'Digital _Paths',
+            ('ReleaseDigital', Gtk.STOCK_OPEN, 'Digital _Paths',
                 None, 'Edit digital paths', self.digitalPaths),
             ('ReleasePurchase', None, 'Purchase History',
                 None, 'Edit purchase history', self.purchaseInfo),
@@ -3271,12 +3267,12 @@ class MBCatGtk:
             ('FilterIncomplete', None, 'Incomplete Data', None,
                 'Filter releases except those with incomplete metadata',
                 self.menuCatalogCheck),
-            ('FilterClear', gtk.STOCK_CLEAR, 'Clear Filters', None, None,
+            ('FilterClear', Gtk.STOCK_CLEAR, 'Clear Filters', None, None,
                     self.menuClearFilters),
-            ('SearchClear', gtk.STOCK_CLEAR, 'Clear Search', None, None,
+            ('SearchClear', Gtk.STOCK_CLEAR, 'Clear Search', None, None,
                     self.menuClearSearch),
             ('Webservice', None, '_Webservice'),
-            ('WebDiscId', gtk.STOCK_CDROM, '_Disc Lookup', None,
+            ('WebDiscId', Gtk.STOCK_CDROM, '_Disc Lookup', None,
                 'Read disc TOC and query by disc ID', self.readDiscTOC),
             ('WebReleaseGroup', None, 'Release Group', None,
                 'Search for release group by keywords',
@@ -3313,18 +3309,18 @@ class MBCatGtk:
 
         # Create a MenuBar
         menubar = uimanager.get_widget('/MenuBar')
-        vbox.pack_start(menubar, False)
+        vbox.pack_start(menubar, False, False, 0)
 
         # Create a Toolbar
         toolbar = uimanager.get_widget('/Toolbar')
-        vbox.pack_start(toolbar, False)
+        vbox.pack_start(toolbar, False, False, 0)
         self.toolbar_force_important()
 
         # Add search bar to Toolbar
-        self.searchentry = gtk.Entry()
+        self.searchentry = Gtk.Entry()
         self.searchentry.connect('activate', self.search_callback)
         self.searchentry.show()
-        searchitem = gtk.ToolItem()
+        searchitem = Gtk.ToolItem()
         searchitem.show()
         #searchitem.set_tooltip(toolbar.tooltips, 'Search for release keywords')
         searchitem.add(self.searchentry)
@@ -3339,7 +3335,7 @@ class MBCatGtk:
         self.scrolledwindow.show()
         vbox.pack_start(self.scrolledwindow, True, True, 0)
 
-        self.statusbar = gtk.Statusbar()
+        self.statusbar = Gtk.Statusbar()
         self.context_id = self.statusbar.get_context_id('PyGTK')
         self.statusbar.show()
 
@@ -3360,9 +3356,9 @@ class MBCatGtk:
         return
 
     def main(self):
-        # All PyGTK applications must have a gtk.main(). Control ends here
+        # All PyGTK applications must have a Gtk.main(). Control ends here
         # and waits for an event to occur (like a key press or mouse event).
-        gtk.main()
+        Gtk.main()
 
 # If the program is run directly or passed as an argument to the python
 # interpreter then create a GtkGui instance and show it
@@ -3374,6 +3370,9 @@ if __name__ == "__main__":
     parser.add_argument('--cache',
         help='Specify the path to the file cache')
     args = parser.parse_args()
+
+    # Calling GObject.threads_init() is not needed for PyGObject 3.10.2+
+    GObject.threads_init()
 
     gui = MBCatGtk(dbPath=args.database, cachePath=args.cache)
     gui.main()
