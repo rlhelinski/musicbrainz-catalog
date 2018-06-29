@@ -16,5 +16,6 @@ setup(name='mbcat',
           'pygtk==2.24',
           'musicbrainzngs==0.6',
           'discid==1.1.1',
-          'progressbar==2.3'],
+          'py3-progressbar', #'progressbar==2.3',
+          ],
       )
